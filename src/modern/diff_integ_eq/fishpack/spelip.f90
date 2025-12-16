@@ -315,8 +315,8 @@ SUBROUTINE SPELIP(Intl,Iorder,A,B,M,Mbdcnd,Bda,Alpha,Bdb,Beta,C,D,N,&
   !
   !     ADJUST RIGHT HAND SIDE IF NECESSARY
   !
-  ! (Label 100 removed - np==1 case handled by empty CASE)
-  CONTINUE
+  ! Deferred correction loop (was GOTO 100 target)
+  DO
   IF( singlr ) CALL ORTHOG(Usol,Idmn,Zn,Zm,Pertrb)
   !
   !     COMPUTE SOLUTION
@@ -345,12 +345,12 @@ SUBROUTINE SPELIP(Intl,Iorder,A,B,M,Mbdcnd,Bda,Alpha,Bdb,Beta,C,D,N,&
   !     RETURN IF DEFERRED CORRECTIONS AND A FOURTH ORDER SOLUTION ARE
   !     NOT FLAGGED
   !
-  IF( iord==2 ) RETURN
-  iord = 2
+  IF( iord==2 ) EXIT  ! Done with correction loop
+    iord = 2
   !
   !     COMPUTE NEW RIGHT HAND SIDE FOR FOURTH ORDER SOLUTION
   !
   CALL DEFER(COFX,COFY,Idmn,Usol,Grhs)
-  GOTO 100
+  END DO  ! Deferred correction loop
   !
 END SUBROUTINE SPELIP
