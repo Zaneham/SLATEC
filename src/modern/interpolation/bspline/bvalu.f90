@@ -72,6 +72,10 @@ PURE REAL(SP) FUNCTION BVALU(T,A,N,K,Ideriv,X)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900326  Removed duplicate information from DESCRIPTION section.  (WRB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   211001  Converted to free-form, added INTENT.  (Mehdi Chinoune)
+  !   251216  Eliminated GOTO 20 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.2.1 (EXIT statement)
+  !           Original: de Boor (A Practical Guide to Splines)
 
   INTEGER, INTENT(IN) :: Ideriv, K, N
   REAL(SP), INTENT(IN) :: A(N), T(N+K), X
@@ -104,16 +108,17 @@ PURE REAL(SP) FUNCTION BVALU(T,A,N,K,Ideriv,X)
         ELSE
           DO WHILE( i/=K )
             i = i - 1
-            IF( X/=T(i) ) GOTO 20
+            IF( X/=T(i) ) EXIT  ! Found suitable index
           END DO
-          ERROR STOP 'BVALU : A LEFT LIMITING VALUE CANNOT BE OBTAINED AT T(K)'
+          IF( i==K ) ERROR STOP 'BVALU : A LEFT LIMITING VALUE CANNOT BE OBTAINED AT T(K)'
         END IF
       END IF
       !
       !- ** DIFFERENCE THE COEFFICIENTS *IDERIV* TIMES
       !     WORK(I) = AJ(I), WORK(K+I) = DP(I), WORK(K+K+I) = DM(I), I=1.K
+      !     (Label 20 removed - search exit handled by EXIT)
       !
-      20  imk = i - K
+      imk = i - K
       DO j = 1, K
         imkpj = imk + j
         Work(j) = A(imkpj)

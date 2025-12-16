@@ -162,6 +162,10 @@ PURE SUBROUTINE DSICS(N,Nelt,Ia,Ja,A,Isym,Nel,Iel,Jel,El,D,R,Iwarn)
   !   920511  Added complete declaration section.  (WRB)
   !   920929  Corrected format of reference.  (FNF)
   !   930701  Updated CATEGORY section.  (FNF, WRB)
+  !   211001  Converted to free-form, added INTENT.  (Mehdi Chinoune)
+  !   251216  Eliminated CYCLE irr_loop  ! Success - continue to next irr (was GOTO 50) per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.2.1 (named CYCLE)
+  !           Original: Seager, LLNL (SLAP)
 
   !     .. Scalar Arguments ..
   INTEGER, INTENT(IN) :: Isym, N, Nelt
@@ -300,7 +304,7 @@ PURE SUBROUTINE DSICS(N,Nelt,Ia,Ja,A,Isym,Nel,Iel,Jel,El,D,R,Iwarn)
     !
     irbgn = Ja(irow)
     irend = Ja(irow+1) - 1
-    DO irr = irbgn, irend
+    irr_loop: DO irr = irbgn, irend
       ir = Ia(irr)
       IF( ir>irow ) THEN
         !         Find the index into EL for EL(IR,IROW)
@@ -320,7 +324,7 @@ PURE SUBROUTINE DSICS(N,Nelt,Ia,Ja,A,Isym,Nel,Iel,Jel,El,D,R,Iwarn)
                   El(i) = El(i) - El(ic)*R(Jel(ic))
                 END DO
                 El(i) = El(i)/D(irow)
-                GOTO 50
+                CYCLE irr_loop  ! Success - continue to next irr (was GOTO 50)
               END DO
             END IF
           END DO
@@ -330,8 +334,8 @@ PURE SUBROUTINE DSICS(N,Nelt,Ia,Ja,A,Isym,Nel,Iel,Jel,El,D,R,Iwarn)
           ERROR STOP 'DSICS : A and EL data structure mismatch in row'
         END IF
       END IF
-      50 CONTINUE
-    END DO
+      ! (Label 50 removed - success handled by named CYCLE)
+    END DO irr_loop
   END DO
   !
   !         Replace diagonals by their inverses.

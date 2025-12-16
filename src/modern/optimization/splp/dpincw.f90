@@ -34,6 +34,10 @@ PURE SUBROUTINE DPINCW(Mrelas,Nvars,Lmx,Lbm,Npp,Jstrt,Imat,Ibrc,Ipr,Iwr,&
   !   890606  Changed references from IPLOC to IDLOC.  (WRB)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900328  Added TYPE section.  (WRB)
+  !   211001  Converted to free-form, added INTENT, PURE.  (Mehdi Chinoune)
+  !   251216  Eliminated GOTO 100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.4.2 (DO construct)
+  !           Original: Hanson & Hiebert (SPLP)
   INTEGER, INTENT(IN) :: Lbm, Lmx, Mrelas, Npp, Nvars
   INTEGER, INTENT(INOUT) :: Jstrt
   REAL(DP), INTENT(IN) :: Costsc, Erdnrm, Dulnrm, Gg
@@ -56,7 +60,8 @@ PURE SUBROUTINE DPINCW(Mrelas,Nvars,Lmx,Lbm,Npp,Jstrt,Imat,Ibrc,Ipr,Iwr,&
   Rg(1:Nvars+Mrelas) = 1._DP
   nnegrc = 0
   j = Jstrt
-  100 CONTINUE
+  ! Main search loop (was GOTO 100 loop)
+  DO
   IF( Ibb(j)<=0 ) THEN
     pagepl = .TRUE.
     !
@@ -124,7 +129,8 @@ PURE SUBROUTINE DPINCW(Mrelas,Nvars,Lmx,Lbm,Npp,Jstrt,Imat,Ibrc,Ipr,Iwr,&
   IF( j<=Nvars ) cnorm = Colnrm(j)
   IF( rcost+Erdnrm*Dulnrm*cnorm<0._DP ) nnegrc = nnegrc + 1
   j = MOD(j,Mrelas+Nvars) + 1
-  IF( nnegrc<Npp .AND. j/=Jstrt ) GOTO 100
+  IF( nnegrc>=Npp .OR. j==Jstrt ) EXIT
+  END DO
   Jstrt = j
 
 END SUBROUTINE DPINCW
