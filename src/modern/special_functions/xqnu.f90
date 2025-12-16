@@ -24,6 +24,10 @@ SUBROUTINE XQNU(Nu1,Nu2,Mu1,Theta,X,Sx,Id,Pqa,Ipqa,Ierror)
   !   901106  Corrected order of sections in prologue and added TYPE
   !           section.  (WRB)
   !   920127  Revised PURPOSE section of prologue.  (DWL)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.2.1 (CYCLE statement)
+  !           Original: Smith, NBS (Legendre functions)
 
   INTEGER :: Ierror, Ipqa(*), Mu1
   REAL(SP) :: Nu1, Nu2, Pqa(*), Sx, X, Theta
@@ -62,9 +66,11 @@ SUBROUTINE XQNU(Nu1,Nu2,Mu1,Theta,X,Sx,Id,Pqa,Ipqa,Ierror)
   ipq1 = Ipqa(k)
   pql1 = Pqa(k-1)
   ipql1 = Ipqa(k-1)
-  100  mu = 1
-  dmu = 1._SP
-  DO
+  ! Forward mu-recurrence loop (was GOTO 100 target)
+  mu_recurrence: DO
+    mu = 1
+    dmu = 1._SP
+    DO
     !
     !        FORWARD RECURRENCE IN MU TO OBTAIN Q(MU1,NU2,X) AND
     !              Q(MU1,NU2-1,X) USING
@@ -128,8 +134,9 @@ SUBROUTINE XQNU(Nu1,Nu2,Mu1,Theta,X,Sx,Id,Pqa,Ipqa,Ierror)
         pq1 = pql1
         ipq1 = ipql1
         k = k - 1
-        GOTO 100
+        CYCLE mu_recurrence  ! Restart mu recurrence (was GOTO 100)
       END IF
     END IF
-  END DO
+    END DO
+  END DO mu_recurrence
 END SUBROUTINE XQNU

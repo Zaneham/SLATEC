@@ -171,7 +171,7 @@ SUBROUTINE DXLEGF(Dnu1,Nudiff,Mu1,Mu2,Theta,Id,Pqa,Ipqa,Ierror)
               !
               dnu2 = Dnu1 + Nudiff
               IF( (Id/=3) .OR. (MOD(Dnu1,1._DP)==0._DP) ) THEN
-                IF( (Id==4) .AND. (MOD(Dnu1,1._DP)/=0._DP) ) GOTO 100
+                IF( (Id==4) .AND. (MOD(Dnu1,1._DP)/=0._DP) ) ERROR STOP 'DXLEGF : DNU1, NUDIFF, MU1, MU2, or ID not valid'
                 IF( (Id==3 .OR. Id==4) .AND. Mu1>dnu2 ) RETURN
               END IF
               !
@@ -239,7 +239,7 @@ SUBROUTINE DXLEGF(Dnu1,Nudiff,Mu1,Mu2,Theta,Id,Pqa,Ipqa,Ierror)
   !
   !        *****     ERROR TERMINATION     *****
   !
-  100 ERROR STOP 'DXLEGF : DNU1, NUDIFF, MU1, MU2, or ID not valid'
+  ! (Label 100 removed - error handled inline)
   Ierror = 210
   RETURN
 END SUBROUTINE DXLEGF
