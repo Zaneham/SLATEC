@@ -108,25 +108,32 @@ SUBROUTINE MPADD3(X,Y,S,Med,Re)
         i = i - 1
       END IF
     END DO
+    early_exit = .FALSE.
     DO WHILE( i>0 )
       c = Y(i+2) + c
-      IF( c<b_com ) GOTO 100
+      IF( c<b_com ) THEN
+        early_exit = .TRUE.
+        EXIT  ! No carry, exit early (was GOTO 100)
+      END IF
       r_com(i) = 0
       c = 1
       i = i - 1
     END DO
-    IF( c==0 ) RETURN
-    ! MUST SHIFT RIGHT HERE AS CARRY OFF END
-    i2p = i2 + 1
-    DO j = 2, i2
-      i = i2p - j
-      r_com(i+1) = r_com(i)
-    END DO
-    r_com(1) = 1
-    Re = Re + 1
-    RETURN
+    IF( .NOT. early_exit ) THEN
+      IF( c==0 ) RETURN
+      ! MUST SHIFT RIGHT HERE AS CARRY OFF END
+      i2p = i2 + 1
+      DO j = 2, i2
+        i = i2p - j
+        r_com(i+1) = r_com(i)
+      END DO
+      r_com(1) = 1
+      Re = Re + 1
+      RETURN
+    END IF
   END IF
-  100  r_com(i) = c
+  ! (Label 100 removed - early exit handled by flag)
+  r_com(i) = c
   i = i - 1
   DO
     ! NO CARRY POSSIBLE HERE
