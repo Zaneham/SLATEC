@@ -28,6 +28,10 @@ SUBROUTINE XPQNU(Nu1,Nu2,Mu,Theta,Id,Pqa,Ipqa,Ierror)
   !           Corrected order of sections in prologue and added TYPE
   !           section.  (WRB)
   !   920127  Revised PURPOSE section of prologue.  (DWL)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251216  Eliminated GOTO 100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.4.2 (DO construct)
+  !           Original: Smith, NBS (Legendre functions)
   USE XBLK ,ONLY: nbitsf_com
   INTEGER :: Id, Ierror, Mu, Ipqa(*)
   REAL(SP) :: Nu1, Nu2, Theta, Pqa(*)
@@ -174,7 +178,9 @@ SUBROUTINE XPQNU(Nu1,Nu2,Mu,Theta,Id,Pqa,Ipqa,Ierror)
     Ipqa(k) = ipq2
     IF( nu>Nu2+.5_SP ) RETURN
   END IF
-  100  pq1 = pq
+  ! Forward nu-wise recurrence loop (was GOTO 100)
+  DO
+    pq1 = pq
   ipq1 = ipq
   IF( nu>=Nu1+.5_SP ) THEN
     k = k + 1
@@ -199,6 +205,6 @@ SUBROUTINE XPQNU(Nu1,Nu2,Mu,Theta,Id,Pqa,Ipqa,Ierror)
   nu = nu + 1._SP
   pq2 = pq1
   ipq2 = ipq1
-  GOTO 100
+  END DO
   !
 END SUBROUTINE XPQNU

@@ -59,7 +59,10 @@ PURE SUBROUTINE ZBUNI(Z,Fnu,Kode,N,Y,Nz,Nui,Nlast,Fnul,Tol,Elim,Alim)
       !-----------------------------------------------------------------------
       CALL ZUNI1(Z,Fnu,Kode,N,Y,nw,Nlast,Fnul,Tol,Elim,Alim)
     END IF
-    IF( nw>=0 ) GOTO 100
+    IF( nw>=0 ) THEN
+      Nz = nw  ! Success (was GOTO 100)
+      RETURN
+    END IF
   ELSE
     fnui = Nui
     dfnu = Fnu + (N-1)
@@ -176,7 +179,5 @@ PURE SUBROUTINE ZBUNI(Z,Fnu,Kode,N,Y,Nz,Nui,Nlast,Fnul,Tol,Elim,Alim)
   Nz = -1
   IF( nw==(-2) ) Nz = -2
   RETURN
-  100  Nz = nw
-  !
-  RETURN
+  ! (Label 100 removed - handled inline)
 END SUBROUTINE ZBUNI

@@ -133,10 +133,11 @@ PURE SUBROUTINE ZUNIK(Zr,Fnu,Ikflg,Ipmtr,Tol,Init,Phi,Zeta1,Zeta2,Summ,Cwrk)
         tstr = REAL(Cwrk(k),DP)
         tsti = AIMAG(Cwrk(k))
         test = ABS(tstr) + ABS(tsti)
-        IF( ac<Tol .AND. test<Tol ) GOTO 20
+        IF( ac<Tol .AND. test<Tol ) EXIT  ! Converged (was GOTO 20)
       END DO
-      k = 15
-      20  Init = k
+      ! Check if we exited early or exhausted iterations
+      IF( k > 15 ) k = 15
+      Init = k  ! (Label 20 removed)
     ELSE
       ac = 2._DP*ABS(LOG(test)) + Fnu
       Zeta1 = CMPLX(ac,0._DP,DP)

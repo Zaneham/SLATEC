@@ -36,6 +36,10 @@ PURE SUBROUTINE SPLPFE(Mrelas,Nvars,Lmx,Lbm,Ienter,Ibasis,Imat,Ibrc,Ipr,Iwr,&
   !   890605  Removed unreferenced labels.  (WRB)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900328  Added TYPE section.  (WRB)
+  !   211001  Converted to free-form, added INTENT, PURE.  (Mehdi Chinoune)
+  !   251216  Eliminated GOTO 50 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.2.1 (CYCLE statement)
+  !           Original: Hanson & Hiebert (SPLP)
   INTEGER, INTENT(IN) :: Lbm, Lmx, Mrelas, Nvars
   INTEGER, INTENT(OUT) :: Ienter
   REAL(SP), INTENT(IN) :: Dulnrm, Eps, Erdnrm, Gg
@@ -55,8 +59,8 @@ PURE SUBROUTINE SPLPFE(Mrelas,Nvars,Lmx,Lbm,Ienter,Ibasis,Imat,Ibrc,Ipr,Iwr,&
   rmax = 0._SP
   Found = .FALSE.
   i = Mrelas + 1
-  n20002 = Mrelas + Nvars
-  DO WHILE( (n20002-i)>=0 )
+  ! Search for variable to enter basis
+  DO i = Mrelas + 1, Mrelas + Nvars
     j = Ibasis(i)
     !
     !     IF J=IBASIS(I) < 0 THEN THE VARIABLE LEFT AT A ZERO LEVEL
@@ -69,7 +73,7 @@ PURE SUBROUTINE SPLPFE(Mrelas,Nvars,Lmx,Lbm,Ienter,Ibasis,Imat,Ibrc,Ipr,Iwr,&
         !     IF A VARIABLE CORRESPONDS TO AN EQUATION(IND=3 AND BL=BU),
         !     THEN DO NOT CONSIDER IT AS A CANDIDATE TO ENTER.
         IF( Ind(j)==3 ) THEN
-          IF( (Bu(j)-Bl(j))<=Eps*(ABS(Bl(j))+ABS(Bu(j))) ) GOTO 50
+          IF( (Bu(j)-Bl(j))<=Eps*(ABS(Bl(j))+ABS(Bu(j))) ) CYCLE  ! Skip equation variables (was GOTO 50)
         END IF
         rcost = Rz(j)
         !
@@ -94,7 +98,7 @@ PURE SUBROUTINE SPLPFE(Mrelas,Nvars,Lmx,Lbm,Ienter,Ibasis,Imat,Ibrc,Ipr,Iwr,&
         END IF
       END IF
     END IF
-    50  i = i + 1
+    ! (Label 50 removed - handled by CYCLE)
   END DO
   !
   !     USE COL. CHOSEN TO COMPUTE SEARCH DIRECTION.

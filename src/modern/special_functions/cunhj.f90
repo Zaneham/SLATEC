@@ -401,11 +401,12 @@ PURE SUBROUTINE CUNHJ(Z,Fnu,Ipmtr,Tol,Phi,Arg,Zeta1,Zeta2,Asum,Bsum)
           p(k) = p(k-1)*w2
           suma = suma + p(k)*CMPLX(gama(k),0._SP,SP)
           ap(k) = ap(k-1)*aw2
-          IF( ap(k)<Tol ) GOTO 20
+          IF( ap(k)<Tol ) EXIT  ! Converged (was GOTO 20)
         END DO
-        k = 30
+        ! Check if we exited early or exhausted iterations
+        IF( k > 30 ) k = 30
       END IF
-      20  kmax = k
+      kmax = k  ! (Label 20 removed)
       zeta = w2*suma
       Arg = zeta*CMPLX(fn23,0._SP,SP)
       za = SQRT(suma)
