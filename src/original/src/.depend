@@ -1,0 +1,4125 @@
+F aaaaaa.f
+D aaaaaa_
+
+F asyik.f
+D asyik_
+R r1mach_
+
+F asyjy.f
+D asyjy_
+R i1mach_
+R r1mach_
+
+F avint.f
+D avint_
+R xermsg_
+
+F bcrh.f
+D bcrh_
+
+F bdiff.f
+D bdiff_
+
+F besi.f
+D besi_
+R alngam_
+R asyik_
+R i1mach_
+R r1mach_
+R xermsg_
+
+F besj.f
+D besj_
+R alngam_
+R asyjy_
+R i1mach_
+R jairy_
+R r1mach_
+R xermsg_
+
+F besk.f
+D besk_
+R asyik_
+R besk0_
+R besk0e_
+R besk1_
+R besk1e_
+R besknu_
+R i1mach_
+R r1mach_
+R xermsg_
+
+F besknu.f
+D besknu_
+R gamma_
+R i1mach_
+R r1mach_
+R xermsg_
+
+F besy.f
+D besy_
+R asyjy_
+R besy0_
+R besy1_
+R besynu_
+R i1mach_
+R r1mach_
+R xermsg_
+R yairy_
+
+F besynu.f
+D besynu_
+R gamma_
+R r1mach_
+R xermsg_
+
+F bfqad.f
+D bfqad_
+R bsgq8_
+R intrv_
+R r1mach_
+R xermsg_
+
+F bint4.f
+D bint4_
+R bnfac_
+R bnslv_
+R bspvd_
+R r1mach_
+R xermsg_
+
+F bintk.f
+D bintk_
+R bnfac_
+R bnslv_
+R bspvn_
+R xermsg_
+
+F bkias.f
+D bkias_
+R bdiff_
+R gamrn_
+R hkseq_
+R r1mach_
+
+F bkisr.f
+D bkisr_
+R psixn_
+R r1mach_
+
+F bksol.f
+D bksol_
+R sdot_
+
+F blktr1.f
+D blktr1_
+R indxa_
+R indxb_
+R indxc_
+
+F bndacc.f
+D bndacc_
+R h12_
+R xermsg_
+
+F bndsol.f
+D bndsol_
+R xermsg_
+
+F bnfac.f
+D bnfac_
+
+F bnslv.f
+D bnslv_
+
+F bsgq8.f
+D bsgq8_
+R bvalu_
+R i1mach_
+R r1mach_
+R xermsg_
+
+F bskin.f
+D bskin_
+R bkias_
+R bkisr_
+R exint_
+R gamrn_
+R i1mach_
+R r1mach_
+
+F bspdoc.f
+D bspdoc_
+
+F bspdr.f
+D bspdr_
+R xermsg_
+
+F bspev.f
+D bspev_
+R bspvn_
+R intrv_
+R xermsg_
+
+F bsplvd.f
+D bsplvd_
+R bsplvn_
+
+F bsplvn.f
+D bsplvn_
+
+F bsppp.f
+D bsppp_
+R bspdr_
+R bspev_
+R xermsg_
+
+F bspvd.f
+D bspvd_
+R bspvn_
+R xermsg_
+
+F bspvn.f
+D bspvn_
+R xermsg_
+
+F bsqad.f
+D bsqad_
+R bvalu_
+R intrv_
+R xermsg_
+
+F bsrh.f
+D bsrh_
+
+F bvalu.f
+D bvalu_
+R intrv_
+R xermsg_
+
+F bvder.f
+D bvder_
+R fmat_
+R gvec_
+R uivp_
+R uvec_
+
+F bvpor.f
+D bvpor_
+R bksol_
+R lssuds_
+R rkfab_
+R scoef_
+R sdot_
+R stor1_
+R stway_
+R svecs_
+
+F bvsup.f
+D bvsup_
+R exbvp_
+R macon_
+R xermsg_
+
+F c1merg.f
+D c1merg_
+R ccopy_
+
+F cacai.f
+D cacai_
+R casyi_
+R cbknu_
+R cmlri_
+R cs1s2_
+R cseri_
+R r1mach_
+
+F cacon.f
+D cacon_
+R cbinu_
+R cbknu_
+R cs1s2_
+R r1mach_
+
+F cairy.f
+D cairy_
+R cacai_
+R cbknu_
+R i1mach_
+R r1mach_
+
+F casyi.f
+D casyi_
+R r1mach_
+
+F cbesh.f
+D cbesh_
+R cacon_
+R cbknu_
+R cbunk_
+R cuoik_
+R i1mach_
+R r1mach_
+
+F cbesi.f
+D cbesi_
+R cbinu_
+R i1mach_
+R r1mach_
+
+F cbesj.f
+D cbesj_
+R cbinu_
+R i1mach_
+R r1mach_
+
+F cbesk.f
+D cbesk_
+R cacon_
+R cbknu_
+R cbunk_
+R cuoik_
+R i1mach_
+R r1mach_
+
+F cbesy.f
+D cbesy_
+R cbesh_
+R i1mach_
+R r1mach_
+
+F cbinu.f
+D cbinu_
+R casyi_
+R cbuni_
+R cmlri_
+R cseri_
+R cuoik_
+R cwrsk_
+
+F cbiry.f
+D cbiry_
+R cbinu_
+R i1mach_
+R r1mach_
+
+F cbknu.f
+D cbknu_
+R ckscl_
+R cshch_
+R cuchk_
+R gamln_
+R i1mach_
+R r1mach_
+
+F cblkt1.f
+D cblkt1_
+R inxca_
+R inxcb_
+R inxcc_
+
+F cbuni.f
+D cbuni_
+R cuni1_
+R cuni2_
+R r1mach_
+
+F cbunk.f
+D cbunk_
+R cunk1_
+R cunk2_
+
+F ccmpb.f
+D ccmpb_
+R cpadd_
+R inxcb_
+R r1mach_
+R tevlc_
+
+F cdcor.f
+D cdcor_
+R cgbsl_
+R cgesl_
+R scnrm2_
+
+F cdcst.f
+D cdcst_
+
+F cdiv.f
+D cdiv_
+
+F cdntl.f
+D cdntl_
+R cdcst_
+R cdscl_
+R cgbfa_
+R cgbsl_
+R cgefa_
+R cgesl_
+R scnrm2_
+
+F cdntp.f
+D cdntp_
+
+F cdpsc.f
+D cdpsc_
+
+F cdpst.f
+D cdpst_
+R cgbfa_
+R cgefa_
+R scnrm2_
+
+F cdriv1.f
+D cdriv1_
+R cdriv3_
+R xermsg_
+
+F cdriv2.f
+D cdriv2_
+R cdriv3_
+R xermsg_
+
+F cdriv3.f
+D cdriv3_
+R cdntp_
+R cdstp_
+R cdzro_
+R cgbfa_
+R cgbsl_
+R cgefa_
+R cgesl_
+R r1mach_
+R scnrm2_
+R xermsg_
+
+F cdscl.f
+D cdscl_
+
+F cdstp.f
+D cdstp_
+R cdcor_
+R cdcst_
+R cdntl_
+R cdpsc_
+R cdpst_
+R cdscl_
+R scnrm2_
+
+F cdzro.f
+D cdzro_
+R cdntp_
+
+F cfod.f
+D cfod_
+
+F cgeev.f
+D cgeev_
+R cbabk2_
+R cbal_
+R comqr2_
+R comqr_
+R corth_
+R scopy_
+R xermsg_
+
+F cgefs.f
+D cgefs_
+R cgeco_
+R cgesl_
+R r1mach_
+R xermsg_
+
+F cgeir.f
+D cgeir_
+R ccopy_
+R cdcdot_
+R cgefa_
+R cgesl_
+R r1mach_
+R scasum_
+R xermsg_
+
+F chiev.f
+D chiev_
+R htribk_
+R htridi_
+R imtql2_
+R scopy_
+R scopym_
+R tqlrat_
+R xermsg_
+
+F chkder.f
+D chkder_
+R r1mach_
+
+F chkpr4.f
+D chkpr4_
+
+F chkprm.f
+D chkprm_
+
+F chksn4.f
+D chksn4_
+
+F chksng.f
+D chksng_
+
+F ckscl.f
+D ckscl_
+R cuchk_
+
+F cmlri.f
+D cmlri_
+R gamln_
+R r1mach_
+
+F cmpcsg.f
+D cmpcsg_
+R pimach_
+
+F cmposd.f
+D cmposd_
+R c1merg_
+R cmpcsg_
+R cmptrx_
+
+F cmposn.f
+D cmposn_
+R c1merg_
+R cmpcsg_
+R cmptr3_
+R cmptrx_
+
+F cmposp.f
+D cmposp_
+R cmposd_
+R cmposn_
+
+F cmptr3.f
+D cmptr3_
+
+F cmptrx.f
+D cmptrx_
+
+F cnbco.f
+D cnbco_
+R caxpy_
+R cdotc_
+R cnbfa_
+R csscal_
+R scasum_
+
+F cnbdi.f
+D cnbdi_
+
+F cnbfa.f
+D cnbfa_
+R caxpy_
+R cscal_
+R cswap_
+R icamax_
+
+F cnbfs.f
+D cnbfs_
+R cnbco_
+R cnbsl_
+R r1mach_
+R xermsg_
+
+F cnbir.f
+D cnbir_
+R ccopy_
+R cdcdot_
+R cnbfa_
+R cnbsl_
+R r1mach_
+R scasum_
+R xermsg_
+
+F cnbsl.f
+D cnbsl_
+R caxpy_
+R cdotc_
+
+F compb.f
+D compb_
+R indxb_
+R ppadd_
+R r1mach_
+R tevls_
+
+F cosgen.f
+D cosgen_
+R pimach_
+
+F cpadd.f
+D cpadd_
+R bcrh_
+R pgsf_
+R ppgsf_
+R pppsf_
+
+F cpevl.f
+D cpevl_
+R i1mach_
+
+F cpevlr.f
+D cpevlr_
+
+F cpofs.f
+D cpofs_
+R cpoco_
+R cposl_
+R r1mach_
+R xermsg_
+
+F cpoir.f
+D cpoir_
+R ccopy_
+R cpofa_
+R cposl_
+R dcdot_
+R r1mach_
+R scasum_
+R xermsg_
+
+F cpqr79.f
+D cpqr79_
+R comqr_
+R xermsg_
+
+F cproc.f
+D cproc_
+
+F cprocp.f
+D cprocp_
+
+F cprod.f
+D cprod_
+
+F cprodp.f
+D cprodp_
+
+F cpzero.f
+D cpzero_
+R cpevl_
+
+F crati.f
+D crati_
+
+F cs1s2.f
+D cs1s2_
+
+F cscale.f
+D cscale_
+R sdot_
+
+F cseri.f
+D cseri_
+R cuchk_
+R gamln_
+R r1mach_
+
+F cshch.f
+D cshch_
+
+F csroot.f
+D csroot_
+R pythag_
+
+F cuchk.f
+D cuchk_
+
+F cunhj.f
+D cunhj_
+R r1mach_
+
+F cuni1.f
+D cuni1_
+R cuchk_
+R cunik_
+R cuoik_
+R r1mach_
+
+F cuni2.f
+D cuni2_
+R cairy_
+R cuchk_
+R cunhj_
+R cuoik_
+R r1mach_
+
+F cunik.f
+D cunik_
+R r1mach_
+
+F cunk1.f
+D cunk1_
+R cs1s2_
+R cuchk_
+R cunik_
+R r1mach_
+
+F cunk2.f
+D cunk2_
+R cairy_
+R cs1s2_
+R cuchk_
+R cunhj_
+R r1mach_
+
+F cuoik.f
+D cuoik_
+R cuchk_
+R cunhj_
+R cunik_
+R r1mach_
+
+F cv.f
+D cv_
+R bsplvn_
+R sdot_
+
+F cwrsk.f
+D cwrsk_
+R cbknu_
+R crati_
+R r1mach_
+
+F d1mach.f
+D d1mach_
+R xermsg_
+
+F d1merg.f
+D d1merg_
+R dcopy_
+
+F d1mpyq.f
+D d1mpyq_
+
+F d1updt.f
+D d1updt_
+R d1mach_
+
+F dasyik.f
+D dasyik_
+R d1mach_
+
+F dasyjy.f
+D dasyjy_
+R d1mach_
+R i1mach_
+
+F davint.f
+D davint_
+R xermsg_
+
+F dbdiff.f
+D dbdiff_
+
+F dbesi.f
+D dbesi_
+R d1mach_
+R dasyik_
+R dlngam_
+R i1mach_
+R xermsg_
+
+F dbesj.f
+D dbesj_
+R d1mach_
+R dasyjy_
+R djairy_
+R dlngam_
+R i1mach_
+R xermsg_
+
+F dbesk.f
+D dbesk_
+R d1mach_
+R dasyik_
+R dbesk0_
+R dbesk1_
+R dbsk0e_
+R dbsk1e_
+R dbsknu_
+R i1mach_
+R xermsg_
+
+F dbesy.f
+D dbesy_
+R d1mach_
+R dasyjy_
+R dbesy0_
+R dbesy1_
+R dbsynu_
+R dyairy_
+R i1mach_
+R xermsg_
+
+F dbfqad.f
+D dbfqad_
+R d1mach_
+R dbsgq8_
+R dintrv_
+R xermsg_
+
+F dbint4.f
+D dbint4_
+R d1mach_
+R dbnfac_
+R dbnslv_
+R dbspvd_
+R xermsg_
+
+F dbintk.f
+D dbintk_
+R dbnfac_
+R dbnslv_
+R dbspvn_
+R xermsg_
+
+F dbkias.f
+D dbkias_
+R d1mach_
+R dbdiff_
+R dgamrn_
+R dhkseq_
+
+F dbkisr.f
+D dbkisr_
+R d1mach_
+R dpsixn_
+
+F dbksol.f
+D dbksol_
+R ddot_
+
+F dbndac.f
+D dbndac_
+R dh12_
+R xermsg_
+
+F dbndsl.f
+D dbndsl_
+R xermsg_
+
+F dbnfac.f
+D dbnfac_
+
+F dbnslv.f
+D dbnslv_
+
+F dbocls.f
+D dbocls_
+R d1mach_
+R dasum_
+R dbols_
+R dcopy_
+R ddot_
+R dnrm2_
+R dscal_
+R xermsg_
+
+F dbols.f
+D dbols_
+R dbolsm_
+R dcopy_
+R dnrm2_
+R drot_
+R drotg_
+R idamax_
+R xermsg_
+
+F dbolsm.f
+D dbolsm_
+R d1mach_
+R daxpy_
+R dcopy_
+R ddot_
+R dmout_
+R dnrm2_
+R drot_
+R drotg_
+R dswap_
+R dvout_
+R ivout_
+R xermsg_
+
+F dbsgq8.f
+D dbsgq8_
+R d1mach_
+R dbvalu_
+R i1mach_
+R xermsg_
+
+F dbskin.f
+D dbskin_
+R d1mach_
+R dbkias_
+R dbkisr_
+R dexint_
+R dgamrn_
+R i1mach_
+
+F dbsknu.f
+D dbsknu_
+R d1mach_
+R dgamma_
+R i1mach_
+R xermsg_
+
+F dbspdr.f
+D dbspdr_
+R xermsg_
+
+F dbspev.f
+D dbspev_
+R dbspvn_
+R dintrv_
+R xermsg_
+
+F dbsppp.f
+D dbsppp_
+R dbspdr_
+R dbspev_
+R xermsg_
+
+F dbspvd.f
+D dbspvd_
+R dbspvn_
+R xermsg_
+
+F dbspvn.f
+D dbspvn_
+R xermsg_
+
+F dbsqad.f
+D dbsqad_
+R dbvalu_
+R dintrv_
+R xermsg_
+
+F dbsynu.f
+D dbsynu_
+R d1mach_
+R dgamma_
+R xermsg_
+
+F dbvalu.f
+D dbvalu_
+R dintrv_
+R xermsg_
+
+F dbvder.f
+D dbvder_
+R dfmat_
+R dgvec_
+R duivp_
+R duvec_
+
+F dbvpor.f
+D dbvpor_
+R dbksol_
+R dcoef_
+R ddot_
+R dlssud_
+R drkfab_
+R dstor1_
+R dstway_
+R dvecs_
+
+F dbvsup.f
+D dbvsup_
+R dexbvp_
+R dmacon_
+R xermsg_
+
+F dcfod.f
+D dcfod_
+
+F dckder.f
+D dckder_
+R d1mach_
+
+F dcoef.f
+D dcoef_
+R ddot_
+R dsuds_
+R xgetf_
+R xsetf_
+
+F dcov.f
+D dcov_
+R denorm_
+R dfdjc3_
+R dqrfac_
+R dwupdt_
+R xermsg_
+
+F dcscal.f
+D dcscal_
+R ddot_
+
+F dcv.f
+D dcv_
+R ddot_
+R dfspvn_
+
+F ddaini.f
+D ddaini_
+R ddajac_
+R ddanrm_
+R ddaslv_
+
+F ddajac.f
+D ddajac_
+R dgbfa_
+R dgefa_
+
+F ddanrm.f
+D ddanrm_
+
+F ddaslv.f
+D ddaslv_
+R dgbsl_
+R dgesl_
+
+F ddassl.f
+D ddassl_
+R d1mach_
+R ddaini_
+R ddanrm_
+R ddastp_
+R ddatrp_
+R ddawts_
+R xermsg_
+
+F ddastp.f
+D ddastp_
+R ddajac_
+R ddanrm_
+R ddaslv_
+R ddatrp_
+
+F ddatrp.f
+D ddatrp_
+
+F ddawts.f
+D ddawts_
+
+F ddcor.f
+D ddcor_
+R dgbsl_
+R dgesl_
+R dnrm2_
+
+F ddcst.f
+D ddcst_
+
+F ddeabm.f
+D ddeabm_
+R ddes_
+R xermsg_
+
+F ddebdf.f
+D ddebdf_
+R dlsod_
+R xermsg_
+
+F dderkf.f
+D dderkf_
+R drkfs_
+R xermsg_
+
+F ddes.f
+D ddes_
+R d1mach_
+R dintp_
+R dsteps_
+R xermsg_
+
+F ddntl.f
+D ddntl_
+R ddcst_
+R ddscl_
+R dgbfa_
+R dgbsl_
+R dgefa_
+R dgesl_
+R dnrm2_
+
+F ddntp.f
+D ddntp_
+
+F ddoglg.f
+D ddoglg_
+R d1mach_
+R denorm_
+
+F ddpsc.f
+D ddpsc_
+
+F ddpst.f
+D ddpst_
+R dgbfa_
+R dgefa_
+R dnrm2_
+
+F ddriv1.f
+D ddriv1_
+R ddriv3_
+R xermsg_
+
+F ddriv2.f
+D ddriv2_
+R ddriv3_
+R xermsg_
+
+F ddriv3.f
+D ddriv3_
+R d1mach_
+R ddntp_
+R ddstp_
+R ddzro_
+R dgbfa_
+R dgbsl_
+R dgefa_
+R dgesl_
+R dnrm2_
+R xermsg_
+
+F ddscl.f
+D ddscl_
+
+F ddstp.f
+D ddstp_
+R ddcor_
+R ddcst_
+R ddntl_
+R ddpsc_
+R ddpst_
+R ddscl_
+R dnrm2_
+
+F ddzro.f
+D ddzro_
+R ddntp_
+
+F deabm.f
+D deabm_
+R des_
+R xermsg_
+
+F debdf.f
+D debdf_
+R lsod_
+R xermsg_
+
+F defc.f
+D defc_
+R defcmn_
+
+F defcmn.f
+D defcmn_
+R dbndac_
+R dbndsl_
+R dcopy_
+R dfspvn_
+R dscal_
+R dsort_
+R xermsg_
+
+F defe4.f
+D defe4_
+R dx4_
+R dy4_
+
+F defehl.f
+D defehl_
+
+F defer.f
+D defer_
+R dx_
+R dy_
+
+F denorm.f
+D denorm_
+
+F derkf.f
+D derkf_
+R derkfs_
+R xermsg_
+
+F derkfs.f
+D derkfs_
+R defehl_
+R hstart_
+R hvnrm_
+R r1mach_
+R xermsg_
+
+F des.f
+D des_
+R r1mach_
+R sintrp_
+R steps_
+R xermsg_
+
+F dexbvp.f
+D dexbvp_
+R dbvpor_
+R xermsg_
+
+F dexint.f
+D dexint_
+R d1mach_
+R dpsixn_
+R i1mach_
+
+F dfc.f
+D dfc_
+R dfcmn_
+
+F dfcmn.f
+D dfcmn_
+R daxpy_
+R dbndac_
+R dbndsl_
+R dcopy_
+R dfspvd_
+R dfspvn_
+R dlsei_
+R dscal_
+R dsort_
+R xermsg_
+
+F dfdjc1.f
+D dfdjc1_
+R d1mach_
+
+F dfdjc3.f
+D dfdjc3_
+R d1mach_
+
+F dfehl.f
+D dfehl_
+
+F dfspvd.f
+D dfspvd_
+R dfspvn_
+
+F dfspvn.f
+D dfspvn_
+
+F dfulmt.f
+D dfulmt_
+R xermsg_
+
+F dfzero.f
+D dfzero_
+R d1mach_
+
+F dgamln.f
+D dgamln_
+R d1mach_
+R i1mach_
+
+F dgamrn.f
+D dgamrn_
+R d1mach_
+R i1mach_
+
+F dgaus8.f
+D dgaus8_
+R d1mach_
+R i1mach_
+R xermsg_
+
+F dgefs.f
+D dgefs_
+R d1mach_
+R dgeco_
+R dgesl_
+R xermsg_
+
+F dglss.f
+D dglss_
+R dllsia_
+R dulsia_
+
+F dh12.f
+D dh12_
+R daxpy_
+R ddot_
+R dswap_
+
+F dhfti.f
+D dhfti_
+R d1mach_
+R dh12_
+R xermsg_
+
+F dhkseq.f
+D dhkseq_
+R d1mach_
+R i1mach_
+
+F dhstrt.f
+D dhstrt_
+R dhvnrm_
+
+F dhvnrm.f
+D dhvnrm_
+
+F dintp.f
+D dintp_
+
+F dintrv.f
+D dintrv_
+
+F dintyd.f
+D dintyd_
+
+F djairy.f
+D djairy_
+
+F dllsia.f
+D dllsia_
+R d1mach_
+R du11ls_
+R du12ls_
+R xermsg_
+
+F dlpdp.f
+D dlpdp_
+R dcopy_
+R ddot_
+R dnrm2_
+R dscal_
+R dwnnls_
+
+F dlsei.f
+D dlsei_
+R d1mach_
+R dasum_
+R daxpy_
+R dcopy_
+R ddot_
+R dh12_
+R dlsi_
+R dnrm2_
+R dscal_
+R dswap_
+R xermsg_
+
+F dlsi.f
+D dlsi_
+R d1mach_
+R dasum_
+R daxpy_
+R dcopy_
+R ddot_
+R dh12_
+R dhfti_
+R dlpdp_
+R dscal_
+R dswap_
+
+F dlsod.f
+D dlsod_
+R d1mach_
+R dhstrt_
+R dintyd_
+R dstod_
+R dvnrms_
+R xermsg_
+
+F dlssud.f
+D dlssud_
+R d1mach_
+R ddot_
+R dohtrl_
+R dorthr_
+R j4save_
+R xermax_
+R xermsg_
+R xgetf_
+R xsetf_
+
+F dmacon.f
+D dmacon_
+R d1mach_
+
+F dmgsbv.f
+D dmgsbv_
+R ddot_
+R dprvec_
+
+F dmout.f
+D dmout_
+R i1mach_
+
+F dmpar.f
+D dmpar_
+R d1mach_
+R denorm_
+R dqrslv_
+
+F dnbco.f
+D dnbco_
+R dasum_
+R daxpy_
+R ddot_
+R dnbfa_
+R dscal_
+
+F dnbdi.f
+D dnbdi_
+
+F dnbfa.f
+D dnbfa_
+R daxpy_
+R dscal_
+R dswap_
+R idamax_
+
+F dnbfs.f
+D dnbfs_
+R d1mach_
+R dnbco_
+R dnbsl_
+R xermsg_
+
+F dnbsl.f
+D dnbsl_
+R daxpy_
+R ddot_
+
+F dnls1.f
+D dnls1_
+R d1mach_
+R dckder_
+R denorm_
+R dfdjc3_
+R dmpar_
+R dqrfac_
+R dwupdt_
+R xermsg_
+
+F dnls1e.f
+D dnls1e_
+R dnls1_
+R xermsg_
+
+F dnsq.f
+D dnsq_
+R d1mach_
+R d1mpyq_
+R d1updt_
+R ddoglg_
+R denorm_
+R dfdjc1_
+R dqform_
+R dqrfac_
+R xermsg_
+
+F dnsqe.f
+D dnsqe_
+R dnsq_
+R xermsg_
+
+F dogleg.f
+D dogleg_
+R enorm_
+R r1mach_
+
+F dohtrl.f
+D dohtrl_
+R ddot_
+
+F dorthr.f
+D dorthr_
+R d1mach_
+R dcscal_
+R ddot_
+R xermsg_
+
+F dp1vlu.f
+D dp1vlu_
+R xermsg_
+
+F dpchng.f
+D dpchng_
+R dprwpg_
+R idloc_
+R xermsg_
+
+F dpcoef.f
+D dpcoef_
+R dp1vlu_
+
+F dpfqad.f
+D dpfqad_
+R d1mach_
+R dintrv_
+R dppgq8_
+R xermsg_
+
+F dpincw.f
+D dpincw_
+R dcopy_
+R ddot_
+R dprwpg_
+R idloc_
+R la05bd_
+
+F dpinit.f
+D dpinit_
+R dasum_
+R dcopy_
+R dpnnzr_
+
+F dpintm.f
+D dpintm_
+R xermsg_
+
+F dpjac.f
+D dpjac_
+R dgbfa_
+R dgefa_
+R dvnrms_
+
+F dplint.f
+D dplint_
+R xermsg_
+
+F dplpce.f
+D dplpce_
+R dasum_
+R dcopy_
+R dprwpg_
+R idloc_
+R la05bd_
+
+F dplpdm.f
+D dplpdm_
+R dasum_
+R dpnnzr_
+R la05ad_
+R xermsg_
+
+F dplpfe.f
+D dplpfe_
+R dasum_
+R dcopy_
+R dprwpg_
+R idloc_
+R la05bd_
+
+F dplpfl.f
+D dplpfl_
+
+F dplpmn.f
+D dplpmn_
+R dasum_
+R dcopy_
+R ddot_
+R dpincw_
+R dpinit_
+R dpintm_
+R dplpce_
+R dplpdm_
+R dplpfe_
+R dplpfl_
+R dplpmu_
+R dplpup_
+R dpnnzr_
+R dpopt_
+R dprwpg_
+R dvout_
+R ivout_
+R la05bd_
+R sclosm_
+R xermsg_
+
+F dplpmu.f
+D dplpmu_
+R dasum_
+R dcopy_
+R ddot_
+R dplpdm_
+R dpnnzr_
+R dprwpg_
+R idloc_
+R la05bd_
+R la05cd_
+R xermsg_
+
+F dplpup.f
+D dplpup_
+R dpchng_
+R dpnnzr_
+R xermsg_
+
+F dpnnzr.f
+D dpnnzr_
+R idloc_
+R xermsg_
+
+F dpofs.f
+D dpofs_
+R d1mach_
+R dpoco_
+R dposl_
+R xermsg_
+
+F dpolcf.f
+D dpolcf_
+
+F dpolft.f
+D dpolft_
+R dp1vlu_
+R xermsg_
+
+F dpolvl.f
+D dpolvl_
+
+F dpopt.f
+D dpopt_
+R d1mach_
+R xermsg_
+
+F dpperm.f
+D dpperm_
+R xermsg_
+
+F dppgq8.f
+D dppgq8_
+R d1mach_
+R dppval_
+R i1mach_
+R xermsg_
+
+F dppqad.f
+D dppqad_
+R dintrv_
+R xermsg_
+
+F dppval.f
+D dppval_
+R dintrv_
+R xermsg_
+
+F dprvec.f
+D dprvec_
+R ddot_
+
+F dprwpg.f
+D dprwpg_
+R dprwvr_
+R xermsg_
+
+F dprwvr.f
+D dprwvr_
+R dreadp_
+R dwritp_
+R sopenm_
+
+F dpsifn.f
+D dpsifn_
+R d1mach_
+R i1mach_
+
+F dpsixn.f
+D dpsixn_
+R d1mach_
+
+F dpsort.f
+D dpsort_
+R xermsg_
+
+F dqag.f
+D dqag_
+R dqage_
+R xermsg_
+
+F dqage.f
+D dqage_
+R d1mach_
+R dqk15_
+R dqk21_
+R dqk31_
+R dqk41_
+R dqk51_
+R dqk61_
+R dqpsrt_
+
+F dqagi.f
+D dqagi_
+R dqagie_
+R xermsg_
+
+F dqagie.f
+D dqagie_
+R d1mach_
+R dqelg_
+R dqk15i_
+R dqpsrt_
+
+F dqagp.f
+D dqagp_
+R dqagpe_
+R xermsg_
+
+F dqagpe.f
+D dqagpe_
+R d1mach_
+R dqelg_
+R dqk21_
+R dqpsrt_
+
+F dqags.f
+D dqags_
+R dqagse_
+R xermsg_
+
+F dqagse.f
+D dqagse_
+R d1mach_
+R dqelg_
+R dqk21_
+R dqpsrt_
+
+F dqawc.f
+D dqawc_
+R dqawce_
+R xermsg_
+
+F dqawce.f
+D dqawce_
+R d1mach_
+R dqc25c_
+R dqpsrt_
+
+F dqawf.f
+D dqawf_
+R dqawfe_
+R xermsg_
+
+F dqawfe.f
+D dqawfe_
+R d1mach_
+R dqagie_
+R dqawoe_
+R dqelg_
+
+F dqawo.f
+D dqawo_
+R dqawoe_
+R xermsg_
+
+F dqawoe.f
+D dqawoe_
+R d1mach_
+R dqc25f_
+R dqelg_
+R dqpsrt_
+
+F dqaws.f
+D dqaws_
+R dqawse_
+R xermsg_
+
+F dqawse.f
+D dqawse_
+R d1mach_
+R dqc25s_
+R dqmomo_
+R dqpsrt_
+
+F dqc25c.f
+D dqc25c_
+R dqcheb_
+R dqk15w_
+R dqwgtc_
+
+F dqc25f.f
+D dqc25f_
+R d1mach_
+R dgtsl_
+R dqcheb_
+R dqk15w_
+R dqwgtf_
+
+F dqc25s.f
+D dqc25s_
+R dqcheb_
+R dqk15w_
+R dqwgts_
+
+F dqcheb.f
+D dqcheb_
+
+F dqdota.f
+D dqdota_
+R mpadd_
+R mpblas_
+R mpcdm_
+R mpcmd_
+R mpmul_
+
+F dqdoti.f
+D dqdoti_
+R mpadd_
+R mpblas_
+R mpcdm_
+R mpcmd_
+R mpmul_
+
+F dqelg.f
+D dqelg_
+R d1mach_
+
+F dqform.f
+D dqform_
+
+F dqk15.f
+D dqk15_
+R d1mach_
+
+F dqk15i.f
+D dqk15i_
+R d1mach_
+
+F dqk15w.f
+D dqk15w_
+R d1mach_
+
+F dqk21.f
+D dqk21_
+R d1mach_
+
+F dqk31.f
+D dqk31_
+R d1mach_
+
+F dqk41.f
+D dqk41_
+R d1mach_
+
+F dqk51.f
+D dqk51_
+R d1mach_
+
+F dqk61.f
+D dqk61_
+R d1mach_
+
+F dqmomo.f
+D dqmomo_
+
+F dqnc79.f
+D dqnc79_
+R d1mach_
+R i1mach_
+R xermsg_
+
+F dqng.f
+D dqng_
+R d1mach_
+R xermsg_
+
+F dqpsrt.f
+D dqpsrt_
+
+F dqrfac.f
+D dqrfac_
+R d1mach_
+R denorm_
+
+F dqrslv.f
+D dqrslv_
+
+F dqwgtc.f
+D dqwgtc_
+
+F dqwgtf.f
+D dqwgtf_
+
+F dqwgts.f
+D dqwgts_
+
+F drc.f
+D drc_
+R d1mach_
+R xermsg_
+
+F drc3jj.f
+D drc3jj_
+R d1mach_
+R xermsg_
+
+F drc3jm.f
+D drc3jm_
+R d1mach_
+R xermsg_
+
+F drc6j.f
+D drc6j_
+R d1mach_
+R xermsg_
+
+F drd.f
+D drd_
+R d1mach_
+R xermsg_
+
+F dreadp.f
+D dreadp_
+R xermsg_
+
+F dreort.f
+D dreort_
+R ddot_
+R dmgsbv_
+R dstor1_
+R dstway_
+
+F drf.f
+D drf_
+R d1mach_
+R xermsg_
+
+F drj.f
+D drj_
+R d1mach_
+R drc_
+R xermsg_
+
+F drkfab.f
+D drkfab_
+R dbvder_
+R ddeabm_
+R dderkf_
+R dreort_
+R dstor1_
+
+F drkfs.f
+D drkfs_
+R d1mach_
+R dfehl_
+R dhstrt_
+R dhvnrm_
+R xermsg_
+
+F drsco.f
+D drsco_
+
+F dslvs.f
+D dslvs_
+R dgbsl_
+R dgesl_
+
+F dsort.f
+D dsort_
+R xermsg_
+
+F dsos.f
+D dsos_
+R dsoseq_
+R xermsg_
+
+F dsoseq.f
+D dsoseq_
+R d1mach_
+R dsossl_
+R i1mach_
+
+F dsossl.f
+D dsossl_
+
+F dsplp.f
+D dsplp_
+R dplpmn_
+R xermsg_
+
+F dsteps.f
+D dsteps_
+R d1mach_
+R dhstrt_
+
+F dstod.f
+D dstod_
+R dcfod_
+R dpjac_
+R dslvs_
+R dvnrms_
+
+F dstor1.f
+D dstor1_
+
+F dstway.f
+D dstway_
+R dstor1_
+
+F dsuds.f
+D dsuds_
+R dlssud_
+
+F dsvco.f
+D dsvco_
+
+F du11ls.f
+D du11ls_
+R daxpy_
+R ddot_
+R dnrm2_
+R dscal_
+R dswap_
+R idamax_
+R iswap_
+R xermsg_
+
+F du11us.f
+D du11us_
+R daxpy_
+R ddot_
+R dnrm2_
+R dscal_
+R dswap_
+R idamax_
+R iswap_
+R xermsg_
+
+F du12ls.f
+D du12ls_
+R daxpy_
+R ddot_
+R dnrm2_
+R dswap_
+
+F du12us.f
+D du12us_
+R daxpy_
+R ddot_
+R dnrm2_
+R dswap_
+
+F dulsia.f
+D dulsia_
+R d1mach_
+R du11us_
+R du12us_
+R xermsg_
+
+F dusrmt.f
+D dusrmt_
+
+F dvecs.f
+D dvecs_
+R dmgsbv_
+
+F dvnrms.f
+D dvnrms_
+
+F dvout.f
+D dvout_
+R i1mach_
+
+F dwnlit.f
+D dwnlit_
+R dcopy_
+R dh12_
+R drotm_
+R drotmg_
+R dscal_
+R dswap_
+R dwnlt1_
+R dwnlt2_
+R dwnlt3_
+R idamax_
+
+F dwnlsm.f
+D dwnlsm_
+R d1mach_
+R dasum_
+R daxpy_
+R dcopy_
+R dh12_
+R dnrm2_
+R drotm_
+R drotmg_
+R dscal_
+R dswap_
+R dwnlit_
+R idamax_
+R xermsg_
+
+F dwnlt1.f
+D dwnlt1_
+R idamax_
+
+F dwnlt2.f
+D dwnlt2_
+
+F dwnlt3.f
+D dwnlt3_
+R dswap_
+
+F dwnnls.f
+D dwnnls_
+R dwnlsm_
+R xermsg_
+
+F dwritp.f
+D dwritp_
+R xermsg_
+
+F dwupdt.f
+D dwupdt_
+
+F dx.f
+D dx_
+
+F dx4.f
+D dx4_
+
+F dxadd.f
+D dxadd_
+R dxadj_
+
+F dxadj.f
+D dxadj_
+R xermsg_
+
+F dxc210.f
+D dxc210_
+R xermsg_
+
+F dxcon.f
+D dxcon_
+R dxadj_
+R dxc210_
+R dxred_
+
+F dxlegf.f
+D dxlegf_
+R dxpmu_
+R dxpmup_
+R dxpnrm_
+R dxpqnu_
+R dxqmu_
+R dxqnu_
+R dxred_
+R dxset_
+R xermsg_
+
+F dxnrmp.f
+D dxnrmp_
+R dxadd_
+R dxadj_
+R dxred_
+R dxset_
+R xermsg_
+
+F dxpmu.f
+D dxpmu_
+R dxadd_
+R dxadj_
+R dxpqnu_
+
+F dxpmup.f
+D dxpmup_
+R dxadj_
+
+F dxpnrm.f
+D dxpnrm_
+R dxadj_
+
+F dxpqnu.f
+D dxpqnu_
+R dxadd_
+R dxadj_
+R dxpsi_
+
+F dxpsi.f
+D dxpsi_
+
+F dxqmu.f
+D dxqmu_
+R dxadd_
+R dxadj_
+R dxpqnu_
+
+F dxqnu.f
+D dxqnu_
+R dxadd_
+R dxadj_
+R dxpqnu_
+
+F dxred.f
+D dxred_
+
+F dxset.f
+D dxset_
+R i1mach_
+R xermsg_
+
+F dy.f
+D dy_
+
+F dy4.f
+D dy4_
+
+F dyairy.f
+D dyairy_
+
+F efc.f
+D efc_
+R efcmn_
+
+F efcmn.f
+D efcmn_
+R bndacc_
+R bndsol_
+R bsplvn_
+R scopy_
+R sscal_
+R ssort_
+R xermsg_
+
+F enorm.f
+D enorm_
+
+F exbvp.f
+D exbvp_
+R bvpor_
+R xermsg_
+
+F exint.f
+D exint_
+R i1mach_
+R psixn_
+R r1mach_
+
+F fc.f
+D fc_
+R fcmn_
+
+F fcmn.f
+D fcmn_
+R bndacc_
+R bndsol_
+R bsplvd_
+R bsplvn_
+R lsei_
+R saxpy_
+R scopy_
+R sscal_
+R ssort_
+R xermsg_
+
+F fdjac1.f
+D fdjac1_
+R r1mach_
+
+F fdjac3.f
+D fdjac3_
+R r1mach_
+
+F fdump.f
+D fdump_
+
+F fftdoc.f
+D fftdoc_
+
+F fulmat.f
+D fulmat_
+R xermsg_
+
+F fundoc.f
+D fundoc_
+
+F fzero.f
+D fzero_
+R r1mach_
+
+F gamln.f
+D gamln_
+R i1mach_
+R r1mach_
+
+F gamrn.f
+D gamrn_
+R i1mach_
+R r1mach_
+
+F gaus8.f
+D gaus8_
+R i1mach_
+R r1mach_
+R xermsg_
+
+F h12.f
+D h12_
+R saxpy_
+R sdot_
+R sswap_
+
+F hfti.f
+D hfti_
+R h12_
+R r1mach_
+R xermsg_
+
+F hkseq.f
+D hkseq_
+R i1mach_
+R r1mach_
+
+F hpperm.f
+D hpperm_
+R xermsg_
+
+F hpsort.f
+D hpsort_
+R xermsg_
+
+F hstart.f
+D hstart_
+R hvnrm_
+
+F hstcs1.f
+D hstcs1_
+R blktri_
+
+F hvnrm.f
+D hvnrm_
+
+F hwscs1.f
+D hwscs1_
+R blktri_
+
+F hwsss1.f
+D hwsss1_
+R genbun_
+
+F i1mach.f
+D i1mach_
+
+F i1merg.f
+D i1merg_
+R icopy_
+
+F idloc.f
+D idloc_
+R dprwpg_
+R xermsg_
+
+F indxa.f
+D indxa_
+
+F indxb.f
+D indxb_
+
+F indxc.f
+D indxc_
+
+F intrv.f
+D intrv_
+
+F intyd.f
+D intyd_
+
+F inxca.f
+D inxca_
+
+F inxcb.f
+D inxcb_
+
+F inxcc.f
+D inxcc_
+
+F iploc.f
+D iploc_
+R prwpge_
+R xermsg_
+
+F ipperm.f
+D ipperm_
+R xermsg_
+
+F ipsort.f
+D ipsort_
+R xermsg_
+
+F isort.f
+D isort_
+R xermsg_
+
+F ivout.f
+D ivout_
+R i1mach_
+
+F j4save.f
+D j4save_
+
+F jairy.f
+D jairy_
+
+F la05ad.f
+D la05ad_
+R d1mach_
+R la05ed_
+R mc20ad_
+R xermsg_
+R xsetun_
+
+F la05as.f
+D la05as_
+R la05es_
+R mc20as_
+R r1mach_
+R xermsg_
+R xsetun_
+
+F la05bd.f
+D la05bd_
+R xermsg_
+R xsetun_
+
+F la05bs.f
+D la05bs_
+R xermsg_
+R xsetun_
+
+F la05cd.f
+D la05cd_
+R la05ed_
+R xermsg_
+R xsetun_
+
+F la05cs.f
+D la05cs_
+R la05es_
+R xermsg_
+R xsetun_
+
+F la05ed.f
+D la05ed_
+
+F la05es.f
+D la05es_
+
+F llsia.f
+D llsia_
+R r1mach_
+R u11ls_
+R u12ls_
+R xermsg_
+
+F lmpar.f
+D lmpar_
+R enorm_
+R qrsolv_
+R r1mach_
+
+F lpdp.f
+D lpdp_
+R scopy_
+R sdot_
+R snrm2_
+R sscal_
+R wnnls_
+
+F lsame.f
+D lsame_
+
+F lsei.f
+D lsei_
+R h12_
+R lsi_
+R r1mach_
+R sasum_
+R saxpy_
+R scopy_
+R sdot_
+R snrm2_
+R sscal_
+R sswap_
+R xermsg_
+
+F lsi.f
+D lsi_
+R h12_
+R hfti_
+R lpdp_
+R r1mach_
+R sasum_
+R saxpy_
+R scopy_
+R sdot_
+R sscal_
+R sswap_
+
+F lsod.f
+D lsod_
+R hstart_
+R intyd_
+R r1mach_
+R stod_
+R vnwrms_
+R xermsg_
+
+F lssods.f
+D lssods_
+R j4save_
+R ohtror_
+R orthol_
+R r1mach_
+R sdot_
+R sdsdot_
+R xermax_
+R xermsg_
+R xgetf_
+R xsetf_
+
+F lssuds.f
+D lssuds_
+R j4save_
+R ohtrol_
+R orthor_
+R r1mach_
+R sdot_
+R xermax_
+R xermsg_
+R xgetf_
+R xsetf_
+
+F macon.f
+D macon_
+R r1mach_
+
+F mc20ad.f
+D mc20ad_
+
+F mc20as.f
+D mc20as_
+
+F mgsbv.f
+D mgsbv_
+R prvec_
+R sdot_
+
+F minso4.f
+D minso4_
+
+F minsol.f
+D minsol_
+
+F mpadd.f
+D mpadd_
+R mpadd2_
+
+F mpadd2.f
+D mpadd2_
+R mpadd3_
+R mpchk_
+R mperr_
+R mpnzr_
+R mpstr_
+
+F mpadd3.f
+D mpadd3_
+
+F mpblas.f
+D mpblas_
+R i1mach_
+R xermsg_
+
+F mpcdm.f
+D mpcdm_
+R mpchk_
+R mpdivi_
+R mpmuli_
+R mpnzr_
+
+F mpchk.f
+D mpchk_
+R i1mach_
+R mperr_
+
+F mpcmd.f
+D mpcmd_
+R mpchk_
+R mperr_
+
+F mpdivi.f
+D mpdivi_
+R mpchk_
+R mperr_
+R mpnzr_
+R mpstr_
+R mpunfl_
+
+F mperr.f
+D mperr_
+R xermsg_
+
+F mpmaxr.f
+D mpmaxr_
+R mpchk_
+
+F mpmlp.f
+D mpmlp_
+
+F mpmul.f
+D mpmul_
+R mpchk_
+R mperr_
+R mpmlp_
+R mpnzr_
+
+F mpmul2.f
+D mpmul2_
+R mpchk_
+R mperr_
+R mpnzr_
+R mpovfl_
+R mpstr_
+
+F mpmuli.f
+D mpmuli_
+R mpmul2_
+
+F mpnzr.f
+D mpnzr_
+R mperr_
+R mpovfl_
+R mpunfl_
+
+F mpovfl.f
+D mpovfl_
+R mpchk_
+R mperr_
+R mpmaxr_
+
+F mpstr.f
+D mpstr_
+
+F mpunfl.f
+D mpunfl_
+R mpchk_
+
+F numxer.f
+D numxer_
+R j4save_
+
+F ohtrol.f
+D ohtrol_
+R sdot_
+
+F ohtror.f
+D ohtror_
+R sdot_
+
+F ortho4.f
+D ortho4_
+
+F orthog.f
+D orthog_
+
+F orthol.f
+D orthol_
+R cscale_
+R r1mach_
+R sdot_
+R xermsg_
+
+F orthor.f
+D orthor_
+R cscale_
+R r1mach_
+R sdot_
+R xermsg_
+
+F pchngs.f
+D pchngs_
+R iploc_
+R prwpge_
+R xermsg_
+
+F pcoef.f
+D pcoef_
+R pvalue_
+
+F pfqad.f
+D pfqad_
+R intrv_
+R ppgq8_
+R r1mach_
+R xermsg_
+
+F pgsf.f
+D pgsf_
+
+F pimach.f
+D pimach_
+
+F pinitm.f
+D pinitm_
+R xermsg_
+
+F pjac.f
+D pjac_
+R sgbfa_
+R sgefa_
+R vnwrms_
+
+F pnnzrs.f
+D pnnzrs_
+R iploc_
+R xermsg_
+
+F poisd2.f
+D poisd2_
+R cosgen_
+R s1merg_
+R trix_
+
+F poisn2.f
+D poisn2_
+R cosgen_
+R s1merg_
+R tri3_
+R trix_
+
+F poisp2.f
+D poisp2_
+R poisd2_
+R poisn2_
+
+F polcof.f
+D polcof_
+
+F polfit.f
+D polfit_
+R pvalue_
+R xermsg_
+
+F polint.f
+D polint_
+R xermsg_
+
+F polyvl.f
+D polyvl_
+
+F pos3d1.f
+D pos3d1_
+R cosqb_
+R cosqf_
+R cosqi_
+R cost_
+R costi_
+R pimach_
+R rfftb_
+R rfftf_
+R rffti_
+R sinqb_
+R sinqf_
+R sinqi_
+R sint_
+R sinti_
+R tridq_
+
+F postg2.f
+D postg2_
+R cosgen_
+R s1merg_
+R tri3_
+R trix_
+
+F ppadd.f
+D ppadd_
+R bsrh_
+R ppsgf_
+R ppspf_
+R psgf_
+
+F ppgq8.f
+D ppgq8_
+R i1mach_
+R ppval_
+R r1mach_
+R xermsg_
+
+F ppgsf.f
+D ppgsf_
+
+F pppsf.f
+D pppsf_
+
+F ppqad.f
+D ppqad_
+R intrv_
+R xermsg_
+
+F ppsgf.f
+D ppsgf_
+
+F ppspf.f
+D ppspf_
+
+F ppval.f
+D ppval_
+R intrv_
+R xermsg_
+
+F proc.f
+D proc_
+
+F procp.f
+D procp_
+
+F prod.f
+D prod_
+
+F prodp.f
+D prodp_
+
+F prvec.f
+D prvec_
+R sdot_
+
+F prwpge.f
+D prwpge_
+R prwvir_
+R xermsg_
+
+F prwvir.f
+D prwvir_
+R sopenm_
+R sreadp_
+R swritp_
+
+F psgf.f
+D psgf_
+
+F psifn.f
+D psifn_
+R i1mach_
+R r1mach_
+
+F psixn.f
+D psixn_
+R r1mach_
+
+F pvalue.f
+D pvalue_
+R xermsg_
+
+F pythag.f
+D pythag_
+
+F qag.f
+D qag_
+R qage_
+R xermsg_
+
+F qage.f
+D qage_
+R qk15_
+R qk21_
+R qk31_
+R qk41_
+R qk51_
+R qk61_
+R qpsrt_
+R r1mach_
+
+F qagi.f
+D qagi_
+R qagie_
+R xermsg_
+
+F qagie.f
+D qagie_
+R qelg_
+R qk15i_
+R qpsrt_
+R r1mach_
+
+F qagp.f
+D qagp_
+R qagpe_
+R xermsg_
+
+F qagpe.f
+D qagpe_
+R qelg_
+R qk21_
+R qpsrt_
+R r1mach_
+
+F qags.f
+D qags_
+R qagse_
+R xermsg_
+
+F qagse.f
+D qagse_
+R qelg_
+R qk21_
+R qpsrt_
+R r1mach_
+
+F qawc.f
+D qawc_
+R qawce_
+R xermsg_
+
+F qawce.f
+D qawce_
+R qc25c_
+R qpsrt_
+R r1mach_
+
+F qawf.f
+D qawf_
+R qawfe_
+R xermsg_
+
+F qawfe.f
+D qawfe_
+R qagie_
+R qawoe_
+R qelg_
+R r1mach_
+
+F qawo.f
+D qawo_
+R qawoe_
+R xermsg_
+
+F qawoe.f
+D qawoe_
+R qc25f_
+R qelg_
+R qpsrt_
+R r1mach_
+
+F qaws.f
+D qaws_
+R qawse_
+R xermsg_
+
+F qawse.f
+D qawse_
+R qc25s_
+R qmomo_
+R qpsrt_
+R r1mach_
+
+F qc25c.f
+D qc25c_
+R qcheb_
+R qk15w_
+R qwgtc_
+
+F qc25f.f
+D qc25f_
+R qcheb_
+R qk15w_
+R qwgtf_
+R r1mach_
+R sgtsl_
+
+F qc25s.f
+D qc25s_
+R qcheb_
+R qk15w_
+R qwgts_
+
+F qcheb.f
+D qcheb_
+
+F qelg.f
+D qelg_
+R r1mach_
+
+F qform.f
+D qform_
+
+F qk15.f
+D qk15_
+R r1mach_
+
+F qk15i.f
+D qk15i_
+R r1mach_
+
+F qk15w.f
+D qk15w_
+R r1mach_
+
+F qk21.f
+D qk21_
+R r1mach_
+
+F qk31.f
+D qk31_
+R r1mach_
+
+F qk41.f
+D qk41_
+R r1mach_
+
+F qk51.f
+D qk51_
+R r1mach_
+
+F qk61.f
+D qk61_
+R r1mach_
+
+F qmomo.f
+D qmomo_
+
+F qnc79.f
+D qnc79_
+R i1mach_
+R r1mach_
+R xermsg_
+
+F qng.f
+D qng_
+R r1mach_
+R xermsg_
+
+F qpdoc.f
+D qpdoc_
+
+F qpsrt.f
+D qpsrt_
+
+F qrfac.f
+D qrfac_
+R enorm_
+R r1mach_
+
+F qrsolv.f
+D qrsolv_
+
+F qwgtc.f
+D qwgtc_
+
+F qwgtf.f
+D qwgtf_
+
+F qwgts.f
+D qwgts_
+
+F r1mach.f
+D r1mach_
+R xermsg_
+
+F r1mpyq.f
+D r1mpyq_
+
+F r1updt.f
+D r1updt_
+R r1mach_
+
+F rc.f
+D rc_
+R r1mach_
+R xermsg_
+
+F rc3jj.f
+D rc3jj_
+R r1mach_
+R xermsg_
+
+F rc3jm.f
+D rc3jm_
+R r1mach_
+R xermsg_
+
+F rc6j.f
+D rc6j_
+R r1mach_
+R xermsg_
+
+F rd.f
+D rd_
+R r1mach_
+R xermsg_
+
+F reort.f
+D reort_
+R mgsbv_
+R sdot_
+R stor1_
+R stway_
+
+F rf.f
+D rf_
+R r1mach_
+R xermsg_
+
+F rj.f
+D rj_
+R r1mach_
+R rc_
+R xermsg_
+
+F rkfab.f
+D rkfab_
+R bvder_
+R deabm_
+R derkf_
+R reort_
+R stor1_
+
+F rpqr79.f
+D rpqr79_
+R hqr_
+R xermsg_
+
+F rpzero.f
+D rpzero_
+R cpzero_
+
+F rsco.f
+D rsco_
+
+F rwupdt.f
+D rwupdt_
+
+F s1merg.f
+D s1merg_
+R scopy_
+
+F sbocls.f
+D sbocls_
+R r1mach_
+R sasum_
+R sbols_
+R scopy_
+R sdot_
+R snrm2_
+R sscal_
+R xermsg_
+
+F sbols.f
+D sbols_
+R isamax_
+R sbolsm_
+R scopy_
+R snrm2_
+R srot_
+R srotg_
+R xermsg_
+
+F sbolsm.f
+D sbolsm_
+R ivout_
+R r1mach_
+R saxpy_
+R scopy_
+R sdot_
+R smout_
+R snrm2_
+R srot_
+R srotg_
+R sswap_
+R svout_
+R xermsg_
+
+F sclosm.f
+D sclosm_
+R xermsg_
+
+F scoef.f
+D scoef_
+R sdot_
+R suds_
+R xgetf_
+R xsetf_
+
+F scov.f
+D scov_
+R enorm_
+R fdjac3_
+R qrfac_
+R rwupdt_
+R xermsg_
+
+F sdaini.f
+D sdaini_
+R sdajac_
+R sdanrm_
+R sdaslv_
+
+F sdajac.f
+D sdajac_
+R sgbfa_
+R sgefa_
+
+F sdanrm.f
+D sdanrm_
+
+F sdaslv.f
+D sdaslv_
+R sgbsl_
+R sgesl_
+
+F sdassl.f
+D sdassl_
+R r1mach_
+R sdaini_
+R sdanrm_
+R sdastp_
+R sdatrp_
+R sdawts_
+R xermsg_
+
+F sdastp.f
+D sdastp_
+R sdajac_
+R sdanrm_
+R sdaslv_
+R sdatrp_
+
+F sdatrp.f
+D sdatrp_
+
+F sdawts.f
+D sdawts_
+
+F sdcor.f
+D sdcor_
+R sgbsl_
+R sgesl_
+R snrm2_
+
+F sdcst.f
+D sdcst_
+
+F sdntl.f
+D sdntl_
+R sdcst_
+R sdscl_
+R sgbfa_
+R sgbsl_
+R sgefa_
+R sgesl_
+R snrm2_
+
+F sdntp.f
+D sdntp_
+
+F sdpsc.f
+D sdpsc_
+
+F sdpst.f
+D sdpst_
+R sgbfa_
+R sgefa_
+R snrm2_
+
+F sdriv1.f
+D sdriv1_
+R sdriv3_
+R xermsg_
+
+F sdriv2.f
+D sdriv2_
+R sdriv3_
+R xermsg_
+
+F sdriv3.f
+D sdriv3_
+R r1mach_
+R sdntp_
+R sdstp_
+R sdzro_
+R sgbfa_
+R sgbsl_
+R sgefa_
+R sgesl_
+R snrm2_
+R xermsg_
+
+F sdscl.f
+D sdscl_
+
+F sdstp.f
+D sdstp_
+R sdcor_
+R sdcst_
+R sdntl_
+R sdpsc_
+R sdpst_
+R sdscl_
+R snrm2_
+
+F sdzro.f
+D sdzro_
+R sdntp_
+
+F sgeev.f
+D sgeev_
+R balanc_
+R balbak_
+R hqr2_
+R hqr_
+R orthes_
+R ortran_
+R scopy_
+R scopym_
+R xermsg_
+
+F sgefs.f
+D sgefs_
+R r1mach_
+R sgeco_
+R sgesl_
+R xermsg_
+
+F sgeir.f
+D sgeir_
+R r1mach_
+R sasum_
+R scopy_
+R sdsdot_
+R sgefa_
+R sgesl_
+R xermsg_
+
+F sglss.f
+D sglss_
+R llsia_
+R ulsia_
+
+F sintrp.f
+D sintrp_
+
+F slvs.f
+D slvs_
+R sgbsl_
+R sgesl_
+
+F smout.f
+D smout_
+R i1mach_
+
+F snbco.f
+D snbco_
+R sasum_
+R saxpy_
+R sdot_
+R snbfa_
+R sscal_
+
+F snbdi.f
+D snbdi_
+
+F snbfa.f
+D snbfa_
+R isamax_
+R saxpy_
+R sscal_
+R sswap_
+
+F snbfs.f
+D snbfs_
+R r1mach_
+R snbco_
+R snbsl_
+R xermsg_
+
+F snbir.f
+D snbir_
+R r1mach_
+R sasum_
+R scopy_
+R sdsdot_
+R snbfa_
+R snbsl_
+R xermsg_
+
+F snbsl.f
+D snbsl_
+R saxpy_
+R sdot_
+
+F snls1.f
+D snls1_
+R chkder_
+R enorm_
+R fdjac3_
+R lmpar_
+R qrfac_
+R r1mach_
+R rwupdt_
+R xermsg_
+
+F snls1e.f
+D snls1e_
+R snls1_
+R xermsg_
+
+F snsq.f
+D snsq_
+R dogleg_
+R enorm_
+R fdjac1_
+R qform_
+R qrfac_
+R r1mach_
+R r1mpyq_
+R r1updt_
+R xermsg_
+
+F snsqe.f
+D snsqe_
+R snsq_
+R xermsg_
+
+F sods.f
+D sods_
+R lssods_
+
+F sopenm.f
+D sopenm_
+R xermsg_
+
+F sos.f
+D sos_
+R soseqs_
+R xermsg_
+
+F soseqs.f
+D soseqs_
+R i1mach_
+R r1mach_
+R sossol_
+
+F sossol.f
+D sossol_
+
+F speli4.f
+D speli4_
+R chksn4_
+R defe4_
+R genbun_
+R minso4_
+R ortho4_
+R tris4_
+
+F spelip.f
+D spelip_
+R blktri_
+R chksng_
+R defer_
+R minsol_
+R orthog_
+R trisp_
+
+F spincw.f
+D spincw_
+R iploc_
+R la05bs_
+R prwpge_
+R scopy_
+R sdot_
+
+F spinit.f
+D spinit_
+R pnnzrs_
+R sasum_
+R scopy_
+
+F splp.f
+D splp_
+R splpmn_
+R xermsg_
+
+F splpce.f
+D splpce_
+R iploc_
+R la05bs_
+R prwpge_
+R sasum_
+R scopy_
+
+F splpdm.f
+D splpdm_
+R la05as_
+R pnnzrs_
+R sasum_
+R xermsg_
+
+F splpfe.f
+D splpfe_
+R iploc_
+R la05bs_
+R prwpge_
+R sasum_
+R scopy_
+
+F splpfl.f
+D splpfl_
+
+F splpmn.f
+D splpmn_
+R ivout_
+R la05bs_
+R pinitm_
+R pnnzrs_
+R prwpge_
+R sasum_
+R sclosm_
+R scopy_
+R sdot_
+R spincw_
+R spinit_
+R splpce_
+R splpdm_
+R splpfe_
+R splpfl_
+R splpmu_
+R splpup_
+R spopt_
+R svout_
+R xermsg_
+
+F splpmu.f
+D splpmu_
+R iploc_
+R la05bs_
+R la05cs_
+R pnnzrs_
+R prwpge_
+R sasum_
+R scopy_
+R sdot_
+R splpdm_
+R xermsg_
+
+F splpup.f
+D splpup_
+R pchngs_
+R pnnzrs_
+R xermsg_
+
+F spofs.f
+D spofs_
+R r1mach_
+R spoco_
+R sposl_
+R xermsg_
+
+F spoir.f
+D spoir_
+R dsdot_
+R r1mach_
+R sasum_
+R scopy_
+R spofa_
+R sposl_
+R xermsg_
+
+F spopt.f
+D spopt_
+R r1mach_
+R xermsg_
+
+F spperm.f
+D spperm_
+R xermsg_
+
+F spsort.f
+D spsort_
+R xermsg_
+
+F sreadp.f
+D sreadp_
+R xermsg_
+
+F ssiev.f
+D ssiev_
+R imtql2_
+R tqlrat_
+R tred1_
+R tred2_
+R xermsg_
+
+F ssort.f
+D ssort_
+R xermsg_
+
+F steps.f
+D steps_
+R hstart_
+R r1mach_
+
+F stod.f
+D stod_
+R cfod_
+R pjac_
+R slvs_
+R vnwrms_
+
+F stor1.f
+D stor1_
+
+F stway.f
+D stway_
+R stor1_
+
+F suds.f
+D suds_
+R lssuds_
+
+F svco.f
+D svco_
+
+F svd.f
+D svd_
+R pythag_
+
+F svecs.f
+D svecs_
+R mgsbv_
+
+F svout.f
+D svout_
+R i1mach_
+
+F swritp.f
+D swritp_
+R xermsg_
+
+F tevlc.f
+D tevlc_
+
+F tevls.f
+D tevls_
+
+F tri3.f
+D tri3_
+
+F tridq.f
+D tridq_
+
+F tris4.f
+D tris4_
+
+F trisp.f
+D trisp_
+
+F trix.f
+D trix_
+
+F u11ls.f
+D u11ls_
+R isamax_
+R iswap_
+R saxpy_
+R sdot_
+R snrm2_
+R sscal_
+R sswap_
+R xermsg_
+
+F u11us.f
+D u11us_
+R isamax_
+R iswap_
+R saxpy_
+R sdot_
+R snrm2_
+R sscal_
+R sswap_
+R xermsg_
+
+F u12ls.f
+D u12ls_
+R saxpy_
+R sdot_
+R snrm2_
+R sswap_
+
+F u12us.f
+D u12us_
+R saxpy_
+R sdot_
+R snrm2_
+R sswap_
+
+F ulsia.f
+D ulsia_
+R r1mach_
+R u11us_
+R u12us_
+R xermsg_
+
+F usrmat.f
+D usrmat_
+
+F vnwrms.f
+D vnwrms_
+
+F wnlit.f
+D wnlit_
+R h12_
+R isamax_
+R scopy_
+R srotm_
+R srotmg_
+R sscal_
+R sswap_
+R wnlt1_
+R wnlt2_
+R wnlt3_
+
+F wnlsm.f
+D wnlsm_
+R h12_
+R isamax_
+R r1mach_
+R sasum_
+R saxpy_
+R scopy_
+R snrm2_
+R srotm_
+R srotmg_
+R sscal_
+R sswap_
+R wnlit_
+R xermsg_
+
+F wnlt1.f
+D wnlt1_
+R isamax_
+
+F wnlt2.f
+D wnlt2_
+
+F wnlt3.f
+D wnlt3_
+R sswap_
+
+F wnnls.f
+D wnnls_
+R wnlsm_
+R xermsg_
+
+F xadd.f
+D xadd_
+R xadj_
+
+F xadj.f
+D xadj_
+R xermsg_
+
+F xc210.f
+D xc210_
+R xermsg_
+
+F xcon.f
+D xcon_
+R xadj_
+R xc210_
+R xred_
+
+F xerbla.f
+D xerbla_
+R xermsg_
+
+F xerclr.f
+D xerclr_
+R j4save_
+
+F xercnt.f
+D xercnt_
+
+F xerdmp.f
+D xerdmp_
+R xersve_
+
+F xerhlt.f
+D xerhlt_
+
+F xermax.f
+D xermax_
+R j4save_
+
+F xermsg.f
+D xermsg_
+R fdump_
+R j4save_
+R xercnt_
+R xerhlt_
+R xerprn_
+R xersve_
+
+F xerprn.f
+D xerprn_
+R i1mach_
+R xgetua_
+
+F xersve.f
+D xersve_
+R i1mach_
+R xgetua_
+
+F xgetf.f
+D xgetf_
+R j4save_
+
+F xgetua.f
+D xgetua_
+R j4save_
+
+F xgetun.f
+D xgetun_
+R j4save_
+
+F xlegf.f
+D xlegf_
+R xermsg_
+R xpmu_
+R xpmup_
+R xpnrm_
+R xpqnu_
+R xqmu_
+R xqnu_
+R xred_
+R xset_
+
+F xnrmp.f
+D xnrmp_
+R xadd_
+R xadj_
+R xermsg_
+R xred_
+R xset_
+
+F xpmu.f
+D xpmu_
+R xadd_
+R xadj_
+R xpqnu_
+
+F xpmup.f
+D xpmup_
+R xadj_
+
+F xpnrm.f
+D xpnrm_
+R xadj_
+
+F xpqnu.f
+D xpqnu_
+R xadd_
+R xadj_
+R xpsi_
+
+F xpsi.f
+D xpsi_
+
+F xqmu.f
+D xqmu_
+R xadd_
+R xadj_
+R xpqnu_
+
+F xqnu.f
+D xqnu_
+R xadd_
+R xadj_
+R xpqnu_
+
+F xred.f
+D xred_
+
+F xset.f
+D xset_
+R i1mach_
+R xermsg_
+
+F xsetf.f
+D xsetf_
+R j4save_
+R xermsg_
+
+F xsetua.f
+D xsetua_
+R j4save_
+R xermsg_
+
+F xsetun.f
+D xsetun_
+R j4save_
+
+F yairy.f
+D yairy_
+
+F zabs.f
+D zabs_
+
+F zacai.f
+D zacai_
+R d1mach_
+R zabs_
+R zasyi_
+R zbknu_
+R zmlri_
+R zs1s2_
+R zseri_
+
+F zacon.f
+D zacon_
+R d1mach_
+R zabs_
+R zbinu_
+R zbknu_
+R zmlt_
+R zs1s2_
+
+F zairy.f
+D zairy_
+R d1mach_
+R i1mach_
+R zabs_
+R zacai_
+R zbknu_
+R zexp_
+R zsqrt_
+
+F zasyi.f
+D zasyi_
+R d1mach_
+R zabs_
+R zdiv_
+R zexp_
+R zmlt_
+R zsqrt_
+
+F zbesh.f
+D zbesh_
+R d1mach_
+R i1mach_
+R zabs_
+R zacon_
+R zbknu_
+R zbunk_
+R zuoik_
+
+F zbesi.f
+D zbesi_
+R d1mach_
+R i1mach_
+R zabs_
+R zbinu_
+
+F zbesj.f
+D zbesj_
+R d1mach_
+R i1mach_
+R zabs_
+R zbinu_
+
+F zbesk.f
+D zbesk_
+R d1mach_
+R i1mach_
+R zabs_
+R zacon_
+R zbknu_
+R zbunk_
+R zuoik_
+
+F zbesy.f
+D zbesy_
+R d1mach_
+R i1mach_
+R zbesh_
+
+F zbinu.f
+D zbinu_
+R zabs_
+R zasyi_
+R zbuni_
+R zmlri_
+R zseri_
+R zuoik_
+R zwrsk_
+
+F zbiry.f
+D zbiry_
+R d1mach_
+R i1mach_
+R zabs_
+R zbinu_
+R zdiv_
+R zsqrt_
+
+F zbknu.f
+D zbknu_
+R d1mach_
+R dgamln_
+R i1mach_
+R zabs_
+R zdiv_
+R zexp_
+R zkscl_
+R zlog_
+R zmlt_
+R zshch_
+R zsqrt_
+R zuchk_
+
+F zbuni.f
+D zbuni_
+R d1mach_
+R zabs_
+R zuni1_
+R zuni2_
+
+F zbunk.f
+D zbunk_
+R zunk1_
+R zunk2_
+
+F zdiv.f
+D zdiv_
+R zabs_
+
+F zexp.f
+D zexp_
+
+F zkscl.f
+D zkscl_
+R zabs_
+R zlog_
+R zuchk_
+
+F zlog.f
+D zlog_
+R zabs_
+
+F zmlri.f
+D zmlri_
+R d1mach_
+R dgamln_
+R zabs_
+R zexp_
+R zlog_
+R zmlt_
+
+F zmlt.f
+D zmlt_
+
+F zrati.f
+D zrati_
+R zabs_
+R zdiv_
+
+F zs1s2.f
+D zs1s2_
+R zabs_
+R zexp_
+R zlog_
+
+F zseri.f
+D zseri_
+R d1mach_
+R dgamln_
+R zabs_
+R zdiv_
+R zlog_
+R zmlt_
+R zuchk_
+
+F zshch.f
+D zshch_
+
+F zsqrt.f
+D zsqrt_
+R zabs_
+
+F zuchk.f
+D zuchk_
+
+F zunhj.f
+D zunhj_
+R d1mach_
+R zabs_
+R zdiv_
+R zlog_
+R zsqrt_
+
+F zuni1.f
+D zuni1_
+R d1mach_
+R zabs_
+R zuchk_
+R zunik_
+R zuoik_
+
+F zuni2.f
+D zuni2_
+R d1mach_
+R zabs_
+R zairy_
+R zuchk_
+R zunhj_
+R zuoik_
+
+F zunik.f
+D zunik_
+R d1mach_
+R zdiv_
+R zlog_
+R zsqrt_
+
+F zunk1.f
+D zunk1_
+R d1mach_
+R zabs_
+R zs1s2_
+R zuchk_
+R zunik_
+
+F zunk2.f
+D zunk2_
+R d1mach_
+R zabs_
+R zairy_
+R zs1s2_
+R zuchk_
+R zunhj_
+
+F zuoik.f
+D zuoik_
+R d1mach_
+R zabs_
+R zlog_
+R zuchk_
+R zunhj_
+R zunik_
+
+F zwrsk.f
+D zwrsk_
+R d1mach_
+R zabs_
+R zbknu_
+R zrati_
+

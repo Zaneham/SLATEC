@@ -1,0 +1,24 @@
+name = "slatec-modern"
+version = "0.1.0"
+license = "public-domain"
+author = "Zane Hambly"
+maintainer = "zanehambly@gmail.com"
+copyright = "Original: US National Laboratories (Public Domain)"
+
+[build]
+auto-executables = false
+auto-tests = true
+
+[library]
+source-dir = "src/modern"
+
+[install]
+library = true
+
+[fortran]
+implicit-typing = false
+implicit-external = false
+source-form = "free"
+
+[dev-dependencies]
+test-drive = { git = "https://github.com/fortran-lang/test-drive", tag = "v0.4.0" }

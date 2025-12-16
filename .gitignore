@@ -1,0 +1,33 @@
+# Build directories
+build/
+_build/
+
+# FPM
+fpm_build/
+
+# Object files
+*.o
+*.obj
+*.mod
+*.smod
+
+# Executables
+*.exe
+*.out
+
+# Archives
+*.a
+*.lib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Original source (cloned for reference)
+mehdi-slatec/
