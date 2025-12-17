@@ -215,7 +215,8 @@ PURE SUBROUTINE RC3JJ(L2,L3,M2,M3,L1min,L1max,Thrcof,Ndim,Ier)
     Ier = 4
     ERROR STOP 'RC3JJ : L1MIN greater than L1MAX.'
   END IF
-  100  lstep = lstep + 1
+  forward_recursion: DO  ! Forward recursion loop (was GOTO 100 target)
+    lstep = lstep + 1
   l1 = l1 + 1._SP
   !
   !
@@ -275,7 +276,7 @@ PURE SUBROUTINE RC3JJ(L2,L3,M2,M3,L1min,L1max,Thrcof,Ndim,Ier)
       !  an increase of ABS(C1) is detected, the recursion direction is
       !  reversed.
       !
-      IF( c1old>ABS(c1) ) GOTO 100
+      IF( c1old>ABS(c1) ) CYCLE forward_recursion
     END IF
     !
     !
@@ -404,7 +405,9 @@ PURE SUBROUTINE RC3JJ(L2,L3,M2,M3,L1min,L1max,Thrcof,Ndim,Ier)
     x = srtiny*c1
     Thrcof(2) = x
     sum1 = sum1 + tinyy*(l1+l1+1._SP)*c1*c1
-    IF( lstep/=nfin ) GOTO 100
+    IF( lstep/=nfin ) CYCLE forward_recursion
+    EXIT forward_recursion
+  END DO forward_recursion
     !
     sumuni = sum1
   END IF

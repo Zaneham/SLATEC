@@ -54,6 +54,10 @@ PURE SUBROUTINE DPCHNG(Ii,Xval,Iplace,Sx,Ix,Ircx)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900328  Added TYPE section.  (WRB)
   !   910403  Updated AUTHOR and DESCRIPTION sections.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100/200 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.4 (DO construct)
+  !           Original: Hanson, Wisniewski (SNLA)
 
   INTEGER, INTENT(IN) :: Ircx
   INTEGER, INTENT(INOUT) :: Ii, Ix(:)
@@ -133,7 +137,8 @@ PURE SUBROUTINE DPCHNG(Ii,Xval,Iplace,Sx,Ix,Ircx)
   !
   !     THE VIRTUAL END OF DATA FOR THIS PAGE IS ILAST.
   !
-  100  ilast = MIN(iend,np*lpg+ll-2)
+  page_scan: DO  ! Page scanning loop (was GOTO 100 target)
+    ilast = MIN(iend,np*lpg+ll-2)
   !
   !     THE RELATIVE END OF DATA FOR THIS PAGE IS IL.
   !     SEARCH FOR A MATRIX VALUE WITH AN INDEX >= I ON THE PRESENT
@@ -156,7 +161,9 @@ PURE SUBROUTINE DPCHNG(Ii,Xval,Iplace,Sx,Ix,Ircx)
       ipl = ll + 1
       np = np + 1
     END IF
-    IF( ilast/=iend ) GOTO 100
+    IF( ilast/=iend ) CYCLE page_scan
+    EXIT page_scan
+  END DO page_scan
     !
     !     INSERT NEW DATA ITEM INTO LOCATION AT IPLACE(IPL).
     !
@@ -182,8 +189,9 @@ PURE SUBROUTINE DPCHNG(Ii,Xval,Iplace,Sx,Ix,Ircx)
     Sx(lmx) = 1._DP
     RETURN
   END IF
-  200  ilast = MIN(iend,np*lpg+ll-2)
-  il = IDLOC(ilast,Ix)
+  data_move: DO  ! Data movement loop (was GOTO 200 target)
+    ilast = MIN(iend,np*lpg+ll-2)
+    il = IDLOC(ilast,Ix)
   il = MIN(il,lmx-2)
   sxlast = Sx(il)
   ixlast = Ix(il)
@@ -207,7 +215,9 @@ PURE SUBROUTINE DPCHNG(Ii,Xval,Iplace,Sx,Ix,Ircx)
       np = np + 1
     END IF
   END IF
-  IF( Ix(lmx-1)>0 ) GOTO 200
+  IF( Ix(lmx-1)>0 ) CYCLE data_move
+    EXIT data_move
+  END DO data_move
   np = ABS(Ix(lmx-1))
   !
   !     DETERMINE IF A NEW PAGE IS TO BE CREATED FOR THE LAST ELEMENT
