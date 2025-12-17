@@ -192,13 +192,13 @@ SUBROUTINE SBHIN(N,Nelt,Ia,Ja,A,Isym,Soln,Rhs,Iunit,Job)
   !
   IF( nrow>N ) THEN
     N = nrow
-    jobret = -1
-    GOTO 100
+    Job = -1  ! Early exit (was GOTO 100)
+    RETURN
   END IF
   IF( nind>Nelt ) THEN
     Nelt = nind
-    jobret = -2
-    GOTO 100
+    Job = -2  ! Early exit (was GOTO 100)
+    RETURN
   END IF
   !
   !         Set the parameters.
@@ -210,8 +210,8 @@ SUBROUTINE SBHIN(N,Nelt,Ia,Ja,A,Isym,Soln,Rhs,Iunit,Job)
   ELSEIF( code=='RSA' ) THEN
     Isym = 1
   ELSE
-    jobret = -3
-    GOTO 100
+    Job = -3  ! Early exit (was GOTO 100)
+    RETURN
   END IF
   READ (Iunit,pntfmt) (Ja(i),i=1,N+1)
   READ (Iunit,rinfmt) (Ia(i),i=1,Nelt)
@@ -284,7 +284,7 @@ SUBROUTINE SBHIN(N,Nelt,Ia,Ja,A,Isym,Soln,Rhs,Iunit,Job)
   END DO
   !
   !         Set return flag.
-  100  Job = jobret
-  RETURN
+  ! (Label 100 removed)
+  Job = jobret
   !------------- LAST LINE OF SBHIN FOLLOWS ------------------------------
 END SUBROUTINE SBHIN
