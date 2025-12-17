@@ -218,7 +218,8 @@ PURE SUBROUTINE RC6J(L2,L3,L4,L5,L6,L1min,L1max,Sixcof,Ndim,Ier)
     ERROR STOP 'RC6J : L1MIN greater than L1MAX.'
     RETURN
   END IF
-  100  lstep = lstep + 1
+  forward_recursion: DO  ! Forward recursion loop (was GOTO 100 target)
+    lstep = lstep + 1
   l1 = l1 + 1._SP
   !
   oldfac = newfac
@@ -282,7 +283,7 @@ PURE SUBROUTINE RC6J(L2,L3,L4,L5,L6,L1min,L1max,Sixcof,Ndim,Ier)
       !  stable.  Once an increase of ABS(C1) is detected, the recursion
       !  direction is reversed.
       !
-      IF( c1old>ABS(c1) ) GOTO 100
+      IF( c1old>ABS(c1) ) CYCLE forward_recursion
     END IF
     !
     !
@@ -408,7 +409,9 @@ PURE SUBROUTINE RC6J(L2,L3,L4,L5,L6,L1min,L1max,Sixcof,Ndim,Ier)
     Sixcof(2) = x
     sum1 = sum1 + tinyy*(l1+l1+1._SP)*c1*c1
     !
-    IF( lstep/=nfin ) GOTO 100
+    IF( lstep/=nfin ) CYCLE forward_recursion
+    EXIT forward_recursion
+  END DO forward_recursion
     !
     sumuni = sum1
   END IF
