@@ -8,7 +8,7 @@ SUBROUTINE DPLPMN(DUSRMT,Mrelas,Nvars,Costs,Prgopt,Dattrv,Bl,Bu,Ind,Info,&
   !***
   ! **Type:**      DOUBLE PRECISION (SPLPMN-S, DPLPMN-D)
   !***
-  ! **Author:**  (UNKNOWN)
+  ! **Author:**  Hanson, R.J. & Hiebert, K.L. (SNLA)
   !***
   ! **Description:**
   !
@@ -35,6 +35,10 @@ SUBROUTINE DPLPMN(DUSRMT,Mrelas,Nvars,Costs,Prgopt,Dattrv,Bl,Bu,Ind,Info,&
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900328  Added TYPE section.  (WRB)
   !   900510  Convert XERRWV calls to XERMSG calls.  (RWC)
+  !   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3, S15.6.2.5
+  !           Converted pseudo-coroutines to internal subroutines.
+  !           Original algorithm: SAND81-0297 (Hanson & Hiebert, 1981)
   USE service, ONLY : IVOUT, DVOUT
   USE LA05DD, ONLY : lp_com
 
@@ -58,117 +62,32 @@ SUBROUTINE DPLPMN(DUSRMT,Mrelas,Nvars,Costs,Prgopt,Dattrv,Bl,Bu,Ind,Info,&
   REAL(DP), INTENT(OUT) :: Amat(Lmx), Colnrm(Nvars), Csc(Nvars), Duals(Nvars+Mrelas), &
     Erd(Mrelas), Primal(Nvars+Mrelas), Rg(Nvars+Mrelas), Rhs(Mrelas), Rz(Nvars+Mrelas), &
     Wr(Mrelas)
+
+  ! Local variables
   INTEGER :: i, ibas, ienter, ileave, iopt, ipage, iplace, itlp, j, jstrt, k, &
-    key, lpg, lpr, lpr1, n20046, n20058, n20080, n20098, n20119, n20172, n20206, &
-    n20247, n20252, n20271, n20276, n20283, n20290, nerr, np, nparm, npr004, &
-    npr005, npr006, npr007, npr008, npr009, npr010, npr011, npr012, npr013, &
-    npr014, npr015, nredc, ntries, nx0066, nx0091, nx0106, idum(01)
+    key, lpg, lpr, lpr1, nerr, np, nparm, nredc, ntries, idum(01)
   INTEGER, TARGET :: intopt(08)
   INTEGER, POINTER :: idg, ipagef, isave, mxitlp, kprint, itbrc, npp, lprg
   REAL(DP) :: aij, anorm, dirnrm, dulnrm, erdnrm, factor, gg, resnrm, rhsnrm, &
     rprnrm, rzj, scalr, scosts, sizee, theta, upbnd, uu, xlamda, xval, rdum(01)
   REAL(DP), TARGET :: ropt(07)
   REAL(DP), POINTER :: eps, asmall, abig, costsc, tolls, tune, tolabs
-  !
-  !
-  !     ARRAY LOCAL VARIABLES
-  !     NAME(LENGTH)          DESCRIPTION
-  !
-  !     COSTS(NVARS)          COST COEFFICIENTS
-  !     PRGOPT( )             OPTION VECTOR
-  !     DATTRV( )             DATA TRANSFER VECTOR
-  !     PRIMAL(NVARS+MRELAS)  AS OUTPUT IT IS PRIMAL SOLUTION OF LP.
-  !                           INTERNALLY, THE FIRST NVARS POSITIONS HOLD
-  !                           THE COLUMN CHECK SUMS.  THE NEXT MRELAS
-  !                           POSITIONS HOLD THE CLASSIFICATION FOR THE
-  !                           BASIC VARIABLES  -1 VIOLATES LOWER
-  !                           BOUND, 0 FEASIBLE, +1 VIOLATES UPPER BOUND
-  !     DUALS(MRELAS+NVARS)   DUAL SOLUTION. INTERNALLY HOLDS R.H. SIDE
-  !                           AS FIRST MRELAS ENTRIES.
-  !     AMAT(LMX)             SPARSE FORM OF DATA MATRIX
-  !     IMAT(LMX)             SPARSE FORM OF DATA MATRIX
-  !     BL(NVARS+MRELAS)      LOWER BOUNDS FOR VARIABLES
-  !     BU(NVARS+MRELAS)      UPPER BOUNDS FOR VARIABLES
-  !     IND(NVARS+MRELAS)     INDICATOR FOR VARIABLES
-  !     CSC(NVARS)            COLUMN SCALING
-  !     IBASIS(NVARS+MRELAS)  COLS. 1-MRELAS ARE BASIC, REST ARE NON-BASIC
-  !     IBB(NVARS+MRELAS)     INDICATOR FOR NON-BASIC VARS., POLARITY OF
-  !                           VARS., AND POTENTIALLY INFINITE VARS.
-  !                           IF IBB(J)<0, VARIABLE J IS BASIC
-  !                           IF IBB(J)>0, VARIABLE J IS NON-BASIC
-  !                           IF IBB(J)=0, VARIABLE J HAS TO BE IGNORED
-  !                           BECAUSE IT WOULD CAUSE UNBOUNDED SOLN.
-  !                           WHEN MOD(IBB(J),2)=0, VARIABLE IS AT ITS
-  !                           UPPER BOUND, OTHERWISE IT IS AT ITS LOWER
-  !                           BOUND
-  !     COLNRM(NVARS)         NORM OF COLUMNS
-  !     ERD(MRELAS)           ERRORS IN DUAL VARIABLES
-  !     ERP(MRELAS)           ERRORS IN PRIMAL VARIABLES
-  !     BASMAT(LBM)           BASIS MATRIX FOR HARWELL SPARSE CODE
-  !     IBRC(LBM,2)           ROW AND COLUMN POINTERS FOR BASMAT(*)
-  !     IPR(2*MRELAS)         WORK ARRAY FOR HARWELL SPARSE CODE
-  !     IWR(8*MRELAS)         WORK ARRAY FOR HARWELL SPARSE CODE
-  !     WR(MRELAS)            WORK ARRAY FOR HARWELL SPARSE CODE
-  !     RZ(NVARS+MRELAS)      REDUCED COSTS
-  !     RPRIM(MRELAS)         INTERNAL PRIMAL SOLUTION
-  !     RG(NVARS+MRELAS)      COLUMN WEIGHTS
-  !     WW(MRELAS)            WORK ARRAY
-  !     RHS(MRELAS)           HOLDS TRANSLATED RIGHT HAND SIDE
-  !
-  !     SCALAR LOCAL VARIABLES
-  !     NAME       TYPE         DESCRIPTION
-  !
-  !     LMX        INTEGER      LENGTH OF AMAT(*)
-  !     LPG        INTEGER      LENGTH OF PAGE FOR AMAT(*)
-  !     EPS        DOUBLE       MACHINE PRECISION
-  !     TUNE       DOUBLE       PARAMETER TO SCALE ERROR ESTIMATES
-  !     TOLLS      DOUBLE       RELATIVE TOLERANCE FOR SMALL RESIDUALS
-  !     TOLABS     DOUBLE       ABSOLUTE TOLERANCE FOR SMALL RESIDUALS.
-  !                             USED IF RELATIVE ERROR TEST FAILS.
-  !                             IN CONSTRAINT EQUATIONS
-  !     FACTOR     DOUBLE      .01--DETERMINES IF BASIS IS SINGULAR
-  !                             OR COMPONENT IS FEASIBLE.  MAY NEED TO
-  !                             BE INCREASED TO 1.D0 ON SHORT WORD
-  !                             LENGTH MACHINES.
-  !     ASMALL     DOUBLE       LOWER BOUND FOR NON-ZERO MAGN. IN AMAT(*)
-  !     ABIG       DOUBLE       UPPER BOUND FOR NON-ZERO MAGN. IN AMAT(*)
-  !     MXITLP     INTEGER      MAXIMUM NUMBER OF ITERATIONS FOR LP
-  !     ITLP       INTEGER      ITERATION COUNTER FOR TOTAL LP ITERS
-  !     COSTSC     DOUBLE       COSTS(*) SCALING
-  !     SCOSTS     DOUBLE       TEMP LOC. FOR COSTSC.
-  !     XLAMDA     DOUBLE       WEIGHT PARAMETER FOR PEN. METHOD.
-  !     ANORM      DOUBLE       NORM OF DATA MATRIX AMAT(*)
-  !     RPRNRM     DOUBLE       NORM OF THE SOLUTION
-  !     DULNRM     DOUBLE       NORM OF THE DUALS
-  !     ERDNRM     DOUBLE       NORM OF ERROR IN DUAL VARIABLES
-  !     DIRNRM     DOUBLE       NORM OF THE DIRECTION VECTOR
-  !     RHSNRM     DOUBLE       NORM OF TRANSLATED RIGHT HAND SIDE VECTOR
-  !     RESNRM     DOUBLE       NORM OF RESIDUAL VECTOR FOR CHECKING
-  !                             FEASIBILITY
-  !     NZBM       INTEGER      NUMBER OF NON-ZEROS IN BASMAT(*)
-  !     LBM        INTEGER      LENGTH OF BASMAT(*)
-  !     SMALL      DOUBLE       EPS*ANORM  USED IN HARWELL SPARSE CODE
-  !     LP         INTEGER      USED IN HARWELL LA05*() PACK AS OUTPUT
-  !                             FILE NUMBER. SET=ERROR_UNIT NOW.
-  !     UU         DOUBLE       0.1--USED IN HARWELL SPARSE CODE
-  !                             FOR RELATIVE PIVOTING TOLERANCE.
-  !     GG         DOUBLE       OUTPUT INFO FLAG IN HARWELL SPARSE CODE
-  !     IPLACE     INTEGER      INTEGER USED BY SPARSE MATRIX CODES
-  !     IENTER     INTEGER      NEXT COLUMN TO ENTER BASIS
-  !     NREDC      INTEGER      NO. OF FULL REDECOMPOSITIONS
-  !     KPRINT     INTEGER      LEVEL OF OUTPUT, =0-3
-  !     IDG        INTEGER      FORMAT AND PRECISION OF OUTPUT
-  !     ITBRC      INTEGER      NO. OF ITERS. BETWEEN RECALCULATING
-  !                             THE ERROR IN THE PRIMAL SOLUTION.
-  !     NPP        INTEGER      NO. OF NEGATIVE REDUCED COSTS REQUIRED
-  !                             IN PARTIAL PRICING
-  !     JSTRT      INTEGER      STARTING PLACE FOR PARTIAL PRICING.
-  !
+
   LOGICAL, TARGET :: lopt(8)
   LOGICAL, POINTER :: colscp, savedt, contin, cstscp, minprb, sizeup, stpedg, usrbas
   LOGICAL :: unbnd, feas, finite, found, redbas, singlr, trans, zerolv
   CHARACTER(8) :: xern1, xern2
 
+  ! State machine variables (replacing npr* return addresses)
+  INTEGER :: istate, inext
+  INTEGER, PARAMETER :: ST_INIT = 1, ST_AFTER_DECOMP = 2, ST_AFTER_ERROR = 3
+  INTEGER, PARAMETER :: ST_AFTER_PRIMAL = 4, ST_AFTER_CLASSIFY = 5
+  INTEGER, PARAMETER :: ST_AFTER_FEASCHK = 6, ST_PENALTY_LOOP = 7
+  INTEGER, PARAMETER :: ST_PHASE1_LOOP = 8, ST_PHASE2_LOOP = 9
+  INTEGER, PARAMETER :: ST_SIMPLEX_ITER = 10, ST_RESCALE = 11
+  INTEGER, PARAMETER :: ST_DONE = 99, ST_ERROR = -1
+
+  ! Set up pointer associations for options
   contin => lopt(1)
   usrbas => lopt(2)
   sizeup => lopt(3)
@@ -192,48 +111,690 @@ SUBROUTINE DPLPMN(DUSRMT,Mrelas,Nvars,Costs,Prgopt,Dattrv,Bl,Bu,Ind,Info,&
   tolls => ropt(5)
   tune => ropt(6)
   tolabs => ropt(7)
-  !
-  !     SET LP=0 SO NO ERROR MESSAGES WILL PRINT WITHIN LA05 () PACKAGE.
+
   !* FIRST EXECUTABLE STATEMENT  DPLPMN
   lp_com = 0
-  !
-  !     THE VALUES ZERO AND ONE.
   factor = 0.01_DP
   lpg = Lmx - (Nvars+4)
   iopt = 1
   Info = 0
   unbnd = .FALSE.
   jstrt = 1
-  !
-  !     PROCESS USER OPTIONS IN PRGOPT(*).
-  !     CHECK THAT ANY USER-GIVEN CHANGES ARE WELL-DEFINED.
+
+  ! Process user options
   CALL DPOPT(Prgopt,Mrelas,Nvars,Info,Csc,Ibasis,ropt,intopt,lopt)
-  IF( Info<0 ) GOTO 4600
-  IF( .NOT. (contin) ) THEN
-    !
-    !     INITIALIZE SPARSE DATA MATRIX, AMAT(*) AND IMAT(*).
+  IF( Info<0 ) THEN
+    CALL do_save_and_return()
+    RETURN
+  END IF
+
+  IF( .NOT. contin ) THEN
+    ! Initialize sparse data matrix
     CALL DPINTM(Mrelas,Nvars,Amat,Imat,Lmx,ipagef)
   ELSE
-    ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-    !     PROCEDURE (RETRIEVE SAVED DATA FROM FILE ISAVE)
+    ! Retrieve saved data from file
+    CALL retrieve_saved_data()
+  END IF
+
+  ! Main algorithm loop - replaces the GOTO state machine
+  main_algorithm: DO
+    ! Update matrix data and check bounds
+    CALL DPLPUP(DUSRMT,Mrelas,Nvars,Dattrv,Bl,Bu,Ind,Info,Amat,Imat,&
+      sizeup,asmall,abig)
+    IF( Info<0 ) EXIT main_algorithm
+
+    ! Print prologue if requested
+    IF( kprint>=1 ) CALL print_prologue()
+
+    ! Initialize: scale data, normalize bounds, form column check sums
+    CALL DPINIT(Mrelas,Nvars,Costs,Bl,Bu,Ind,Primal,Amat,Csc,costsc,&
+      Colnrm,xlamda,anorm,Rhs,rhsnrm,Ibasis,Ibb,Imat,lopt)
+    IF( Info<0 ) EXIT main_algorithm
+
+    nredc = 0
+
+    ! Decompose initial basis matrix
+    CALL decompose_basis(singlr)
+    IF( Info<0 ) EXIT main_algorithm
+
+    IF( singlr ) THEN
+      nerr = 23
+      Info = -nerr
+      ERROR STOP 'DPLPMN : IN DSPLP, A SINGULAR INITIAL BASIS WAS ENCOUNTERED.'
+      EXIT main_algorithm
+    END IF
+
+    ! Compute error in dual and primal systems
+    ntries = 1
+    CALL compute_error(ntries, singlr)
+    IF( singlr ) THEN
+      ! Try redecomposition
+      CALL decompose_basis(singlr)
+      IF( Info<0 ) EXIT main_algorithm
+      ntries = 2
+      CALL compute_error(ntries, singlr)
+      IF( singlr ) THEN
+        nerr = 26
+        Info = -nerr
+        PRINT*,'DPLPMN : IN DSPLP, MOVED TO A SINGULAR POINT.'
+        EXIT main_algorithm
+      END IF
+    END IF
+
+    ! Compute new primal
+    CALL compute_primal()
+
+    ! Classify variables
+    CALL classify_variables()
+
+    ! Check user-provided basis feasibility
+    IF( usrbas ) THEN
+      CALL check_feasibility(feas)
+      IF( .NOT. feas ) THEN
+        nerr = 24
+        Info = -nerr
+        ERROR STOP 'DPLPMN : IN DSPLP, AN INFEASIBLE INITIAL BASIS WAS ENCOUNTERED.'
+        EXIT main_algorithm
+      END IF
+    END IF
+
+    itlp = 0
+
+    ! Penalty method phase
+    CALL perform_simplex_phase(xlamda, scosts, feas, unbnd, itlp)
+    IF( Info<0 ) EXIT main_algorithm
+
+    ! Rescale and rearrange variables
+    CALL rescale_and_rearrange(feas, unbnd)
+
+    ! Set final info value
+    IF( feas .AND. (.NOT. unbnd) ) THEN
+      Info = 1
+    ELSEIF( (.NOT. feas) .AND. (.NOT. unbnd) ) THEN
+      nerr = 1
+      Info = -nerr
+      ERROR STOP 'DPLPMN : IN DSPLP, THE PROBLEM APPEARS TO BE INFEASIBLE'
+    ELSEIF( feas .AND. unbnd ) THEN
+      nerr = 2
+      Info = -nerr
+      ERROR STOP 'DPLPMN : IN DSPLP, THE PROBLEM APPEARS TO HAVE NO FINITE SOLUTION.'
+    ELSEIF( (.NOT. feas) .AND. unbnd ) THEN
+      nerr = 3
+      Info = -nerr
+      ERROR STOP 'DPLPMN : IN DSPLP, THE PROBLEM APPEARS TO BE INFEASIBLE AND NO FINITE SOLN.'
+    END IF
+
+    ! Handle infeasibility markers
+    IF( Info==(-1) .OR. Info==(-3) ) CALL mark_infeasible_vars()
+
+    ! Handle unboundedness markers
+    IF( Info==(-2) .OR. Info==(-3) ) CALL mark_unbounded_vars()
+
+    ! Print summary if requested
+    IF( kprint>=1 ) CALL print_summary()
+
+    EXIT main_algorithm
+  END DO main_algorithm
+
+  ! Save data and return
+  CALL do_save_and_return()
+  RETURN
+
+CONTAINS
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Retrieve saved data from file
+  !---------------------------------------------------------------------------
+  SUBROUTINE retrieve_saved_data()
     lpr = Nvars + 4
     REWIND isave
     READ (isave) (Amat(i),i=1,lpr), (Imat(i),i=1,lpr)
     key = 2
     ipage = 1
-    GOTO 2500
-  END IF
-  !
-  !     UPDATE MATRIX DATA AND CHECK BOUNDS FOR CONSISTENCY.
-  100  CALL DPLPUP(DUSRMT,Mrelas,Nvars,Dattrv,Bl,Bu,Ind,Info,Amat,Imat,&
-    sizeup,asmall,abig)
-  IF( Info<0 ) GOTO 4600
-  !
-  !++  CODE FOR OUTPUT=YES IS ACTIVE
-  IF( kprint>=1 ) THEN
-    ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-    !++  CODE FOR OUTPUT=YES IS ACTIVE
-    !     PROCEDURE (PRINT PROLOGUE)
+
+    retrieve_loop: DO
+      lpr1 = lpr + 1
+      READ (isave) (Amat(i),i=lpr1,Lmx), (Imat(i),i=lpr1,Lmx)
+      np = Imat(Lmx-1)
+      ipage = ipage + 1
+      IF( np < 0 ) EXIT retrieve_loop
+    END DO retrieve_loop
+
+    nparm = Nvars + Mrelas
+    READ (isave) (Ibasis(i),i=1,nparm)
+    REWIND isave
+  END SUBROUTINE retrieve_saved_data
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Save data to file
+  !---------------------------------------------------------------------------
+  SUBROUTINE save_data_to_file()
+    lpr1 = lpr + 1
+
+    save_loop: DO
+      WRITE (isave) (Amat(i),i=lpr1,Lmx), (Imat(i),i=lpr1,Lmx)
+      np = Imat(Lmx-1)
+      ipage = ipage + 1
+      IF( np < 0 ) EXIT save_loop
+    END DO save_loop
+
+    nparm = Nvars + Mrelas
+    WRITE (isave) (Ibasis(i),i=1,nparm)
+    ENDFILE isave
+  END SUBROUTINE save_data_to_file
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Decompose basis matrix
+  !---------------------------------------------------------------------------
+  SUBROUTINE decompose_basis(is_singular)
+    LOGICAL, INTENT(OUT) :: is_singular
+
+    IF( kprint>=2 ) CALL IVOUT(Mrelas,Ibasis,&
+      '('' SUBSCRIPTS OF BASIC VARIABLES DURING REDECOMPOSITION'')',idg)
+
+    uu = 0.1_DP
+    CALL DPLPDM(Mrelas,Nvars,Lbm,nredc,Info,Ibasis,Imat,Ibrc,Ipr,Iwr,&
+      Ind,anorm,eps,uu,gg,Amat,Basmat,Csc,Wr,is_singular,redbas)
+  END SUBROUTINE decompose_basis
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Compute error in dual and primal systems
+  !---------------------------------------------------------------------------
+  SUBROUTINE compute_error(num_tries, is_singular)
+    INTEGER, INTENT(INOUT) :: num_tries
+    LOGICAL, INTENT(OUT) :: is_singular
+
+    IF( num_tries <= 2 ) THEN
+      CALL DPLPCE(Mrelas,Nvars,Lmx,Lbm,itlp,itbrc,Ibasis,Imat,Ibrc,Ipr,Iwr,&
+        Ind,Ibb,erdnrm,eps,tune,gg,Amat,Basmat,Csc,Wr,Ww,Primal,Erd,Erp,is_singular,redbas)
+
+      IF( .NOT. is_singular ) THEN
+        IF( kprint>=3 ) THEN
+          CALL DVOUT(Mrelas,Erp,'('' EST. ERROR IN PRIMAL COMPS.'')',idg)
+          CALL DVOUT(Mrelas,Erd,'('' EST. ERROR IN DUAL COMPS.'')',idg)
+        END IF
+      END IF
+    ELSE
+      is_singular = .TRUE.
+    END IF
+  END SUBROUTINE compute_error
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Classify variables
+  !---------------------------------------------------------------------------
+  SUBROUTINE classify_variables()
+    Primal(Nvars+1:Nvars+Mrelas) = 0._DP
+
+    DO i = 1, Mrelas
+      j = Ibasis(i)
+      IF( Ind(j)/=4 ) THEN
+        IF( Rprim(i)<0._DP ) THEN
+          Primal(i+Nvars) = -1._DP
+        ELSEIF( Ind(j)==3 ) THEN
+          upbnd = Bu(j) - Bl(j)
+          IF( j<=Nvars ) upbnd = upbnd/Csc(j)
+          IF( Rprim(i)>upbnd ) THEN
+            Rprim(i) = Rprim(i) - upbnd
+            IF( j>Nvars ) THEN
+              Rhs(j-Nvars) = Rhs(j-Nvars) + upbnd
+            ELSE
+              k = 0
+              DO
+                CALL DPNNZR(k,aij,iplace,Amat,Imat,j)
+                IF( k<=0 ) EXIT
+                Rhs(k) = Rhs(k) - upbnd*aij*Csc(j)
+              END DO
+            END IF
+            Primal(i+Nvars) = 1._DP
+          END IF
+        END IF
+      END IF
+    END DO
+  END SUBROUTINE classify_variables
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Compute right hand side
+  !---------------------------------------------------------------------------
+  SUBROUTINE compute_rhs()
+    Rhs(1:Mrelas) = 0._DP
+
+    j = 1
+    DO WHILE( j <= Nvars + Mrelas )
+      SELECT CASE( Ind(j) )
+        CASE (2)
+          scalr = -Bu(j)
+        CASE (3)
+          scalr = -Bl(j)
+        CASE (4)
+          scalr = 0._DP
+        CASE DEFAULT
+          scalr = -Bl(j)
+      END SELECT
+
+      IF( scalr==0._DP ) THEN
+        j = j + 1
+      ELSEIF( j>Nvars ) THEN
+        Rhs(j-Nvars) = Rhs(j-Nvars) - scalr
+        j = j + 1
+      ELSE
+        i = 0
+        DO
+          CALL DPNNZR(i,aij,iplace,Amat,Imat,j)
+          IF( i>0 ) THEN
+            Rhs(i) = Rhs(i) + aij*scalr
+          ELSE
+            j = j + 1
+            EXIT
+          END IF
+        END DO
+      END IF
+    END DO
+
+    j = 1
+    DO WHILE( j <= Nvars + Mrelas )
+      scalr = 0._DP
+      IF( Ind(j)==3 .AND. MOD(Ibb(j),2)==0 ) scalr = Bu(j) - Bl(j)
+      IF( scalr==0._DP ) THEN
+        j = j + 1
+      ELSEIF( j>Nvars ) THEN
+        Rhs(j-Nvars) = Rhs(j-Nvars) + scalr
+        j = j + 1
+      ELSE
+        i = 0
+        DO
+          CALL DPNNZR(i,aij,iplace,Amat,Imat,j)
+          IF( i>0 ) THEN
+            Rhs(i) = Rhs(i) - aij*scalr
+          ELSE
+            j = j + 1
+            EXIT
+          END IF
+        END DO
+      END IF
+    END DO
+  END SUBROUTINE compute_rhs
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Check feasibility
+  !---------------------------------------------------------------------------
+  SUBROUTINE check_feasibility(is_feasible)
+    LOGICAL, INTENT(OUT) :: is_feasible
+
+    Ww(1:Mrelas) = Rhs(1:Mrelas)
+
+    DO j = 1, Mrelas
+      ibas = Ibasis(j)
+      xval = Rprim(j)
+
+      IF( Ind(ibas)<=3 ) xval = MAX(0._DP,xval)
+
+      IF( Ind(ibas)==3 ) THEN
+        upbnd = Bu(ibas) - Bl(ibas)
+        IF( ibas<=Nvars ) upbnd = upbnd/Csc(ibas)
+        xval = MIN(upbnd,xval)
+      END IF
+
+      IF( xval/=0._DP ) THEN
+        IF( ibas>Nvars ) THEN
+          IF( Ind(ibas)/=2 ) THEN
+            Ww(ibas-Nvars) = Ww(ibas-Nvars) + xval
+          ELSE
+            Ww(ibas-Nvars) = Ww(ibas-Nvars) - xval
+          END IF
+        ELSE
+          i = 0
+          DO
+            CALL DPNNZR(i,aij,iplace,Amat,Imat,ibas)
+            IF( i>0 ) THEN
+              Ww(i) = Ww(i) - xval*aij*Csc(ibas)
+            ELSE
+              EXIT
+            END IF
+          END DO
+        END IF
+      END IF
+    END DO
+
+    resnrm = SUM(ABS(Ww(1:Mrelas)))
+    is_feasible = resnrm<=tolls*(rprnrm*anorm+rhsnrm)
+
+    IF( .NOT. is_feasible ) is_feasible = resnrm<=tolabs
+    IF( is_feasible ) Primal(Nvars+1:Nvars+Mrelas) = 0._DP
+  END SUBROUTINE check_feasibility
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Compute new primal
+  !---------------------------------------------------------------------------
+  SUBROUTINE compute_primal()
+    Ww(1:Mrelas) = Rhs(1:Mrelas)
+    trans = .FALSE.
+    CALL LA05BD(Basmat,Ibrc,Lbm,Mrelas,Ipr,Iwr,Wr,gg,Ww,trans)
+    Rprim(1:Mrelas) = Ww(1:Mrelas)
+    rprnrm = SUM(ABS(Rprim(1:Mrelas)))
+  END SUBROUTINE compute_primal
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Compute new duals
+  !---------------------------------------------------------------------------
+  SUBROUTINE compute_duals()
+    DO i = 1, Mrelas
+      j = Ibasis(i)
+      IF( j>Nvars ) THEN
+        Duals(i) = xlamda*Primal(i+Nvars)
+      ELSE
+        Duals(i) = costsc*Costs(j)*Csc(j) + xlamda*Primal(i+Nvars)
+      END IF
+    END DO
+
+    trans = .TRUE.
+    CALL LA05BD(Basmat,Ibrc,Lbm,Mrelas,Ipr,Iwr,Wr,gg,Duals,trans)
+    dulnrm = SUM(ABS(Duals(1:Mrelas)))
+  END SUBROUTINE compute_duals
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Initialize reduced costs
+  !---------------------------------------------------------------------------
+  SUBROUTINE init_reduced_costs()
+    CALL DPINCW(Mrelas,Nvars,Lmx,Lbm,npp,jstrt,Imat,Ibrc,Ipr,Iwr,Ind,&
+      Ibb,costsc,gg,erdnrm,dulnrm,Amat,Basmat,Csc,Wr,Ww,Rz,Rg,Costs,Colnrm,Duals,stpedg)
+  END SUBROUTINE init_reduced_costs
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Find entering variable
+  !---------------------------------------------------------------------------
+  SUBROUTINE find_entering_variable(var_found)
+    LOGICAL, INTENT(OUT) :: var_found
+
+    CALL DPLPFE(Mrelas,Nvars,Lmx,Lbm,ienter,Ibasis,Imat,Ibrc,Ipr,Iwr,Ind,Ibb,&
+      erdnrm,eps,gg,dulnrm,dirnrm,Amat,Basmat,Csc,Wr,Ww,Bl,Bu,Rz,Rg,Colnrm,Duals,var_found)
+  END SUBROUTINE find_entering_variable
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Perform simplex phase (penalty, phase-1, or phase-2)
+  !---------------------------------------------------------------------------
+  SUBROUTINE perform_simplex_phase(lambda, saved_costsc, is_feasible, is_unbounded, iter_count)
+    REAL(DP), INTENT(INOUT) :: lambda, saved_costsc
+    LOGICAL, INTENT(INOUT) :: is_feasible, is_unbounded
+    INTEGER, INTENT(INOUT) :: iter_count
+
+    LOGICAL :: phase1_needed, phase2_started, any_infeasible
+    INTEGER :: phase
+
+    phase1_needed = .FALSE.
+    phase2_started = .FALSE.
+    phase = 0  ! 0=penalty, 1=phase-1, 2=phase-2
+
+    simplex_phases: DO
+      ! Compute duals for current phase
+      CALL compute_duals()
+
+      ! Main simplex iteration loop
+      simplex_loop: DO
+        ! Initialize reduced costs
+        CALL init_reduced_costs()
+
+        IF( kprint>2 ) THEN
+          CALL DVOUT(Mrelas,Duals,'('' BASIC (INTERNAL) DUAL SOLN.'')',idg)
+          CALL DVOUT(Nvars+Mrelas,Rz,'('' REDUCED COSTS'')',idg)
+        END IF
+
+        ! Find variable to enter basis
+        CALL find_entering_variable(found)
+
+        IF( .NOT. found ) THEN
+          ! Check if redecomposition needed
+          IF( .NOT. redbas ) THEN
+            CALL decompose_basis(singlr)
+            IF( Info<0 ) RETURN
+            ntries = 1
+            CALL compute_error(ntries, singlr)
+            IF( singlr ) THEN
+              nerr = 26
+              Info = -nerr
+              PRINT*,'DPLPMN : IN DSPLP, MOVED TO A SINGULAR POINT.'
+              RETURN
+            END IF
+            CALL compute_primal()
+            CALL compute_duals()
+            CALL init_reduced_costs()
+
+            ! Erase non-cycling markers
+            DO i = Mrelas + 1, Mrelas + Nvars
+              Ibasis(i) = ABS(Ibasis(i))
+            END DO
+
+            CALL find_entering_variable(found)
+          END IF
+
+          IF( .NOT. found ) EXIT simplex_loop
+        END IF
+
+        IF( kprint>=3 ) CALL DVOUT(Mrelas,Ww,'('' SEARCH DIRECTION'')',idg)
+
+        ! Choose variable to leave basis
+        CALL DPLPFL(Mrelas,Nvars,ienter,ileave,Ibasis,Ind,theta,dirnrm,&
+          rprnrm,Csc,Ww,Bl,Bu,Erp,Rprim,Primal,finite,zerolv)
+
+        IF( .NOT. finite ) THEN
+          is_unbounded = .TRUE.
+          Ibb(Ibasis(ienter)) = 0
+        ELSE
+          ! Make move and update
+          CALL DPLPMU(Mrelas,Nvars,Lmx,Lbm,nredc,Info,ienter,ileave,npp,&
+            jstrt,Ibasis,Imat,Ibrc,Ipr,Iwr,Ind,Ibb,anorm,eps,uu,gg,&
+            rprnrm,erdnrm,dulnrm,theta,costsc,xlamda,rhsnrm,Amat,&
+            Basmat,Csc,Wr,Rprim,Ww,Bu,Bl,Rhs,Erd,Erp,Rz,Rg,Colnrm,&
+            Costs,Primal,Duals,singlr,redbas,zerolv,stpedg)
+          IF( Info==(-26) ) RETURN
+
+          IF( kprint>=2 ) CALL print_iteration_summary()
+
+          ! Compute error periodically
+          ntries = 1
+          CALL compute_error(ntries, singlr)
+          IF( singlr ) THEN
+            CALL decompose_basis(singlr)
+            IF( Info<0 ) RETURN
+            ntries = 2
+            CALL compute_error(ntries, singlr)
+            IF( singlr ) THEN
+              nerr = 26
+              Info = -nerr
+              PRINT*,'DPLPMN : IN DSPLP, MOVED TO A SINGULAR POINT.'
+              RETURN
+            END IF
+          END IF
+        END IF
+
+        iter_count = iter_count + 1
+
+        ! Check max iterations
+        IF( iter_count > mxitlp ) THEN
+          nerr = 25
+          IF( kprint>=1 ) CALL print_summary()
+          idum(1) = 0
+          IF( savedt ) idum(1) = isave
+          WRITE (xern1,'(I8)') mxitlp
+          WRITE (xern2,'(I8)') idum(1)
+          PRINT*,'DPLPMN','IN DSPLP, MAX ITERATIONS = '//xern1//&
+            ' TAKEN.  UP-TO-DATE RESULTS SAVED ON FILE NO. '//xern2
+          Info = -nerr
+          RETURN
+        END IF
+      END DO simplex_loop
+
+      ! After simplex loop exits (optimality reached for current phase)
+      CALL compute_rhs()
+      CALL compute_primal()
+      CALL check_feasibility(is_feasible)
+
+      SELECT CASE (phase)
+        CASE (0)  ! Penalty phase
+          IF( is_feasible ) THEN
+            ! Check if any basic vars still infeasible
+            any_infeasible = .FALSE.
+            DO i = 1, Mrelas
+              IF( Primal(i+Nvars)/=0._DP ) THEN
+                any_infeasible = .TRUE.
+                EXIT
+              END IF
+            END DO
+
+            IF( any_infeasible ) THEN
+              lambda = 0._DP
+              phase = 2
+            ELSE
+              EXIT simplex_phases  ! Done!
+            END IF
+          ELSE
+            ! Need phase-1
+            IF( kprint>=2 ) CALL IVOUT(0,idum,'('' ENTER STANDARD PHASE-1'')',idg)
+            saved_costsc = costsc
+            costsc = 0._DP
+            CALL classify_variables()
+            phase = 1
+          END IF
+
+        CASE (1)  ! Phase-1
+          CALL compute_rhs()
+          CALL compute_primal()
+          CALL check_feasibility(is_feasible)
+
+          IF( is_feasible ) THEN
+            IF( kprint>1 ) CALL IVOUT(0,idum,'('' ENTER STANDARD PHASE-2'')',idg)
+            lambda = 0._DP
+            costsc = saved_costsc
+            phase = 2
+          ELSE
+            EXIT simplex_phases  ! Infeasible
+          END IF
+
+        CASE (2)  ! Phase-2
+          EXIT simplex_phases  ! Done
+      END SELECT
+
+      ! Update duals for next phase
+      CALL compute_duals()
+    END DO simplex_phases
+  END SUBROUTINE perform_simplex_phase
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Rescale and rearrange variables
+  !---------------------------------------------------------------------------
+  SUBROUTINE rescale_and_rearrange(is_feasible, is_unbounded)
+    LOGICAL, INTENT(IN) :: is_feasible, is_unbounded
+
+    CALL compute_duals()
+
+    IF( costsc/=0._DP ) THEN
+      DO i = 1, Mrelas
+        Duals(i) = Duals(i)/costsc
+      END DO
+    END IF
+
+    CALL compute_primal()
+
+    ! Reapply column scaling to primal
+    DO i = 1, Mrelas
+      j = Ibasis(i)
+      IF( j<=Nvars ) THEN
+        scalr = Csc(j)
+        IF( Ind(j)==2 ) scalr = -scalr
+        Rprim(i) = Rprim(i)*scalr
+      END IF
+    END DO
+
+    ! Replace translated basic variables into array Primal
+    Primal(1:Nvars+Mrelas) = 0._DP
+    DO j = 1, Nvars + Mrelas
+      ibas = ABS(Ibasis(j))
+      xval = 0._DP
+      IF( j<=Mrelas ) xval = Rprim(j)
+      IF( Ind(ibas)==1 ) xval = xval + Bl(ibas)
+      IF( Ind(ibas)==2 ) xval = Bu(ibas) - xval
+      IF( Ind(ibas)==3 ) THEN
+        IF( MOD(Ibb(ibas),2)==0 ) xval = Bu(ibas) - Bl(ibas) - xval
+        xval = xval + Bl(ibas)
+      END IF
+      Primal(ibas) = xval
+    END DO
+
+    ! Compute duals for independent variables with bounds
+    DO j = 1, Nvars
+      rzj = 0._DP
+      IF( Ibb(j)>0._DP .AND. Ind(j)/=4 ) THEN
+        rzj = Costs(j)
+        i = 0
+        DO
+          CALL DPNNZR(i,aij,iplace,Amat,Imat,j)
+          IF( i<=0 ) EXIT
+          rzj = rzj - aij*Duals(i)
+        END DO
+      END IF
+      Duals(Mrelas+j) = rzj
+    END DO
+  END SUBROUTINE rescale_and_rearrange
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Mark infeasible variables
+  !---------------------------------------------------------------------------
+  SUBROUTINE mark_infeasible_vars()
+    sizee = SUM(ABS(Primal(1:Nvars)))*anorm
+    sizee = sizee/SUM(ABS(Csc(1:Nvars)))
+    sizee = sizee + SUM(ABS(Primal(Nvars+1:Nvars+Mrelas)))
+
+    DO i = 1, Nvars + Mrelas
+      SELECT CASE( Ind(i) )
+        CASE (1)
+          IF( sizee+ABS(Primal(i)-Bl(i))*factor/=sizee ) THEN
+            IF( Primal(i)<=Bl(i) ) Ind(i) = -4
+          END IF
+        CASE (2)
+          IF( sizee+ABS(Primal(i)-Bu(i))*factor/=sizee ) THEN
+            IF( Primal(i)>=Bu(i) ) Ind(i) = -4
+          END IF
+        CASE (3)
+          IF( sizee+ABS(Primal(i)-Bl(i))*factor/=sizee ) THEN
+            IF( Primal(i)<Bl(i) ) THEN
+              Ind(i) = -4
+            ELSEIF( sizee+ABS(Primal(i)-Bu(i))*factor/=sizee ) THEN
+              IF( Primal(i)>Bu(i) ) Ind(i) = -4
+            END IF
+          END IF
+        CASE (4)
+          ! Free variable, no bounds to check
+      END SELECT
+    END DO
+  END SUBROUTINE mark_infeasible_vars
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Mark unbounded variables
+  !---------------------------------------------------------------------------
+  SUBROUTINE mark_unbounded_vars()
+    DO j = 1, Nvars
+      IF( Ibb(j)==0 ) THEN
+        SELECT CASE( Ind(j) )
+          CASE (1)
+            Bu(j) = Bl(j)
+            Ind(j) = -3
+          CASE (2)
+            Bl(j) = Bu(j)
+            Ind(j) = -3
+          CASE (3)
+            ! Has both bounds, keep as is
+          CASE (4)
+            Bl(j) = 0._DP
+            Bu(j) = 0._DP
+            Ind(j) = -3
+        END SELECT
+      END IF
+    END DO
+  END SUBROUTINE mark_unbounded_vars
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Print prologue
+  !---------------------------------------------------------------------------
+  SUBROUTINE print_prologue()
     idum(1) = Mrelas
     CALL IVOUT(1,idum,'(''1NUM. OF DEPENDENT VARS., MRELAS'')',idg)
     idum(1) = Nvars
@@ -267,756 +828,75 @@ SUBROUTINE DPLPMN(DUSRMT,Mrelas,Nvars,Costs,Prgopt,Dattrv,Bl,Bu,Ind,Info,&
         &'' WHEN COL. NO. OF BASIS EXCHANGED IS NEGATIVE, THE LEAVING''/&
         &'' VARIABLE IS AT ITS UPPER BOUND.'')',idg)
     END IF
-  END IF
-  !++  CODE FOR OUTPUT=NO IS INACTIVE
-  !++  END
-  !
-  !     INITIALIZATION. SCALE DATA, NORMALIZE BOUNDS, FORM COLUMN
-  !     CHECK SUMS, AND FORM INITIAL BASIS MATRIX.
-  CALL DPINIT(Mrelas,Nvars,Costs,Bl,Bu,Ind,Primal,Amat,Csc,costsc,&
-    Colnrm,xlamda,anorm,Rhs,rhsnrm,Ibasis,Ibb,Imat,lopt)
-  IF( Info<0 ) GOTO 4600
-  !
-  nredc = 0
-  npr004 = 200
-  GOTO 2700
-  200 CONTINUE
-  IF( .NOT. (singlr) ) THEN
-    npr005 = 300
-    ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-    !     PROCEDURE (COMPUTE ERROR IN DUAL AND PRIMAL SYSTEMS)
-    ntries = 1
-    GOTO 3000
-  ELSE
-    nerr = 23
-    Info = -nerr
-    ERROR STOP 'DPLPMN : IN DSPLP,  A SINGULAR INITIAL BASIS WAS ENCOUNTERED.'
-    GOTO 4600
-  END IF
-  300  npr006 = 400
-  GOTO 4000
-  400  npr007 = 500
-  GOTO 2800
-  500 CONTINUE
-  IF( .NOT. (usrbas) ) GOTO 700
-  npr008 = 600
-  GOTO 3100
-  600 CONTINUE
-  IF( .NOT. feas ) THEN
-    nerr = 24
-    Info = -nerr
-    ERROR STOP 'DPLPMN : IN DSPLP, AN INFEASIBLE INITIAL BASIS WAS ENCOUNTERED.'
-    GOTO 4600
-  END IF
-  700  itlp = 0
-  !
-  !     LAMDA HAS BEEN SET TO A CONSTANT, PERFORM PENALTY METHOD.
-  npr009 = 800
-  !     PROCEDURE (PERFORM SIMPLEX STEPS)
-  npr013 = 2000
-  GOTO 4100
-  800  npr010 = 900
-  GOTO 1900
-  900  npr006 = 1000
-  GOTO 4000
-  1000 npr008 = 1100
-  GOTO 3100
-  1100 CONTINUE
-  IF( feas ) THEN
-    !     CHECK IF ANY BASIC VARIABLES ARE STILL CLASSIFIED AS
-    !     INFEASIBLE.  IF ANY ARE, THEN THIS MAY NOT YET BE AN
-    !     OPTIMAL POINT.  THEREFORE SET LAMDA TO ZERO AND TRY
-    !     TO PERFORM MORE SIMPLEX STEPS.
-    i = 1
-    n20046 = Mrelas
-    DO WHILE( (n20046-i)>=0 )
-      IF( Primal(i+Nvars)/=0._DP ) THEN
-        xlamda = 0._DP
-        npr009 = 1700
-        npr013 = 2000
-        GOTO 4100
-      ELSE
-        i = i + 1
-      END IF
-    END DO
-    GOTO 1700
-  ELSE
-    !
-    !     SET LAMDA TO INFINITY BY SETTING COSTSC TO ZERO (SAVE THE VALUE OF
-    !     COSTSC) AND PERFORM STANDARD PHASE-1.
-    IF( kprint>=2 ) CALL IVOUT(0,idum,'('' ENTER STANDARD PHASE-1'')',idg)
-    scosts = costsc
-    costsc = 0._DP
-    npr007 = 1200
-    GOTO 2800
-  END IF
-  1200 npr009 = 1300
-  npr013 = 2000
-  GOTO 4100
-  1300 npr010 = 1400
-  GOTO 1900
-  1400 npr006 = 1500
-  GOTO 4000
-  1500 npr008 = 1600
-  GOTO 3100
-  1600 CONTINUE
-  IF( feas ) THEN
-    !
-    !     SET LAMDA TO ZERO, COSTSC=SCOSTS, PERFORM STANDARD PHASE-2.
-    IF( kprint>1 ) CALL IVOUT(0,idum,'('' ENTER STANDARD PHASE-2'')',idg)
-    xlamda = 0._DP
-    costsc = scosts
-    npr009 = 1700
-    npr013 = 2000
-    GOTO 4100
-  END IF
-  !
-  1700 npr011 = 1800
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE(RESCALE AND REARRANGE VARIABLES)
-  !
-  !     RESCALE THE DUAL VARIABLES.
-  npr013 = 4300
-  GOTO 4100
-  1800 CONTINUE
-  IF( feas .AND. ( .NOT. unbnd) ) THEN
-    Info = 1
-  ELSEIF( ( .NOT. feas) .AND. ( .NOT. unbnd) ) THEN
-    nerr = 1
-    Info = -nerr
-    ERROR STOP 'DPLPMN : IN DSPLP, THE PROBLEM APPEARS TO BE INFEASIBLE'
-  ELSEIF( feas .AND. unbnd ) THEN
-    nerr = 2
-    Info = -nerr
-    ERROR STOP 'DPLPMN : IN DSPLP, THE PROBLEM APPEARS TO HAVE NO FINITE SOLUTION.'
-  ELSEIF( ( .NOT. feas) .AND. unbnd ) THEN
-    nerr = 3
-    Info = -nerr
-    ERROR STOP 'DPLPMN : IN DSPLP, THE PROBLEM APPEARS TO BE INFEASIBLE AND TO HAVE NO FINITE SOLN.'
-  END IF
-  !
-  IF( Info==(-1) .OR. Info==(-3) ) THEN
-    sizee = SUM(ABS(Primal(1:Nvars)))*anorm
-    sizee = sizee/SUM(ABS(Csc(1:Nvars)))
-    sizee = sizee + SUM(ABS(Primal(Nvars+1:Nvars+Mrelas)))
-    i = 1
-    n20058 = Nvars + Mrelas
-    DO WHILE( (n20058-i)>=0 )
-      nx0066 = Ind(i)
-      IF( nx0066>=1 .AND. nx0066<=4 ) THEN
-        SELECT CASE (nx0066)
-          CASE (2)
-            IF( sizee+ABS(Primal(i)-Bu(i))*factor/=sizee ) THEN
-              IF( Primal(i)>=Bu(i) ) Ind(i) = -4
-            END IF
-          CASE (3)
-            IF( sizee+ABS(Primal(i)-Bl(i))*factor/=sizee ) THEN
-              IF( Primal(i)<Bl(i) ) THEN
-                Ind(i) = -4
-              ELSEIF( sizee+ABS(Primal(i)-Bu(i))*factor/=sizee ) THEN
-                IF( Primal(i)>Bu(i) ) Ind(i) = -4
-              END IF
-            END IF
-          CASE (4)
-          CASE DEFAULT
-            IF( sizee+ABS(Primal(i)-Bl(i))*factor/=sizee ) THEN
-              IF( Primal(i)<=Bl(i) ) Ind(i) = -4
-            END IF
-        END SELECT
-      END IF
-      i = i + 1
-    END DO
-  END IF
-  !
-  IF( Info==(-2) .OR. Info==(-3) ) THEN
-    j = 1
-    n20080 = Nvars
-    DO WHILE( (n20080-j)>=0 )
-      IF( Ibb(j)==0 ) THEN
-        nx0091 = Ind(j)
-        IF( nx0091>=1 .AND. nx0091<=4 ) THEN
-          SELECT CASE (nx0091)
-            CASE (2)
-              Bl(j) = Bu(j)
-              Ind(j) = -3
-            CASE (3)
-            CASE (4)
-              Bl(j) = 0._DP
-              Bu(j) = 0._DP
-              Ind(j) = -3
-            CASE DEFAULT
-              Bu(j) = Bl(j)
-              Ind(j) = -3
-          END SELECT
-        END IF
-      END IF
-      j = j + 1
-    END DO
-  END IF
-  !++  CODE FOR OUTPUT=YES IS ACTIVE
-  IF( kprint<1 ) GOTO 4600
-  npr012 = 4600
-  !++  CODE FOR OUTPUT=NO IS INACTIVE
-  !++  END
-  GOTO 4500
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE (COMPUTE RIGHT HAND SIDE)
-  1900 Rhs(1:Mrelas) = 0._DP
-  j = 1
-  n20098 = Nvars + Mrelas
-  DO WHILE( (n20098-j)>=0 )
-    nx0106 = Ind(j)
-    IF( nx0106>=1 .AND. nx0106<=4 ) THEN
-      SELECT CASE (nx0106)
-        CASE (2)
-          scalr = -Bu(j)
-        CASE (3)
-          scalr = -Bl(j)
-        CASE (4)
-          scalr = 0._DP
-        CASE DEFAULT
-          scalr = -Bl(j)
-      END SELECT
+  END SUBROUTINE print_prologue
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Print iteration summary
+  !---------------------------------------------------------------------------
+  SUBROUTINE print_iteration_summary()
+    idum(1) = itlp + 1
+    CALL IVOUT(1,idum,'(''0ITERATION NUMBER'')',idg)
+    idum(1) = Ibasis(ABS(ileave))
+    CALL IVOUT(1,idum,'('' INDEX OF VARIABLE ENTERING THE BASIS'')',idg)
+    idum(1) = ileave
+    CALL IVOUT(1,idum,'('' COLUMN OF THE BASIS EXCHANGED'')',idg)
+    idum(1) = Ibasis(ienter)
+    CALL IVOUT(1,idum,'('' INDEX OF VARIABLE LEAVING THE BASIS'')',idg)
+    rdum(1) = theta
+    CALL DVOUT(1,rdum,'('' LENGTH OF THE EXCHANGE STEP'')',idg)
+    IF( kprint>=3 ) THEN
+      CALL DVOUT(Mrelas,Rprim,'('' BASIC (INTERNAL) PRIMAL SOLN.'')',idg)
+      CALL IVOUT(Nvars+Mrelas,Ibasis,&
+        '('' VARIABLE INDICES IN POSITIONS 1-MRELAS ARE BASIC.'')',idg)
+      CALL IVOUT(Nvars+Mrelas,Ibb,'('' IBB ARRAY'')',idg)
+      CALL DVOUT(Mrelas,Rhs,'('' TRANSLATED RHS'')',idg)
+      CALL DVOUT(Mrelas,Duals,'('' BASIC (INTERNAL) DUAL SOLN.'')',idg)
     END IF
-    IF( scalr==0._DP ) THEN
-      j = j + 1
-    ELSEIF( j>Nvars ) THEN
-      Rhs(j-Nvars) = Rhs(j-Nvars) - scalr
-      j = j + 1
+  END SUBROUTINE print_iteration_summary
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Print summary
+  !---------------------------------------------------------------------------
+  SUBROUTINE print_summary()
+    idum(1) = Info
+    CALL IVOUT(1,idum,'('' THE OUTPUT VALUE OF INFO IS'')',idg)
+    IF( .NOT. minprb ) THEN
+      CALL IVOUT(0,idum,'('' THIS IS A MAXIMIZATION PROBLEM.'')',idg)
     ELSE
-      i = 0
-      DO
-        CALL DPNNZR(i,aij,iplace,Amat,Imat,j)
-        IF( i>0 ) THEN
-          Rhs(i) = Rhs(i) + aij*scalr
-        ELSE
-          j = j + 1
-          EXIT
-        END IF
-      END DO
+      CALL IVOUT(0,idum,'('' THIS IS A MINIMIZATION PROBLEM.'')',idg)
     END IF
-  END DO
-  j = 1
-  n20119 = Nvars + Mrelas
-  DO WHILE( (n20119-j)>=0 )
-    scalr = 0._DP
-    IF( Ind(j)==3 .AND. MOD(Ibb(j),2)==0 ) scalr = Bu(j) - Bl(j)
-    IF( scalr==0._DP ) THEN
-      j = j + 1
-    ELSEIF( j>Nvars ) THEN
-      Rhs(j-Nvars) = Rhs(j-Nvars) + scalr
-      j = j + 1
+    IF( .NOT. stpedg ) THEN
+      CALL IVOUT(0,idum,'('' MINIMUM REDUCED COST PRICING WAS USED.'')',idg)
     ELSE
-      i = 0
-      DO
-        CALL DPNNZR(i,aij,iplace,Amat,Imat,j)
-        IF( i>0 ) THEN
-          Rhs(i) = Rhs(i) - aij*scalr
-        ELSE
-          j = j + 1
-          EXIT
-        END IF
-      END DO
+      CALL IVOUT(0,idum,'('' STEEPEST EDGE PRICING WAS USED.'')',idg)
     END IF
-  END DO
-  SELECT CASE(npr010)
-    CASE(900)
-      GOTO 900
-    CASE(1400)
-      GOTO 1400
-  END SELECT
-  2000 npr014 = 2100
-  GOTO 3200
-  2100 CONTINUE
-  IF( kprint>2 ) THEN
-    CALL DVOUT(Mrelas,Duals,'('' BASIC (INTERNAL) DUAL SOLN.'')',idg)
-    CALL DVOUT(Nvars+Mrelas,Rz,'('' REDUCED COSTS'')',idg)
-  END IF
-  npr015 = 2200
-  GOTO 4200
-  2200 CONTINUE
-  IF( .NOT. found ) THEN
-    ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-    !     PROCEDURE (REDECOMPOSE BASIS MATRIX AND TRY AGAIN)
-    IF( redbas ) GOTO 3900
-    npr004 = 3500
-    GOTO 2700
-  END IF
-  2300 CONTINUE
-  IF( .NOT. (found) ) THEN
-    SELECT CASE(npr009)
-      CASE(800)
-        GOTO 800
-      CASE(1300)
-        GOTO 1300
-      CASE(1700)
-        GOTO 1700
-    END SELECT
-  ELSE
-    IF( kprint>=3 ) CALL DVOUT(Mrelas,Ww,'('' SEARCH DIRECTION'')',idg)
-    ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-    !     PROCEDURE (CHOOSE VARIABLE TO LEAVE BASIS)
-    CALL DPLPFL(Mrelas,Nvars,ienter,ileave,Ibasis,Ind,theta,dirnrm,&
-      rprnrm,Csc,Ww,Bl,Bu,Erp,Rprim,Primal,finite,zerolv)
-    IF( .NOT. (finite) ) THEN
-      unbnd = .TRUE.
-      Ibb(Ibasis(ienter)) = 0
-    ELSE
-      ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-      !     PROCEDURE (MAKE MOVE AND UPDATE)
-      CALL DPLPMU(Mrelas,Nvars,Lmx,Lbm,nredc,Info,ienter,ileave,npp,&
-        jstrt,Ibasis,Imat,Ibrc,Ipr,Iwr,Ind,Ibb,anorm,eps,uu,gg,&
-        rprnrm,erdnrm,dulnrm,theta,costsc,xlamda,rhsnrm,Amat,&
-        Basmat,Csc,Wr,Rprim,Ww,Bu,Bl,Rhs,Erd,Erp,Rz,Rg,Colnrm,&
-        Costs,Primal,Duals,singlr,redbas,zerolv,stpedg)
-      IF( Info==(-26) ) GOTO 4600
-      !++  CODE FOR OUTPUT=YES IS ACTIVE
-      IF( kprint>=2 ) THEN
-        ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-        !     PROCEDURE (PRINT ITERATION SUMMARY)
-        idum(1) = itlp + 1
-        CALL IVOUT(1,idum,'(''0ITERATION NUMBER'')',idg)
-        idum(1) = Ibasis(ABS(ileave))
-        CALL IVOUT(1,idum,'('' INDEX OF VARIABLE ENTERING THE BASIS'')',idg)
-        idum(1) = ileave
-        CALL IVOUT(1,idum,'('' COLUMN OF THE BASIS EXCHANGED'')',idg)
-        idum(1) = Ibasis(ienter)
-        CALL IVOUT(1,idum,'('' INDEX OF VARIABLE LEAVING THE BASIS'')',idg)
-        rdum(1) = theta
-        CALL DVOUT(1,rdum,'('' LENGTH OF THE EXCHANGE STEP'')',idg)
-        IF( kprint>=3 ) THEN
-          CALL DVOUT(Mrelas,Rprim,'('' BASIC (INTERNAL) PRIMAL SOLN.'')',idg)
-          CALL IVOUT(Nvars+Mrelas,Ibasis,&
-            '('' VARIABLE INDICES IN POSITIONS 1-MRELAS ARE BASIC.'')',idg)
-          CALL IVOUT(Nvars+Mrelas,Ibb,'('' IBB ARRAY'')',idg)
-          CALL DVOUT(Mrelas,Rhs,'('' TRANSLATED RHS'')',idg)
-          CALL DVOUT(Mrelas,Duals,'('' BASIC (INTERNAL) DUAL SOLN.'')',idg)
-        END IF
-        !++  CODE FOR OUTPUT=NO IS INACTIVE
-        !++  END
-      END IF
-      npr005 = 2400
-      ntries = 1
-      GOTO 3000
+    rdum(1) = DOT_PRODUCT(Costs(1:Nvars),Primal(1:Nvars))
+    CALL DVOUT(1,rdum,'('' OUTPUT VALUE OF THE OBJECTIVE FUNCTION'')',idg)
+    CALL DVOUT(Nvars+Mrelas,Primal,&
+      '('' THE OUTPUT INDEPENDENT AND DEPENDENT VARIABLES'')',idg)
+    CALL DVOUT(Mrelas+Nvars,Duals,'('' THE OUTPUT DUAL VARIABLES'')',idg)
+    CALL IVOUT(Nvars+Mrelas,Ibasis,&
+      '('' VARIABLE INDICES IN POSITIONS 1-MRELAS ARE BASIC.'')',idg)
+    idum(1) = itlp
+    CALL IVOUT(1,idum,'('' NO. OF ITERATIONS'')',idg)
+    idum(1) = nredc
+    CALL IVOUT(1,idum,'('' NO. OF FULL REDECOMPS'')',idg)
+  END SUBROUTINE print_summary
+
+  !---------------------------------------------------------------------------
+  ! Internal subroutine: Save data and return
+  !---------------------------------------------------------------------------
+  SUBROUTINE do_save_and_return()
+    IF( savedt ) THEN
+      key = INT( Amat(4) )
+      Amat(4) = 0._DP
+      lpr = Nvars + 4
+      WRITE (isave) (Amat(i),i=1,lpr), (Imat(i),i=1,lpr)
+      Amat(4) = key
+      ipage = 1
+      key = 1
+      CALL save_data_to_file()
     END IF
-  END IF
-  2400 itlp = itlp + 1
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE (CHECK AND RETURN WITH EXCESS ITERATIONS)
-  IF( itlp<=mxitlp ) THEN
-    npr015 = 2200
-    GOTO 4200
-  ELSE
-    nerr = 25
-    npr011 = 3300
-    npr013 = 4300
-    GOTO 4100
-  END IF
-  2500 lpr1 = lpr + 1
-  READ (isave) (Amat(i),i=lpr1,Lmx), (Imat(i),i=lpr1,Lmx)
-  np = Imat(Lmx-1)
-  ipage = ipage + 1
-  IF( np>=0 ) GOTO 2500
-  nparm = Nvars + Mrelas
-  READ (isave) (Ibasis(i),i=1,nparm)
-  REWIND isave
-  GOTO 100
-  2600 CONTINUE
-  lpr1 = lpr + 1
-  WRITE (isave) (Amat(i),i=lpr1,Lmx), (Imat(i),i=lpr1,Lmx)
-  np = Imat(Lmx-1)
-  ipage = ipage + 1
-  IF( np>=0 ) GOTO 2600
-  nparm = Nvars + Mrelas
-  WRITE (isave) (Ibasis(i),i=1,nparm)
-  ENDFILE isave
-  RETURN
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE (DECOMPOSE BASIS MATRIX)
-  !++  CODE FOR OUTPUT=YES IS ACTIVE
-  2700 CONTINUE
-  IF( kprint>=2 ) CALL IVOUT(Mrelas,Ibasis,&
-    '('' SUBSCRIPTS OF BASIC VARIABLES DURING REDECOMPOSITION'')',idg)
-  !++  CODE FOR OUTPUT=NO IS INACTIVE
-  !++  END
-  !
-  !     SET RELATIVE PIVOTING FACTOR FOR USE IN LA05 () PACKAGE.
-  uu = 0.1_DP
-  CALL DPLPDM(Mrelas,Nvars,Lbm,nredc,Info,Ibasis,Imat,Ibrc,Ipr,Iwr,&
-    Ind,anorm,eps,uu,gg,Amat,Basmat,Csc,Wr,singlr,redbas)
-  IF( Info<0 ) GOTO 4600
-  SELECT CASE(npr004)
-    CASE(200)
-      GOTO 200
-    CASE(2900)
-      GOTO 2900
-    CASE(3500)
-      GOTO 3500
-  END SELECT
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE (CLASSIFY VARIABLES)
-  !
-  !     DEFINE THE CLASSIFICATION OF THE BASIC VARIABLES
-  !     -1 VIOLATES LOWER BOUND, 0 FEASIBLE, +1 VIOLATES UPPER BOUND.
-  !     (THIS INFO IS STORED IN PRIMAL(NVARS+1)-PRIMAL(NVARS+MRELAS))
-  !     TRANSLATE VARIABLE TO ITS UPPER BOUND, IF > UPPER BOUND
-  2800 Primal(Nvars+1:Nvars+Mrelas) = 0._DP
-  i = 1
-  n20172 = Mrelas
-  DO WHILE( (n20172-i)>=0 )
-    j = Ibasis(i)
-    IF( Ind(j)/=4 ) THEN
-      IF( Rprim(i)<0._DP ) THEN
-        Primal(i+Nvars) = -1._DP
-      ELSEIF( Ind(j)==3 ) THEN
-        upbnd = Bu(j) - Bl(j)
-        IF( j<=Nvars ) upbnd = upbnd/Csc(j)
-        IF( Rprim(i)>upbnd ) THEN
-          Rprim(i) = Rprim(i) - upbnd
-          IF( j>Nvars ) THEN
-            Rhs(j-Nvars) = Rhs(j-Nvars) + upbnd
-          ELSE
-            k = 0
-            DO
-              CALL DPNNZR(k,aij,iplace,Amat,Imat,j)
-              IF( k<=0 ) EXIT
-              Rhs(k) = Rhs(k) - upbnd*aij*Csc(j)
-            END DO
-          END IF
-          Primal(i+Nvars) = 1._DP
-        END IF
-      END IF
-    END IF
-    i = i + 1
-  END DO
-  SELECT CASE(npr007)
-    CASE(500)
-      GOTO 500
-    CASE(1200)
-      GOTO 1200
-  END SELECT
-  2900 ntries = ntries + 1
-  3000 CONTINUE
-  IF( (2-ntries)>=0 ) THEN
-    CALL DPLPCE(Mrelas,Nvars,Lmx,Lbm,itlp,itbrc,Ibasis,Imat,Ibrc,Ipr,Iwr,&
-      Ind,Ibb,erdnrm,eps,tune,gg,Amat,Basmat,Csc,Wr,Ww,Primal,Erd,Erp,singlr,redbas)
-    IF( .NOT. singlr ) THEN
-      !++  CODE FOR OUTPUT=YES IS ACTIVE
-      IF( kprint>=3 ) THEN
-        CALL DVOUT(Mrelas,Erp,'('' EST. ERROR IN PRIMAL COMPS.'')',idg)
-        !++  CODE FOR OUTPUT=NO IS INACTIVE
-        !++  END
-        CALL DVOUT(Mrelas,Erd,'('' EST. ERROR IN DUAL COMPS.'')',idg)
-      END IF
-      SELECT CASE(npr005)
-        CASE(300)
-          GOTO 300
-        CASE(2400)
-          GOTO 2400
-        CASE(3600)
-          GOTO 3600
-      END SELECT
-    ELSEIF( ntries/=2 ) THEN
-      npr004 = 2900
-      GOTO 2700
-    END IF
-  END IF
-  nerr = 26
-  Info = -nerr
-  PRINT*,'DPLPMN : IN DSPLP, MOVED TO A SINGULAR POINT. THIS SHOULD NOT HAPPEN.'
-  GOTO 4600
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE (CHECK FEASIBILITY)
-  !
-  !     SEE IF NEARBY FEASIBLE POINT SATISFIES THE CONSTRAINT
-  !     EQUATIONS.
-  !
-  !     COPY RHS INTO WW(*), THEN UPDATE WW(*).
-  3100 Ww(1:Mrelas) = Rhs(1:Mrelas)
-  j = 1
-  n20206 = Mrelas
-  DO WHILE( (n20206-j)>=0 )
-    ibas = Ibasis(j)
-    xval = Rprim(j)
-    !
-    !     ALL VARIABLES BOUNDED BELOW HAVE ZERO AS THAT BOUND.
-    IF( Ind(ibas)<=3 ) xval = MAX(0._DP,xval)
-    !
-    !     IF THE VARIABLE HAS AN UPPER BOUND, COMPUTE THAT BOUND.
-    IF( Ind(ibas)==3 ) THEN
-      upbnd = Bu(ibas) - Bl(ibas)
-      IF( ibas<=Nvars ) upbnd = upbnd/Csc(ibas)
-      xval = MIN(upbnd,xval)
-    END IF
-    !
-    !     SUBTRACT XVAL TIMES COLUMN VECTOR FROM RIGHT-HAND SIDE IN WW(*)
-    IF( xval==0._DP ) THEN
-      j = j + 1
-    ELSEIF( ibas>Nvars ) THEN
-      IF( Ind(ibas)/=2 ) THEN
-        Ww(ibas-Nvars) = Ww(ibas-Nvars) + xval
-      ELSE
-        Ww(ibas-Nvars) = Ww(ibas-Nvars) - xval
-      END IF
-      j = j + 1
-    ELSE
-      i = 0
-      DO
-        CALL DPNNZR(i,aij,iplace,Amat,Imat,ibas)
-        IF( i>0 ) THEN
-          Ww(i) = Ww(i) - xval*aij*Csc(ibas)
-        ELSE
-          j = j + 1
-          EXIT
-        END IF
-      END DO
-    END IF
-  END DO
-  !
-  !   COMPUTE NORM OF DIFFERENCE AND CHECK FOR FEASIBILITY.
-  resnrm = SUM(ABS(Ww(1:Mrelas)))
-  feas = resnrm<=tolls*(rprnrm*anorm+rhsnrm)
-  !
-  !     TRY AN ABSOLUTE ERROR TEST IF THE RELATIVE TEST FAILS.
-  IF( .NOT. feas ) feas = resnrm<=tolabs
-  IF( feas ) THEN
-    Primal(Nvars+1:Nvars+Mrelas) = 0._DP
-  END IF
-  SELECT CASE(npr008)
-    CASE(600)
-      GOTO 600
-    CASE(1100)
-      GOTO 1100
-    CASE(1600)
-      GOTO 1600
-  END SELECT
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE (INITIALIZE REDUCED COSTS AND STEEPEST EDGE WEIGHTS)
-  3200 CALL DPINCW(Mrelas,Nvars,Lmx,Lbm,npp,jstrt,Imat,Ibrc,Ipr,Iwr,Ind,&
-    Ibb,costsc,gg,erdnrm,dulnrm,Amat,Basmat,Csc,Wr,Ww,Rz,Rg,Costs,Colnrm,Duals,stpedg)
-  !
-  SELECT CASE(npr014)
-    CASE(2100)
-      GOTO 2100
-    CASE(3900)
-      GOTO 3900
-  END SELECT
-  !++  CODE FOR OUTPUT=YES IS ACTIVE
-  3300 CONTINUE
-  IF( kprint>=1 ) THEN
-    npr012 = 3400
-    GOTO 4500
-  END IF
-  !++  CODE FOR OUTPUT=NO IS INACTIVE
-  !++  END
-  3400 idum(1) = 0
-  IF( savedt ) idum(1) = isave
-  WRITE (xern1,'(I8)') mxitlp
-  WRITE (xern2,'(I8)') idum(1)
-  PRINT*,'DPLPMN','IN DSPLP, MAX ITERATIONS = '//xern1//&
-    ' TAKEN.  UP-TO-DATE RESULTS SAVED ON FILE NO. '//xern2//&
-    '.   IF FILE NO. = 0, NO SAVE.'
-  Info = -nerr
-  GOTO 4600
-  3500 npr005 = 3600
-  ntries = 1
-  GOTO 3000
-  3600 npr006 = 3700
-  GOTO 4000
-  3700 npr013 = 3800
-  GOTO 4100
-  3800 npr014 = 3900
-  GOTO 3200
-  !
-  !     ERASE NON-CYCLING MARKERS NEAR COMPLETION.
-  3900 i = Mrelas + 1
-  n20247 = Mrelas + Nvars
-  DO WHILE( (n20247-i)>=0 )
-    Ibasis(i) = ABS(Ibasis(i))
-    i = i + 1
-  END DO
-  npr015 = 2300
-  GOTO 4200
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE (COMPUTE NEW PRIMAL)
-  !
-  !     COPY RHS INTO WW(*), SOLVE SYSTEM.
-  4000 Ww(1:Mrelas) = Rhs(1:Mrelas)
-  trans = .FALSE.
-  CALL LA05BD(Basmat,Ibrc,Lbm,Mrelas,Ipr,Iwr,Wr,gg,Ww,trans)
-  Rprim(1:Mrelas) = Ww(1:Mrelas)
-  rprnrm = SUM(ABS(Rprim(1:Mrelas)))
-  SELECT CASE(npr006)
-    CASE(400)
-      GOTO 400
-    CASE(1000)
-      GOTO 1000
-    CASE(1500)
-      GOTO 1500
-    CASE(3700)
-      GOTO 3700
-    CASE(4400)
-      GOTO 4400
-  END SELECT
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE (COMPUTE NEW DUALS)
-  !
-  !     SOLVE FOR DUAL VARIABLES. FIRST COPY COSTS INTO DUALS(*).
-  4100 i = 1
-  n20252 = Mrelas
-  DO WHILE( (n20252-i)>=0 )
-    j = Ibasis(i)
-    IF( j>Nvars ) THEN
-      Duals(i) = xlamda*Primal(i+Nvars)
-    ELSE
-      Duals(i) = costsc*Costs(j)*Csc(j) + xlamda*Primal(i+Nvars)
-    END IF
-    i = i + 1
-  END DO
-  !
-  trans = .TRUE.
-  CALL LA05BD(Basmat,Ibrc,Lbm,Mrelas,Ipr,Iwr,Wr,gg,Duals,trans)
-  dulnrm = SUM(ABS(Duals(1:Mrelas)))
-  SELECT CASE(npr013)
-    CASE(2000)
-      GOTO 2000
-    CASE(3800)
-      GOTO 3800
-    CASE(4300)
-      GOTO 4300
-  END SELECT
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE (FIND VARIABLE TO ENTER BASIS AND GET SEARCH DIRECTION)
-  4200 CALL DPLPFE(Mrelas,Nvars,Lmx,Lbm,ienter,Ibasis,Imat,Ibrc,Ipr,Iwr,Ind,Ibb,&
-    erdnrm,eps,gg,dulnrm,dirnrm,Amat,Basmat,Csc,Wr,Ww,Bl,Bu,Rz,Rg,Colnrm,Duals,found)
-  SELECT CASE(npr015)
-    CASE(2200)
-      GOTO 2200
-    CASE(2300)
-      GOTO 2300
-  END SELECT
-  4300 CONTINUE
-  IF( costsc==0._DP ) THEN
-    npr006 = 4400
-    GOTO 4000
-  ELSE
-    i = 1
-    n20271 = Mrelas
-    DO WHILE( (n20271-i)>=0 )
-      Duals(i) = Duals(i)/costsc
-      i = i + 1
-    END DO
-    npr006 = 4400
-    GOTO 4000
-  END IF
-  !
-  !     REAPPLY COLUMN SCALING TO PRIMAL.
-  4400 i = 1
-  n20276 = Mrelas
-  DO WHILE( (n20276-i)>=0 )
-    j = Ibasis(i)
-    IF( j<=Nvars ) THEN
-      scalr = Csc(j)
-      IF( Ind(j)==2 ) scalr = -scalr
-      Rprim(i) = Rprim(i)*scalr
-    END IF
-    i = i + 1
-  END DO
-  !
-  !     REPLACE TRANSLATED BASIC VARIABLES INTO ARRAY PRIMAL(*)
-  Primal(1:Nvars+Mrelas) = 0._DP
-  j = 1
-  n20283 = Nvars + Mrelas
-  DO WHILE( (n20283-j)>=0 )
-    ibas = ABS(Ibasis(j))
-    xval = 0._DP
-    IF( j<=Mrelas ) xval = Rprim(j)
-    IF( Ind(ibas)==1 ) xval = xval + Bl(ibas)
-    IF( Ind(ibas)==2 ) xval = Bu(ibas) - xval
-    IF( Ind(ibas)==3 ) THEN
-      IF( MOD(Ibb(ibas),2)==0 ) xval = Bu(ibas) - Bl(ibas) - xval
-      xval = xval + Bl(ibas)
-    END IF
-    Primal(ibas) = xval
-    j = j + 1
-  END DO
-  !
-  !     COMPUTE DUALS FOR INDEPENDENT VARIABLES WITH BOUNDS.
-  !     OTHER ENTRIES ARE ZERO.
-  j = 1
-  n20290 = Nvars
-  DO WHILE( (n20290-j)>=0 )
-    rzj = 0._DP
-    IF( Ibb(j)>0._DP .AND. Ind(j)/=4 ) THEN
-      rzj = Costs(j)
-      i = 0
-      DO
-        CALL DPNNZR(i,aij,iplace,Amat,Imat,j)
-        IF( i<=0 ) EXIT
-        rzj = rzj - aij*Duals(i)
-      END DO
-    END IF
-    Duals(Mrelas+j) = rzj
-    j = j + 1
-  END DO
-  SELECT CASE(npr011)
-    CASE(1800)
-      GOTO 1800
-    CASE(3300)
-      GOTO 3300
-  END SELECT
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE (PRINT SUMMARY)
-  4500 idum(1) = Info
-  CALL IVOUT(1,idum,'('' THE OUTPUT VALUE OF INFO IS'')',idg)
-  IF( .NOT. (minprb) ) THEN
-    CALL IVOUT(0,idum,'('' THIS IS A MAXIMIZATION PROBLEM.'')',idg)
-  ELSE
-    CALL IVOUT(0,idum,'('' THIS IS A MINIMIZATION PROBLEM.'')',idg)
-  END IF
-  IF( .NOT. (stpedg) ) THEN
-    CALL IVOUT(0,idum,'('' MINIMUM REDUCED COST PRICING WAS USED.'')',idg)
-  ELSE
-    CALL IVOUT(0,idum,'('' STEEPEST EDGE PRICING WAS USED.'')',idg)
-  END IF
-  rdum(1) = DOT_PRODUCT(Costs(1:Nvars),Primal(1:Nvars))
-  CALL DVOUT(1,rdum,'('' OUTPUT VALUE OF THE OBJECTIVE FUNCTION'')',idg)
-  CALL DVOUT(Nvars+Mrelas,Primal,&
-    '('' THE OUTPUT INDEPENDENT AND DEPENDENT VARIABLES'')',idg)
-  CALL DVOUT(Mrelas+Nvars,Duals,'('' THE OUTPUT DUAL VARIABLES'')',idg)
-  CALL IVOUT(Nvars+Mrelas,Ibasis,&
-    '('' VARIABLE INDICES IN POSITIONS 1-MRELAS ARE BASIC.'')',idg)
-  idum(1) = itlp
-  CALL IVOUT(1,idum,'('' NO. OF ITERATIONS'')',idg)
-  idum(1) = nredc
-  CALL IVOUT(1,idum,'('' NO. OF FULL REDECOMPS'')',idg)
-  SELECT CASE(npr012)
-    CASE(3400)
-      GOTO 3400
-    CASE(4600)
-      GOTO 4600
-  END SELECT
-  !++  CODE FOR OUTPUT=NO IS INACTIVE
-  !++  END
-  ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-  !     PROCEDURE (RETURN TO USER)
-  4600 CONTINUE
-  IF( savedt ) THEN
-    ! CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-    !     PROCEDURE (SAVE DATA ON FILE ISAVE)
-    !
-    !     FORCE PAGE FILE TO BE OPENED ON RESTARTS.
-    key = INT( Amat(4) )
-    Amat(4) = 0._DP
-    lpr = Nvars + 4
-    WRITE (isave) (Amat(i),i=1,lpr), (Imat(i),i=1,lpr)
-    Amat(4) = key
-    ipage = 1
-    key = 1
-    GOTO 2600
-  END IF
-  !
-  !     THIS TEST IS THERE ONLY TO AVOID DIAGNOSTICS ON SOME FORTRAN
-  !     COMPILERS.
-  RETURN
+  END SUBROUTINE do_save_and_return
+
 END SUBROUTINE DPLPMN
