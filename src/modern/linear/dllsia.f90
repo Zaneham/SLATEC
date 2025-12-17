@@ -166,6 +166,9 @@ PURE SUBROUTINE DLLSIA(A,Mda,M,N,B,Mdb,Nb,Re,Ae,Key,Mode,Np,Krank,Ksure,Rnorm,&
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900510  Fixed an error message.  (RWC)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+!   251217  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.4 (inline error handling)
+!           Original: Manteuffel, T.A. (LANL)
   USE service, ONLY : eps_2_dp
   !
   INTEGER, INTENT(IN) :: Key, Liw, Lw, M, Mda, Mdb, Mode, N, Nb, Np
@@ -221,18 +224,33 @@ PURE SUBROUTINE DLLSIA(A,Mda,M,N,B,Mdb,Nb,Re,Ae,Key,Mode,Np,Krank,Ksure,Rnorm,&
                 ELSEIF( Mdb<M ) THEN
                   ERROR STOP 'DLLSIA : MDB<M'
                   RETURN
-                ELSEIF( it/=0 ) THEN
-                  GOTO 2
                 END IF
               END IF
+              IF( it==0 ) THEN
               IF( Key<0 .OR. Key>3 ) THEN
                 ERROR STOP 'DLLSIA : KEY OUT OF RANGE'
                 RETURN
               ELSE
-                IF( Key==0 .AND. Lw<5*N ) GOTO 5
-                IF( Key==1 .AND. Lw<4*N ) GOTO 5
-                IF( Key==2 .AND. Lw<4*N ) GOTO 5
-                IF( Key==3 .AND. Lw<3*N ) GOTO 5
+                IF( Key==0 .AND. Lw<5*N ) THEN
+                  ERROR STOP 'DLLSIA : INSUFFICIENT WORK SPACE'
+                  Info = -1
+                  RETURN
+                END IF
+                IF( Key==1 .AND. Lw<4*N ) THEN
+                  ERROR STOP 'DLLSIA : INSUFFICIENT WORK SPACE'
+                  Info = -1
+                  RETURN
+                END IF
+                IF( Key==2 .AND. Lw<4*N ) THEN
+                  ERROR STOP 'DLLSIA : INSUFFICIENT WORK SPACE'
+                  Info = -1
+                  RETURN
+                END IF
+                IF( Key==3 .AND. Lw<3*N ) THEN
+                  ERROR STOP 'DLLSIA : INSUFFICIENT WORK SPACE'
+                  Info = -1
+                  RETURN
+                END IF
                 IF( Np<0 .OR. Np>N ) THEN
                   ERROR STOP 'DLLSIA : NP OUT OF RANGE'
                   RETURN
@@ -247,10 +265,19 @@ PURE SUBROUTINE DLLSIA(A,Mda,M,N,B,Mdb,Nb,Re,Ae,Key,Mode,Np,Krank,Ksure,Rnorm,&
                   !
                   IF( Key==1 ) THEN
                     !
-                    IF( Ae(1)<0._DP ) GOTO 100
+                    IF( Ae(1)<0._DP ) THEN
+                      ERROR STOP 'DLLSIA : AE(I) < 0'
+                      RETURN
+                    END IF
                     DO i = 1, N
-                      IF( Re(i)<0._DP ) GOTO 10
-                      IF( Re(i)>1._DP ) GOTO 20
+                      IF( Re(i)<0._DP ) THEN
+                        ERROR STOP 'DLLSIA : RE(I) < 0'
+                        RETURN
+                      END IF
+                      IF( Re(i)>1._DP ) THEN
+                        ERROR STOP 'DLLSIA : RE(I) > 1'
+                        RETURN
+                      END IF
                       IF( Re(i)<eps ) Re(i) = eps
                       W(n4-1+i) = Ae(1)
                     END DO
@@ -258,31 +285,58 @@ PURE SUBROUTINE DLLSIA(A,Mda,M,N,B,Mdb,Nb,Re,Ae,Key,Mode,Np,Krank,Ksure,Rnorm,&
                       W(n1),W(n2),W(n3),Iwork(n1),Iwork(n2))
                   ELSEIF( Key==2 ) THEN
                     !
-                    IF( Re(1)<0._DP ) GOTO 10
-                    IF( Re(1)>1._DP ) GOTO 20
+                    IF( Re(1)<0._DP ) THEN
+                      ERROR STOP 'DLLSIA : RE(I) < 0'
+                      RETURN
+                    END IF
+                    IF( Re(1)>1._DP ) THEN
+                      ERROR STOP 'DLLSIA : RE(I) > 1'
+                      RETURN
+                    END IF
                     IF( Re(1)<eps ) Re(1) = eps
                     DO i = 1, N
                       W(n4-1+i) = Re(1)
-                      IF( Ae(i)<0._DP ) GOTO 100
+                      IF( Ae(i)<0._DP ) THEN
+                        ERROR STOP 'DLLSIA : AE(I) < 0'
+                        RETURN
+                      END IF
                     END DO
                     CALL DU11LS(A,Mda,M,N,W(n4),Ae,Mode,Np,Krank,Ksure,&
                       W(n1),W(n2),W(n3),Iwork(n1),Iwork(n2))
                   ELSEIF( Key==3 ) THEN
                     !
                     DO i = 1, N
-                      IF( Re(i)<0._DP ) GOTO 10
-                      IF( Re(i)>1._DP ) GOTO 20
+                      IF( Re(i)<0._DP ) THEN
+                        ERROR STOP 'DLLSIA : RE(I) < 0'
+                        RETURN
+                      END IF
+                      IF( Re(i)>1._DP ) THEN
+                        ERROR STOP 'DLLSIA : RE(I) > 1'
+                        RETURN
+                      END IF
                       IF( Re(i)<eps ) Re(i) = eps
-                      IF( Ae(i)<0._DP ) GOTO 100
+                      IF( Ae(i)<0._DP ) THEN
+                        ERROR STOP 'DLLSIA : AE(I) < 0'
+                        RETURN
+                      END IF
                     END DO
                     CALL DU11LS(A,Mda,M,N,Re,Ae,Mode,Np,Krank,Ksure,W(n1),&
                       W(n2),W(n3),Iwork(n1),Iwork(n2))
                   ELSE
                     !
-                    IF( Re(1)<0._DP ) GOTO 10
-                    IF( Re(1)>1._DP ) GOTO 20
+                    IF( Re(1)<0._DP ) THEN
+                      ERROR STOP 'DLLSIA : RE(I) < 0'
+                      RETURN
+                    END IF
+                    IF( Re(1)>1._DP ) THEN
+                      ERROR STOP 'DLLSIA : RE(I) > 1'
+                      RETURN
+                    END IF
                     IF( Re(1)<eps ) Re(1) = eps
-                    IF( Ae(1)<0._DP ) GOTO 100
+                    IF( Ae(1)<0._DP ) THEN
+                      ERROR STOP 'DLLSIA : AE(I) < 0'
+                      RETURN
+                    END IF
                     DO i = 1, N
                       W(n4-1+i) = Re(1)
                       W(n5-1+i) = Ae(1)
@@ -292,11 +346,12 @@ PURE SUBROUTINE DLLSIA(A,Mda,M,N,B,Mdb,Nb,Re,Ae,Key,Mode,Np,Krank,Ksure,Rnorm,&
                   END IF
                 END IF
               END IF
+              END IF  ! IF( it==0 )
             END IF
             !
             !     DETERMINE INFO
             !
-            2 CONTINUE
+            ! (Label 2 removed)
             IF( Krank==N ) THEN
               Info = 5
             ELSEIF( Krank==0 ) THEN
@@ -328,18 +383,10 @@ PURE SUBROUTINE DLLSIA(A,Mda,M,N,B,Mdb,Nb,Re,Ae,Key,Mode,Np,Krank,Ksure,Rnorm,&
               RETURN
             END IF
           END IF
-          5  ERROR STOP 'DLLSIA : INSUFFICIENT WORK SPACE'
-          Info = -1
-          RETURN
         END IF
-        10  ERROR STOP 'DLLSIA : RE(I) < 0'
-        RETURN
       END IF
-      20  ERROR STOP 'DLLSIA : RE(I) > 1'
-      RETURN
     END IF
   END IF
-  100  ERROR STOP 'DLLSIA : AE(I) < 0'
-
+  ! (Labels 5, 10, 20, 100 removed - error handling moved inline)
   RETURN
 END SUBROUTINE DLLSIA
