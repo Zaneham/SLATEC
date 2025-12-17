@@ -27,6 +27,8 @@ SUBROUTINE CCMPB(Ierror,An,Bn,Cn,B,Ah,Bh)
   !   890531  Changed all specific intrinsics to generic.  (WRB)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900402  Added TYPE section.  (WRB)
+!   251217  Eliminated GOTO 100/200 per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.4 (inline error return)
   USE CCBLK, ONLY : k_com, cnv_com, eps_com, nm_com, npp_com
   USE service, ONLY : eps_sp
   !
@@ -44,7 +46,7 @@ SUBROUTINE CCMPB(Ierror,An,Bn,Cn,B,Ah,Bh)
   DO j = 2, nm_com
     bnorm = MAX(bnorm,ABS(Bn(j)))
     arg = An(j)*Cn(j-1)
-    IF( arg<0 ) GOTO 200
+    IF( arg<0 ) Ierror = 5; RETURN
     B(j) = SIGN(SQRT(arg),An(j))
   END DO
   cnv_com = eps_com*bnorm
@@ -68,7 +70,7 @@ SUBROUTINE CCMPB(Ierror,An,Bn,Cn,B,Ah,Bh)
         Ah(ls) = B(j)
       END DO
       CALL TEVLC(nb,Bh,Ah,Ierror)
-      IF( Ierror/=0 ) GOTO 100
+      IF( Ierror/=0 ) Ierror = 4; RETURN
       lh = ib - 1
       DO j = 1, nb
         lh = lh + 1
@@ -86,12 +88,12 @@ SUBROUTINE CCMPB(Ierror,An,Bn,Cn,B,Ah,Bh)
       l1 = MOD(j-1,nmp) + 1
       l2 = MOD(j+nm_com-1,nmp) + 1
       arg = An(l1)*Cn(l2)
-      IF( arg<0 ) GOTO 200
+      IF( arg<0 ) Ierror = 5; RETURN
       Bh(j) = SIGN(SQRT(arg),-An(l1))
       Ah(j) = -Bn(l1)
     END DO
     CALL TEVLC(nb,Ah,Bh,Ierror)
-    IF( Ierror/=0 ) GOTO 100
+    IF( Ierror/=0 ) Ierror = 4; RETURN
     CALL INXCB(if,k_com-1,j2,lh)
     CALL INXCB(if/2,k_com-1,j1,lh)
     j2 = j2 + 1
@@ -118,8 +120,4 @@ SUBROUTINE CCMPB(Ierror,An,Bn,Cn,B,Ah,Bh)
     CALL CPADD(nm_com+1,Ierror,An,Cn,bc(j1),B(j1:j2-1),B(j2:))
   END IF
   RETURN
-  100  Ierror = 4
-  RETURN
-  200  Ierror = 5
-  !
 END SUBROUTINE CCMPB

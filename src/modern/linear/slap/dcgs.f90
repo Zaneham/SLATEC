@@ -251,6 +251,9 @@ PURE SUBROUTINE DCGS(N,B,X,Nelt,Ia,Ja,A,Isym,MATVEC,MSOLVE,Itol,Tol,Itmax,Iter,&
   !   920929  Corrected format of references.  (FNF)
   !   921019  Changed 500.0 to 500 to reduce SP/DP differences.  (FNF)
   !   921113  Corrected C***CATEGORY line.  (FNF)
+!   251217  Eliminated GOTO 100/200/300 per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.4 (inline error return)
+!           Original: Greenbaum, A. (Courant), Seager, M. K. (LLNL)
   USE service, ONLY : eps_2_dp
   USE blas, ONLY : DAXPY
   USE DSLBLK, ONLY : soln_com
@@ -335,7 +338,7 @@ PURE SUBROUTINE DCGS(N,B,X,Nelt,Ia,Ja,A,Isym,MATVEC,MSOLVE,Itol,Tol,Itmax,Iter,&
       !
       !         Calculate coefficient BK and direction vectors U, V and P.
       rhon = DOT_PRODUCT(R0,R)
-      IF( ABS(rhonm1)<fuzz ) GOTO 200
+      IF( ABS(rhonm1)<fuzz ) THEN; Ierr = 5; RETURN; END IF
       bk = rhon/rhonm1
       IF( Iter==1 ) THEN
         DO i = 1, N
@@ -356,7 +359,7 @@ PURE SUBROUTINE DCGS(N,B,X,Nelt,Ia,Ja,A,Isym,MATVEC,MSOLVE,Itol,Tol,Itmax,Iter,&
       CALL MATVEC(N,P,V2,Nelt,Ia,Ja,A,Isym)
       CALL MSOLVE(N,V2,V1,Rwork,Iwork)
       sigma = DOT_PRODUCT(R0,V1)
-      IF( ABS(sigma)<fuzz ) GOTO 300
+      IF( ABS(sigma)<fuzz ) THEN; Ierr = 6; RETURN; END IF
       ak = rhon/sigma
       akm = -ak
       DO i = 1, N
@@ -380,7 +383,7 @@ PURE SUBROUTINE DCGS(N,B,X,Nelt,Ia,Ja,A,Isym,MATVEC,MSOLVE,Itol,Tol,Itmax,Iter,&
       END IF
       !
       !         check stopping criterion.
-      IF( ISDCGS(N,Itol,Tol,R,V2,bnrm,solnrm)/=0 ) GOTO 100
+      IF( ISDCGS(N,Itol,Tol,R,V2,bnrm,solnrm)/=0 ) RETURN
       !
       !         Update RHO.
       rhonm1 = rhon
@@ -391,13 +394,6 @@ PURE SUBROUTINE DCGS(N,B,X,Nelt,Ia,Ja,A,Isym,MATVEC,MSOLVE,Itol,Tol,Itmax,Iter,&
     Iter = Itmax + 1
     Ierr = 2
   END IF
-  100  RETURN
-  !
-  !         Breakdown of method detected.
-  200  Ierr = 5
   RETURN
-  !
-  !         Stagnation of method detected.
-  300  Ierr = 6
   !------------- LAST LINE OF DCGS FOLLOWS ----------------------------
 END SUBROUTINE DCGS
