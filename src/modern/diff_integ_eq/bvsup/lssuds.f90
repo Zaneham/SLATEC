@@ -117,6 +117,10 @@ PURE SUBROUTINE LSSUDS(A,X,B,N,M,Nrda,U,Nrdu,Iflag,Mlso,Irank,Iscale,Q,Diag,&
   !   900510  Fixed an error message.  (RWC)
   !   910408  Updated the AUTHOR and REFERENCES sections.  (WRB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S8.1.6 (BLOCK construct)
+  !           Original: Watts (SNLA)
   USE service, ONLY : eps_sp
   !
   INTEGER, INTENT(IN) :: Iscale, M, Mlso, N, Nrda, Nrdu
@@ -134,7 +138,8 @@ PURE SUBROUTINE LSSUDS(A,X,B,N,M,Nrda,U,Nrdu,Iflag,Mlso,Irank,Iscale,Q,Diag,&
   !     MACHINE PRECISION (COMPUTER UNIT ROUNDOFF VALUE) IS DEFINED
   !     BY THE FUNCTION R1MACH.
   !
-  !* FIRST EXECUTABLE STATEMENT  LSSUDS
+  !* FIRST EXECUTABLE STATEMENT
+  success: BLOCK  ! Main processing block (was GOTO 100 target)  LSSUDS
   uro = eps_sp
   !
   !- *********************************************************************
@@ -169,7 +174,7 @@ PURE SUBROUTINE LSSUDS(A,X,B,N,M,Nrda,U,Nrdu,Iflag,Mlso,Irank,Iscale,Q,Diag,&
           DO k = 1, N
             Div(k) = Diag(k)
           END DO
-          GOTO 100
+          EXIT success  ! Success (was GOTO 100)
         ELSE
           !
           !     FOR RANK DEFICIENT PROBLEMS USE ADDITIONAL ORTHOGONAL
@@ -179,7 +184,7 @@ PURE SUBROUTINE LSSUDS(A,X,B,N,M,Nrda,U,Nrdu,Iflag,Mlso,Irank,Iscale,Q,Diag,&
           RETURN
         END IF
       ELSEIF( Iflag==1 ) THEN
-        GOTO 100
+        EXIT success  ! Already decomposed (was GOTO 100)
       END IF
     END IF
   END IF
@@ -190,7 +195,7 @@ PURE SUBROUTINE LSSUDS(A,X,B,N,M,Nrda,U,Nrdu,Iflag,Mlso,Irank,Iscale,Q,Diag,&
   RETURN
   !
   !
-  100 CONTINUE
+  END BLOCK success  ! (Label 100 removed)
   IF( Irank>0 ) THEN
     !
     !     COPY CONSTANT VECTOR INTO S AFTER FIRST INTERCHANGING

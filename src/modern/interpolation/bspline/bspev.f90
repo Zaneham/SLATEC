@@ -74,6 +74,10 @@ PURE SUBROUTINE BSPEV(T,Ad,N,K,Nderiv,X,Inev,Svalue,Work)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900326  Removed duplicate information from DESCRIPTION section.  (WRB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 20/100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.12 (EXIT statement)
+  !           Original: de Boor (NIST)
 
   INTEGER, INTENT(IN) :: K, N, Nderiv
   INTEGER, INTENT(INOUT) :: Inev
@@ -94,17 +98,17 @@ PURE SUBROUTINE BSPEV(T,Ad,N,K,Nderiv,X,Inev,Svalue,Work)
     CALL INTRV(T,N+1,X,Inev,i,mflag)
     IF( X>=T(K) ) THEN
       IF( mflag/=0 ) THEN
-        IF( X>T(i) ) GOTO 100
-        DO WHILE( i/=K )
+        IF( X>T(i) ) ERROR STOP 'BSPEV : X IS NOT IN T(K)<=X<=T(N+1)'  ! (Was GOTO 100)
+        search: DO WHILE( i/=K )
           i = i - 1
-          IF( X/=T(i) ) GOTO 20
-        END DO
+          IF( X/=T(i) ) EXIT search  ! Found valid i (was GOTO 20)
+        END DO search
         ERROR STOP 'BSPEV : A LEFT LIMITING VALUE CANNOT BE OBTAINED AT T(K)'
       END IF
       !
-      !- I* HAS BEEN FOUND IN (K,N) SO THAT T(I) <= X < T(I+1)
+      !- I* HAS BEEN FOUND (label 20 removed) IN (K,N) SO THAT T(I) <= X < T(I+1)
       !     (OR <= T(I+1), IF T(I) < T(I+1) = T(N+1) ).
-      20  kp1mn = K + 1 - id
+      kp1mn = K + 1 - id
       kp1 = K + 1
       CALL BSPVN(T,kp1mn,K,1,X,i,Work(1),Work(kp1),iwork)
       jj = (N+N-id+2)*(id-1)/2

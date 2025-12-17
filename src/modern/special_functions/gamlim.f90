@@ -48,22 +48,20 @@ ELEMENTAL SUBROUTINE GAMLIM(Xmin,Xmax)
     xold = Xmin
     xln = LOG(Xmin)
     Xmin = Xmin - Xmin*((Xmin+0.5_SP)*xln-Xmin-0.2258_SP+alnsml)/(Xmin*xln+0.5_SP)
-    IF( ABS(Xmin-xold)<0.005_SP ) GOTO 100
+    IF( ABS(Xmin-xold)<0.005_SP ) EXIT  ! Converged
   END DO
-  ERROR STOP 'GAMLIM : UNABLE TO FIND XMIN'
-  !
-  100  Xmin = -Xmin + 0.01_SP
+  IF( i > 10 ) ERROR STOP 'GAMLIM : UNABLE TO FIND XMIN'
+  Xmin = -Xmin  ! (Label 100 removed) + 0.01_SP
   !
   Xmax = alnbig
   DO i = 1, 10
     xold = Xmax
     xln = LOG(Xmax)
     Xmax = Xmax - Xmax*((Xmax-0.5_SP)*xln-Xmax+0.9189_SP-alnbig)/(Xmax*xln-0.5_SP)
-    IF( ABS(Xmax-xold)<0.005 ) GOTO 200
+    IF( ABS(Xmax-xold)<0.005 ) EXIT  ! Converged
   END DO
-  ERROR STOP 'GAMLIM : UNABLE TO FIND XMAX'
-  !
-  200  Xmax = Xmax - 0.01_SP
+  IF( i > 10 ) ERROR STOP 'GAMLIM : UNABLE TO FIND XMAX'
+  Xmax = Xmax  ! (Label 200 removed) - 0.01_SP
   Xmin = MAX(Xmin,-Xmax+1._SP)
   !
 END SUBROUTINE GAMLIM
