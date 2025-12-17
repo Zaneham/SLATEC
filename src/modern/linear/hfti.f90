@@ -173,26 +173,26 @@ PURE SUBROUTINE HFTI(A,Mda,M,N,B,Mdb,Nb,Tau,Krank,Rnorm,H,G,Ip)
               H(l) = H(l) - A(j-1,l)**2
               IF( H(l)>H(lmax) ) lmax = l
             END DO
-            IF( factor*H(lmax)>hmax*releps ) GOTO 5
+            IF( factor*H(lmax)<=hmax*releps ) THEN
+              !     COMPUTE SQUARED COLUMN LENGTHS AND FIND LMAX (was skip via GOTO 5)
+              lmax = j
+              DO l = j, N
+                H(l) = 0.
+                DO i = j, M
+                  H(l) = H(l) + A(i,l)**2
+                END DO
+                IF( H(l)>H(lmax) ) lmax = l
+              END DO
+              hmax = H(lmax)
+            END IF
           END IF
-          !
-          !     COMPUTE SQUARED COLUMN LENGTHS AND FIND LMAX
-          !    ..
-          lmax = j
-          DO l = j, N
-            H(l) = 0.
-            DO i = j, M
-              H(l) = H(l) + A(i,l)**2
-            END DO
-            IF( H(l)>H(lmax) ) lmax = l
-          END DO
-          hmax = H(lmax)
           !    ..
           !     LMAX HAS BEEN DETERMINED
           !
           !     DO COLUMN INTERCHANGES IF NEEDED.
           !    ..
-          5  Ip(j) = lmax
+          ! (Label 5 removed)
+          Ip(j) = lmax
           IF( Ip(j)/=j ) THEN
             DO i = 1, M
               tmp = A(i,j)
@@ -210,25 +210,27 @@ PURE SUBROUTINE HFTI(A,Mda,M,N,B,Mdb,Nb,Tau,Krank,Rnorm,H,G,Ip)
         !
         !     DETERMINE THE PSEUDORANK, K, USING THE TOLERANCE, TAU.
         !    ..
-        DO j = 1, ldiag
-          IF( ABS(A(j,j))<=Tau ) GOTO 20
-        END DO
-        k = ldiag
-        GOTO 50
+        k = ldiag  ! Assume full rank
+        rank_search: DO j = 1, ldiag
+          IF( ABS(A(j,j))<=Tau ) THEN
+            k = j - 1  ! Found rank deficiency (was GOTO 20)
+            EXIT rank_search
+          END IF
+        END DO rank_search
+        ! (Labels 20/50 removed)
       ELSE
         nerr = 2
         iopt = 2
         ERROR STOP 'HFTI : MDB<MAX(M,N) .AND. NB>1. PROBABLE ERROR.'
         RETURN
       END IF
-      20  k = j - 1
     ELSE
       nerr = 1
       iopt = 2
       ERROR STOP 'HFTI : MDA<M, PROBABLE ERROR.'
       RETURN
     END IF
-    50  kp1 = k + 1
+    kp1 = k + 1
     !
     !     COMPUTE THE NORMS OF THE RESIDUAL VECTORS.
     !
