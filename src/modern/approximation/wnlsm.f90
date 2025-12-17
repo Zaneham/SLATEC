@@ -83,7 +83,7 @@ PURE SUBROUTINE WNLSM(W,Mdw,Mme,Ma,N,L,Prgopt,X,Rnorm,Mode,Ipivot,Itype,Wd,H,&
     krank, l1, last, link, m, me, next, niv, nlink, nopt, nsoln, ntimes
   REAL(SP) :: alamda, alpha, alsq, amax, blowup, bnorm, dope(3), eanorm, fac, sm, &
     sparam(5), t, tau, wmax, z2, zz
-  LOGICAL :: done, feasbl, hitcon, pos
+  LOGICAL :: done, feasbl, hitcon, pos, exit_main_loop
   !
   REAL(SP), PARAMETER :: srelpr = eps_sp
   !* FIRST EXECUTABLE STATEMENT  WNLSM
@@ -163,6 +163,7 @@ PURE SUBROUTINE WNLSM(W,Mdw,Mme,Ma,N,L,Prgopt,X,Rnorm,Mode,Ipivot,Itype,Wd,H,&
     !     Process option vector
     !
     done = .FALSE.
+    exit_main_loop = .FALSE.
     iter = 0
     itmax = 3*(N-L)
     Mode = 0
@@ -307,14 +308,14 @@ PURE SUBROUTINE WNLSM(W,Mdw,Mme,Ma,N,L,Prgopt,X,Rnorm,Mode,Ipivot,Itype,Wd,H,&
       DO j = L + 1, nsoln
         X(j) = X(j) + alpha*(Z(j)-X(j))
       END DO
-      feasbl = .FALSE.
       !
       !        Remove column JCON and shift columns JCON+1 through N to the
       !        left.  Swap column JCON into the N th position.  This achieves
       !        upper Hessenberg form for the nonactive constraints and
       !        leaves an upper Hessenberg matrix to retriangularize.
       !
-      20 CONTINUE
+      DO WHILE( .NOT. feasbl )
+        feasbl = .FALSE.
       DO i = 1, m
         t = W(i,jcon)
         W(i,jcon:N-1) = W(i,jcon+1:N)
@@ -401,11 +402,14 @@ PURE SUBROUTINE WNLSM(W,Mdw,Mme,Ma,N,L,Prgopt,X,Rnorm,Mode,Ipivot,Itype,Wd,H,&
       !        error.  Any that are non-positive will be set to zero and
       !        removed from the solution set.
       !
-      DO jcon = L + 1, nsoln
-        IF( X(jcon)<=0._SP ) GOTO 40
+        feasbl = .TRUE.
+        DO jcon = L + 1, nsoln
+          IF( X(jcon)<=0._SP ) THEN
+            feasbl = .FALSE.
+            EXIT
+          END IF
+        END DO
       END DO
-      feasbl = .TRUE.
-      40 IF( .NOT. feasbl ) GOTO 20
     ELSE
       !
       !        To perform multiplier test and drop a constraint.
@@ -456,7 +460,10 @@ PURE SUBROUTINE WNLSM(W,Mdw,Mme,Ma,N,L,Prgopt,X,Rnorm,Mode,Ipivot,Itype,Wd,H,&
             iwmax = j
           END IF
         END DO
-        IF( wmax<=0._SP ) GOTO 100
+        IF( wmax<=0._SP ) THEN
+          exit_main_loop = .TRUE.
+          EXIT
+        END IF
         !
         !        Set dual coefficients to zero for incoming column.
         !
@@ -552,6 +559,7 @@ PURE SUBROUTINE WNLSM(W,Mdw,Mme,Ma,N,L,Prgopt,X,Rnorm,Mode,Ipivot,Itype,Wd,H,&
         IF( pos .OR. done ) EXIT
       END DO
     END IF
+    IF( exit_main_loop ) EXIT
   END DO
   !
   !     Else perform multiplier test and drop a constraint.  To compute
@@ -559,7 +567,7 @@ PURE SUBROUTINE WNLSM(W,Mdw,Mme,Ma,N,L,Prgopt,X,Rnorm,Mode,Ipivot,Itype,Wd,H,&
   !
   !     Copy right hand side into TEMP vector to use overwriting method.
   !
-  100  isol = 1
+  isol = 1
   IF( nsoln>=isol ) THEN
     Temp(1:niv) = W(1:niv,N+1)
     DO j = nsoln, isol, -1

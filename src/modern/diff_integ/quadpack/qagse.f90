@@ -181,7 +181,7 @@ PURE SUBROUTINE QAGSE(F,A,B,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,Alist,&
   REAL(SP) :: abseps, area, area1, area12, area2, a1, a2, b1, b2, correc, defabs, &
     defab1, defab2, dres, epmach, erlarg, erlast, errbnd, errmax, error1, error2, &
     erro12, errsum, ertest, oflow, resabs, reseps, res3la(3), rlist2(52), small, uflow
-  LOGICAL :: extrap, noext
+  LOGICAL :: extrap, noext, compute_global
   !
   !            THE DIMENSION OF RLIST2 IS DETERMINED BY THE VALUE OF
   !            LIMEXP IN SUBROUTINE QELG (RLIST2 SHOULD BE OF DIMENSION
@@ -291,6 +291,7 @@ PURE SUBROUTINE QAGSE(F,A,B,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,Alist,&
       numrl2 = 2
       ktmin = 0
       extrap = .FALSE.
+    compute_global = .FALSE.
       noext = .FALSE.
       iroff1 = 0
       iroff2 = 0
@@ -375,7 +376,10 @@ PURE SUBROUTINE QAGSE(F,A,B,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,Alist,&
         !
         CALL QPSRT(Limit,Last,maxerr,errmax,Elist,Iord,nrmax)
         !- **JUMP OUT OF DO-LOOP
-        IF( errsum<=errbnd ) GOTO 50
+        IF( errsum<=errbnd ) THEN
+          compute_global = .TRUE.
+          EXIT
+        END IF
         !- **JUMP OUT OF DO-LOOP
         IF( Ier/=0 ) EXIT
         IF( Last==2 ) THEN
@@ -409,7 +413,7 @@ PURE SUBROUTINE QAGSE(F,A,B,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,Alist,&
               maxerr = Iord(nrmax)
               errmax = Elist(maxerr)
               !- **JUMP OUT OF DO-LOOP
-              IF( ABS(Blist(maxerr)-Alist(maxerr))>small ) GOTO 20
+              IF( ABS(Blist(maxerr)-Alist(maxerr))>small ) CYCLE
               nrmax = nrmax + 1
             END DO
           END IF
@@ -439,46 +443,48 @@ PURE SUBROUTINE QAGSE(F,A,B,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,Alist,&
           errmax = Elist(maxerr)
           nrmax = 1
           extrap = .FALSE.
+    compute_global = .FALSE.
           small = small*0.5_SP
           erlarg = errsum
         END IF
-        20 CONTINUE
       END DO
       !
       !           SET FINAL RESULT AND ERROR ESTIMATE.
       !           ------------------------------------
       !
-      IF( Abserr/=oflow ) THEN
+      IF( Abserr/=oflow .AND. .NOT. compute_global ) THEN
         IF( Ier+ierro/=0 ) THEN
           IF( ierro==3 ) Abserr = Abserr + correc
           IF( Ier==0 ) Ier = 3
           IF( Result==0._SP .OR. area==0._SP ) THEN
-            IF( Abserr>errsum ) GOTO 50
-            IF( area==0._SP ) THEN
+            IF( Abserr>errsum ) compute_global = .TRUE.
+            IF( .NOT. compute_global .AND. area==0._SP ) THEN
               IF( Ier>2 ) Ier = Ier - 1
               Neval = 42*Last - 21
               RETURN
             END IF
           ELSEIF( Abserr/ABS(Result)>errsum/ABS(area) ) THEN
-            GOTO 50
+            compute_global = .TRUE.
           END IF
         END IF
         !
-        !           TEST ON DIVERGENCE.
-        !
-        IF( ksgn/=(-1) .OR. MAX(ABS(Result),ABS(area))>defabs*0.1E-01 ) THEN
-          IF( 0.1E-01>(Result/area) .OR. (Result/area)>100._SP .OR. &
-            errsum>ABS(area) ) Ier = 6
+        IF( .NOT. compute_global ) THEN
+          !           TEST ON DIVERGENCE.
+          !
+          IF( ksgn/=(-1) .OR. MAX(ABS(Result),ABS(area))>defabs*0.1E-01 ) THEN
+            IF( 0.1E-01>(Result/area) .OR. (Result/area)>100._SP .OR. &
+              errsum>ABS(area) ) Ier = 6
+          END IF
+          IF( Ier>2 ) Ier = Ier - 1
+          Neval = 42*Last - 21
+          RETURN
         END IF
-        IF( Ier>2 ) Ier = Ier - 1
-        Neval = 42*Last - 21
-        RETURN
       END IF
     END IF
     !
     !           COMPUTE GLOBAL INTEGRAL SUM.
     !
-    50  Result = 0._SP
+    Result = 0._SP
     DO k = 1, Last
       Result = Result + Rlist(k)
     END DO
