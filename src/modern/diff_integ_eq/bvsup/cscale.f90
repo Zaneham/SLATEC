@@ -46,17 +46,20 @@ PURE SUBROUTINE CSCALE(A,Nrda,Nrow,Ncol,Cols,Colsav,Rows,Rowsav,Anorm,Scales,Isc
     ascale = Anorm/Ncol
     DO k = 1, Ncol
       cs = Cols(k)
-      IF( (cs>ten4*ascale) .OR. (ten4*cs<ascale) ) GOTO 100
-      IF( (cs<1._SP/ten20) .OR. (cs>ten20) ) GOTO 100
+      IF( (cs>ten4*ascale) .OR. (ten4*cs<ascale) ) EXIT  ! Needs scaling
+      IF( (cs<1._SP/ten20) .OR. (cs>ten20) ) EXIT  ! Needs scaling
     END DO
   END IF
   !
-  DO k = 1, Ncol
-    Scales(k) = 1._SP
-  END DO
-  RETURN
+  IF( k > Ncol ) THEN  ! Loop completed - no scaling needed
+    DO k = 1, Ncol
+      Scales(k) = 1._SP
+    END DO
+    RETURN
+  END IF
   !
-  100  alog2 = LOG(2._SP)
+  ! Scaling required (was label 100)
+  alog2 = LOG(2._SP)
   Anorm = 0._SP
   DO k = 1, Ncol
     cs = Cols(k)

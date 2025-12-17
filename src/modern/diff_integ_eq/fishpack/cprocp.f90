@@ -52,8 +52,9 @@ PURE SUBROUTINE CPROCP(Nd,Bd,Nm1,Bm1,Nm2,Bm2,Na,Aa,X,Y,M,A,B,C,D,U,Yy)
   m1 = Nm1
   m2 = Nm2
   ia = Na
-  100 CONTINUE
-  IFlg = 0
+  ! Main iteration loop (was GOTO 100 target)
+  DO
+    IFlg = 0
   IF( id>0 ) THEN
     crt = Bd(id)
     id = id - 1
@@ -110,8 +111,8 @@ PURE SUBROUTINE CPROCP(Nd,Bd,Nm1,Bm1,Nm2,Bm2,Na,Aa,X,Y,M,A,B,C,D,U,Yy)
           Y(j) = rt*Y(j)
         END DO
       END IF
-      IF( iflg>0 ) GOTO 100
-      RETURN
+      IF( iflg<=0 ) EXIT  ! Done (was RETURN)
+      CYCLE  ! Continue iteration
     ELSE
       rt = Bm2(m2)
       m2 = m2 - 1
@@ -141,7 +142,6 @@ PURE SUBROUTINE CPROCP(Nd,Bd,Nm1,Bm1,Nm2,Bm2,Na,Aa,X,Y,M,A,B,C,D,U,Yy)
   Y(M) = A(M)*Y(M-1) + (B(M)-rt)*Y(M) + C(M)*yh
   Y(M-1) = y1
   iflg = 1
-  GOTO 100
+  END DO  ! Main iteration loop
   !
-  RETURN
 END SUBROUTINE CPROCP
