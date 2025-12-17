@@ -77,6 +77,10 @@ PURE SUBROUTINE AVINT(X,Y,N,Xlo,Xup,Ans,Ierr)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900326  Removed duplicate information from DESCRIPTIONsection.  (WRB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100/200 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.2.3 (ERROR STOP)
+  !           Original: Jones (SNLA)
 
   INTEGER, INTENT(IN) :: N
   INTEGER, INTENT(OUT) :: Ierr
@@ -96,13 +100,22 @@ PURE SUBROUTINE AVINT(X,Y,N,Xlo,Xup,Ans,Ierr)
       ERROR STOP 'AVINT : LESS THAN TWO FUNCTION VALUES WERE SUPPLIED.'
       RETURN
     ELSE
-      DO i = 2, N
-        IF( X(i)<=X(i-1) ) GOTO 200
-        IF( X(i)>Xup ) EXIT
-      END DO
+      check_order: DO i = 2, N
+        IF( X(i)<=X(i-1) ) THEN
+          Ierr = 4
+          ERROR STOP 'AVINT : THE ABSCISSAS WERE NOT STRICTLY INCREASING. &
+            &MUST HAVE X(I-1) < X(I) FOR ALL I.'  ! (Was GOTO 200)
+          RETURN
+        END IF
+        IF( X(i)>Xup ) EXIT check_order
+      END DO check_order
       IF( N>=3 ) THEN
-        IF( X(N-2)<Xlo ) GOTO 100
-        IF( X(3)>Xup ) GOTO 100
+        IF( X(N-2)<Xlo .OR. X(3)>Xup ) THEN
+          Ierr = 3
+          ERROR STOP 'AVINT : THERE WERE LESS THAN THREE FUNCTION VALUES BETWEEN THE &
+            &LIMITS OF INTEGRATION.'  ! (Was GOTO 100)
+          RETURN
+        END IF
         i = 1
         DO WHILE( X(i)<Xlo )
           i = i + 1
@@ -113,7 +126,12 @@ PURE SUBROUTINE AVINT(X,Y,N,Xlo,Xup,Ans,Ierr)
           i = i - 1
         END DO
         inrt = i
-        IF( (inrt-inlft)<2 ) GOTO 100
+        IF( (inrt-inlft)<2 ) THEN
+          Ierr = 3
+          ERROR STOP 'AVINT : THERE WERE LESS THAN THREE FUNCTION VALUES BETWEEN THE &
+            &LIMITS OF INTEGRATION.'  ! (Was GOTO 100)
+          RETURN
+        END IF
         istart = inlft
         IF( inlft==1 ) istart = 2
         istop = inrt
@@ -178,13 +196,5 @@ PURE SUBROUTINE AVINT(X,Y,N,Xlo,Xup,Ans,Ierr)
     RETURN
   END IF
   RETURN
-  100  Ierr = 3
-  ERROR STOP 'AVINT : THERE WERE LESS THAN THREE FUNCTION VALUES BETWEEN THE &
-    &LIMITS OF INTEGRATION.'
-  RETURN
-  200  Ierr = 4
-  ERROR STOP 'AVINT : THE ABSCISSAS WERE NOT STRICTLY INCREASING. &
-    &MUST HAVE X(I-1) < X(I) FOR ALL I.'
-  !
-  RETURN
+  ! (Labels 100, 200 removed - errors handled inline)
 END SUBROUTINE AVINT
