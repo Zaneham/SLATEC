@@ -103,6 +103,10 @@ PURE SUBROUTINE DBINT4(X,Y,Ndata,Ibcl,Ibcr,Fbcl,Fbcr,Kntopt,T,Bcoef,N,K,W)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900326  Removed duplicate information from DESCRIPTION section.  (WRB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 50/100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S7.4 (STOP statement)
+  !           Original: Amos (SNLA)
   USE service, ONLY : eps_dp
   !
   INTEGER, INTENT(IN) :: Ibcl, Ibcr, Kntopt, Ndata
@@ -121,7 +125,7 @@ PURE SUBROUTINE DBINT4(X,Y,Ndata,Ibcl,Ibcr,Fbcl,Fbcr,Kntopt,T,Bcoef,N,K,W)
   ELSE
     ndm = Ndata - 1
     DO i = 1, ndm
-      IF( X(i)>=X(i+1) ) GOTO 50
+      IF( X(i)>=X(i+1) ) ERROR STOP 'DBINT4 : X VALUES ARE NOT DISTINCT OR NOT ORDERED'
     END DO
     IF( Ibcl<1 .OR. Ibcl>2 ) THEN
       ERROR STOP 'DBINT4 : IBCL IS NOT 1 OR 2'
@@ -161,8 +165,8 @@ PURE SUBROUTINE DBINT4(X,Y,Ndata,Ibcl,Ibcr,Fbcl,Fbcr,Kntopt,T,Bcoef,N,K,W)
             jw = MAX(1,i-1)
             iw = MOD(i+2,5) + 1
             T(np+i) = W(iw,jw)
-            IF( T(4-i)>T(5-i) ) GOTO 100
-            IF( T(np+i)<T(np+i-1) ) GOTO 100
+            IF( T(4-i)>T(5-i) ) ERROR STOP 'DBINT4 : KNOT INPUT THROUGH W ARRAY IS NOT ORDERED PROPERLY'
+            IF( T(np+i)<T(np+i-1) ) ERROR STOP 'DBINT4 : KNOT INPUT THROUGH W ARRAY IS NOT ORDERED PROPERLY'
           END DO
         CASE DEFAULT
           !     SET UP KNOT ARRAY WITH MULTIPLICITY 4 AT X(1) AND X(NDATA)

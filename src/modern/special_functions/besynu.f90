@@ -68,6 +68,10 @@ PURE SUBROUTINE BESYNU(X,Fnu,N,Y)
   !   900727  Added EXTERNAL statement.  (WRB)
   !   910408  Updated the AUTHOR and REFERENCES sections.  (WRB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.8 (IF construct)
+  !           Original: Amos (SNLA)
   !
   USE service, ONLY : eps_2_sp
   !
@@ -151,10 +155,7 @@ PURE SUBROUTINE BESYNU(X,Fnu,N,Y)
             sa = -sb
             sb = tb
           END DO
-          IF( nn<=1 ) THEN
-            s1 = s2
-            GOTO 100
-          END IF
+          IF( nn<=1 ) s1 = s2
         ELSE
           !
           !     MILLER ALGORITHM FOR X1<X<=X2
@@ -341,7 +342,8 @@ PURE SUBROUTINE BESYNU(X,Fnu,N,Y)
       s1 = s2
     END IF
   END IF
-  100  Y(1) = s1
+  ! (Label 100 removed)
+  Y(1) = s1
   IF( N==1 ) RETURN
   Y(2) = s2
   IF( N==2 ) RETURN
