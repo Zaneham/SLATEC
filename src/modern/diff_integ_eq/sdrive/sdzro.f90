@@ -56,6 +56,10 @@ PURE SUBROUTINE SDZRO(Ae,F,H,N,Nq,Iroot,Re,T,Yh,Uround,B,C,Fb,Fc,Y)
   !* REVISION HISTORY  (YYMMDD)
   !   790601  DATE WRITTEN
   !   900329  Initial submission to SLATEC.
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100/200 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.4 (DO construct)
+  !           Original: Kahaner (NIST), Sutherland (LANL)
 
   INTERFACE
     REAL(SP) PURE FUNCTION F(N,T,Y,Iroot)
@@ -81,8 +85,8 @@ PURE SUBROUTINE SDZRO(Ae,F,H,N,Nq,Iroot,Re,T,Yh,Uround,B,C,Fb,Fc,Y)
   fa = Fc
   kount = 0
   !                                                    Perform interchange
-  100 CONTINUE
-  IF( ABS(Fc)<ABS(Fb) ) THEN
+  main: DO  ! Main iteration (was GOTO 100 target)
+    IF( ABS(Fc)<ABS(Fb) ) THEN
     a = B
     fa = Fb
     B = C
@@ -114,27 +118,40 @@ PURE SUBROUTINE SDZRO(Ae,F,H,N,Nq,Iroot,Re,T,Yh,Uround,B,C,Fb,Fc,Y)
     IF( 8._SP*acmb>=acbs ) THEN
       !                                                                 Bisect
       B = 0.5_SP*(C+B)
-      GOTO 200
+      ! Skip to function evaluation (was GOTO 200)
+    ELSE
+      ic = 0
+      acbs = acmb
+      !                                            Test for too small a change
+      IF( p<=ABS(q)*tol ) THEN
+        !                                                 Increment by tolerance
+        B = B + SIGN(tol,cmb)
+      ELSEIF( p<cmb*q ) THEN
+        !                                                            Interpolate
+        B = B + p/q
+      ELSE
+        !                                                                 Bisect
+        B = 0.5_SP*(C+B)
+      END IF
     END IF
-    ic = 0
-  END IF
-  acbs = acmb
-  !                                            Test for too small a change
-  IF( p<=ABS(q)*tol ) THEN
-    !                                                 Increment by tolerance
-    B = B + SIGN(tol,cmb)
-    !                                               Root ought to be between
-    !                                               B and (C + B)/2.
-  ELSEIF( p<cmb*q ) THEN
-    !                                                            Interpolate
-    B = B + p/q
   ELSE
-    !                                                                 Bisect
-    B = 0.5_SP*(C+B)
+    acbs = acmb
+    !                                            Test for too small a change
+    IF( p<=ABS(q)*tol ) THEN
+      !                                                 Increment by tolerance
+      B = B + SIGN(tol,cmb)
+    ELSEIF( p<cmb*q ) THEN
+      !                                                            Interpolate
+      B = B + p/q
+    ELSE
+      !                                                                 Bisect
+      B = 0.5_SP*(C+B)
+    END IF
   END IF
   !                                             Have completed computation
   !                                             for new iterate B.
-  200  CALL SDNTP(H,0,N,Nq,T,B,Yh,Y)
+  ! (Label 200 removed)
+  CALL SDNTP(H,0,N,Nq,T,B,Yh,Y)
   Fb = F(N,B,Y,Iroot)
   IF( N==0 ) RETURN
   IF( Fb==0._SP ) RETURN
@@ -146,6 +163,5 @@ PURE SUBROUTINE SDZRO(Ae,F,H,N,Nq,Iroot,Re,T,Yh,Uround,B,C,Fb,Fc,Y)
     C = a
     Fc = fa
   END IF
-  GOTO 100
-  !
+  END DO main  ! (Was GOTO 100)
 END SUBROUTINE SDZRO
