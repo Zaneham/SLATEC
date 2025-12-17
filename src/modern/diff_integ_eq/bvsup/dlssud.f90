@@ -113,6 +113,10 @@ PURE SUBROUTINE DLSSUD(A,X,B,N,M,Nrda,U,Nrdu,Iflag,Mlso,Irank,Iscale,Q,Diag,&
   !   900328  Added TYPE section.  (WRB)
   !   910408  Updated the AUTHOR and REFERENCES sections.  (WRB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S8.1.6 (BLOCK construct)
+  !           Original: Watts (SNLA)
   USE service, ONLY : eps_dp
   !
   INTEGER, INTENT(IN) :: Iscale, M, Mlso, N, Nrda, Nrdu
@@ -134,7 +138,8 @@ PURE SUBROUTINE DLSSUD(A,X,B,N,M,Nrda,U,Nrdu,Iflag,Mlso,Irank,Iscale,Q,Diag,&
   !
   !     BEGIN BLOCK PERMITTING ...EXITS TO 310
   !        BEGIN BLOCK PERMITTING ...EXITS TO 80
-  !* FIRST EXECUTABLE STATEMENT  DLSSUD
+  !* FIRST EXECUTABLE STATEMENT
+  success: BLOCK  ! Main processing block (was GOTO 100 target)  DLSSUD
   uro = eps_dp
   !
   IF( N>=1 .AND. M>=N .AND. Nrda>=N ) THEN
@@ -167,8 +172,7 @@ PURE SUBROUTINE DLSSUD(A,X,B,N,M,Nrda,U,Nrdu,Iflag,Mlso,Irank,Iscale,Q,Diag,&
           DO k = 1, N
             Div(k) = Diag(k)
           END DO
-          !        .........EXIT
-          GOTO 100
+          EXIT success  ! Success (was GOTO 100)
         ELSE
           !
           !                    FOR RANK DEFICIENT PROBLEMS USE ADDITIONAL
@@ -180,7 +184,7 @@ PURE SUBROUTINE DLSSUD(A,X,B,N,M,Nrda,U,Nrdu,Iflag,Mlso,Irank,Iscale,Q,Diag,&
         END IF
         !        ......EXIT
       ELSEIF( Iflag==1 ) THEN
-        GOTO 100
+        EXIT success  ! Already decomposed (was GOTO 100)
       END IF
     END IF
   END IF
@@ -192,7 +196,7 @@ PURE SUBROUTINE DLSSUD(A,X,B,N,M,Nrda,U,Nrdu,Iflag,Mlso,Irank,Iscale,Q,Diag,&
   RETURN
   !
   !
-  100 CONTINUE
+  END BLOCK success  ! (Label 100 removed)
   IF( Irank>0 ) THEN
     !           BEGIN BLOCK PERMITTING ...EXITS TO 180
     !

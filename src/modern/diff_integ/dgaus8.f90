@@ -81,6 +81,10 @@ PURE SUBROUTINE DGAUS8(FUN,A,B,Err,Ans,Ierr)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900326  Removed duplicate information from DESCRIPTIONsection.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100/200 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.4, S11.1.12 (DO, EXIT)
+  !           Original: Jones (SNLA)
   USE service, ONLY : log10_radix_dp, eps_dp, digits_dp
   !
   INTERFACE
@@ -157,8 +161,8 @@ PURE SUBROUTINE DGAUS8(FUN,A,B,Err,Ans,Ierr)
     ef = 0.5_DP
     mxl = 0
   END IF
-  100 CONTINUE
-  DO
+  main: DO  ! Main adaptive integration loop (was GOTO 100 target)
+    DO
     !
     !     Compute refined estimates, estimate the error, etc.
     !
@@ -205,26 +209,28 @@ PURE SUBROUTINE DGAUS8(FUN,A,B,Err,Ans,Ierr)
       ef = ef*sq2
       IF( lr(l)<=0 ) THEN
         vl(l) = vl(l+1) + vr
-        GOTO 200
+        EXIT  ! Found level needing right-half (was GOTO 200)
       ELSE
         vr = vl(l+1) + vr
       END IF
     END DO
     !
-    !     Exit
+    !     Exit if backtracked to root
     !
-    Ans = vr
+    IF( l<=1 ) THEN
+      Ans = vr
     IF( (mxl/=0) .AND. (ABS(ce)>2._DP*tol*area) ) THEN
       Ierr = 2
       ERROR STOP 'DGAUS8 : ANS is probably insufficiently accurate.'
     END IF
     IF( Err<0._DP ) Err = ce
-    RETURN
+      RETURN
+    END IF
   END IF
-  200  est = gr(l-1)
-  lr(l) = 1
-  aa(l) = aa(l) + 4._DP*hh(l)
-  GOTO 100
+    est = gr(l-1)  ! (Label 200 removed)
+    lr(l) = 1
+    aa(l) = aa(l) + 4._DP*hh(l)
+  END DO main  ! (Was GOTO 100)
   !
   RETURN
 CONTAINS

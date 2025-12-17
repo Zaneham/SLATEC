@@ -68,6 +68,10 @@ PURE SUBROUTINE QPSRT(Limit,Last,Maxerr,Ermax,Elist,Iord,Nrmax)
   !   890831  Modified array declarations.  (WRB)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900328  Added TYPE section.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100/200/300 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.4, S11.1.12 (DO, EXIT)
+  !           Original: Piessens, de Doncker (K. U. Leuven)
 
   !
   INTEGER, INTENT(IN) :: Last, Limit
@@ -117,39 +121,39 @@ PURE SUBROUTINE QPSRT(Limit,Last,Maxerr,Ermax,Elist,Iord,Nrmax)
     jbnd = jupbn - 1
     ibeg = Nrmax + 1
     IF( ibeg<=jbnd ) THEN
-      DO i = ibeg, jbnd
+      search_errmax: DO i = ibeg, jbnd
         isucc = Iord(i)
-        !- **JUMP OUT OF DO-LOOP
-        IF( errmax>=Elist(isucc) ) GOTO 100
+        IF( errmax>=Elist(isucc) ) EXIT search_errmax  ! Found insertion point (was GOTO 100)
         Iord(i-1) = isucc
-      END DO
+      END DO search_errmax
+      IF( i<=jbnd ) THEN  ! Found early (was label 100)
+        Iord(i-1) = Maxerr
+        k = jbnd
+        search_errmin: DO j = i, jbnd
+          isucc = Iord(k)
+          IF( errmin<Elist(isucc) ) EXIT search_errmin  ! Found (was GOTO 200)
+          Iord(k+1) = isucc
+          k = k - 1
+        END DO search_errmin
+        IF( j<=jbnd ) THEN
+          Iord(k+1) = Last  ! (Was label 200)
+        ELSE
+          Iord(i) = Last  ! (Was after second loop)
+        END IF
+      ELSE  ! First loop completed
+        Iord(jbnd) = Maxerr
+        Iord(jupbn) = Last
+      END IF
     END IF
-    Iord(jbnd) = Maxerr
-    Iord(jupbn) = Last
   ELSE
     Iord(1) = 1
     Iord(2) = 2
   END IF
-  GOTO 300
-  !
-  !           INSERT ERRMIN BY TRAVERSING THE LIST BOTTOM-UP.
-  !
-  100  Iord(i-1) = Maxerr
-  k = jbnd
-  DO j = i, jbnd
-    isucc = Iord(k)
-    !- **JUMP OUT OF DO-LOOP
-    IF( errmin<Elist(isucc) ) GOTO 200
-    Iord(k+1) = isucc
-    k = k - 1
-  END DO
-  Iord(i) = Last
-  GOTO 300
-  200  Iord(k+1) = Last
   !
   !           SET MAXERR AND ERMAX.
   !
-  300  Maxerr = Iord(Nrmax)
+  ! Set MAXERR and ERMAX (label 300 removed)
+  Maxerr = Iord(Nrmax)
   Ermax = Elist(Maxerr)
   !
 END SUBROUTINE QPSRT

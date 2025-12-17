@@ -48,22 +48,20 @@ ELEMENTAL SUBROUTINE DGAMLM(Xmin,Xmax)
     xold = Xmin
     xln = LOG(Xmin)
     Xmin = Xmin - Xmin*((Xmin+0.5_DP)*xln-Xmin-0.2258_DP+alnsml)/(Xmin*xln+0.5_DP)
-    IF( ABS(Xmin-xold)<0.005_DP ) GOTO 100
+    IF( ABS(Xmin-xold)<0.005_DP ) EXIT  ! Converged
   END DO
-  ERROR STOP 'DGAMLM : UNABLE TO FIND XMIN'
-  !
-  100  Xmin = -Xmin + 0.01_DP
+  IF( i > 10 ) ERROR STOP 'DGAMLM : UNABLE TO FIND XMIN'
+  Xmin = -Xmin  ! (Label 100 removed) + 0.01_DP
   !
   Xmax = alnbig
   DO i = 1, 10
     xold = Xmax
     xln = LOG(Xmax)
     Xmax = Xmax - Xmax*((Xmax-0.5_DP)*xln-Xmax+0.9189_DP-alnbig)/(Xmax*xln-0.5_DP)
-    IF( ABS(Xmax-xold)<0.005_DP ) GOTO 200
+    IF( ABS(Xmax-xold)<0.005_DP ) EXIT  ! Converged
   END DO
-  ERROR STOP 'DGAMLM : UNABLE TO FIND XMAX'
-  !
-  200  Xmax = Xmax - 0.01_DP
+  IF( i > 10 ) ERROR STOP 'DGAMLM : UNABLE TO FIND XMAX'
+  Xmax = Xmax  ! (Label 200 removed) - 0.01_DP
   Xmin = MAX(Xmin,-Xmax+1._DP)
   !
 END SUBROUTINE DGAMLM
