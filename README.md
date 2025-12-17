@@ -4,7 +4,13 @@ Kia ora! Welcome to a complete modernisation of the SLATEC Common Mathematical L
 
 ## What's the Story?
 
-Saw this massive old-school maths library sitting there with thousands of GOTOs and thought "screw it, why not give it a go?" Turns out SLATEC gets used in quite a bit of scientific code out there, built by US national laboratories (Sandia, Los Alamos, Lawrence Livermore, NIST, Oak Ridge). The maths is mint, but the code style is properly vintage.
+Saw this massive old-school maths library sitting there with thousands of GOTOs and thought "screw it, why not give it a go?" Turns out SLATEC gets used in quite a bit of scientific code out there, built by US national laboratories (Sandia, Los Alamos, Lawrence Livermore, NIST, Oak Ridge). The maths is mint, but the code style is properly vintage and its kind of giving my old 1998 Kia Sportage.
+
+This library is still used and is pulled into many scientific applications, it's embedded in scipy and referenced pretty much everywhere. But no one wants to touch it. 
+
+Now I know what you must be thinking: Why're the All Blacks losing their steam? Nah jokes! "Why not GSL?"
+
+Well the issue with GSL is that it sits under the GPL license, now I am not a lawyer but if you link against it then any code you write must also be released under the same license. So its absolutely rubbish for people who're using it for commercial or scientific applications or even just regular people messing about. GSL is also just C with a FORTRAN wig on. SLATEC is FORTRAN native so theres far less friction!
 
 So here we are, keeping the mathematical goodness while making the code actually readable.
 
