@@ -44,6 +44,9 @@ SUBROUTINE XCON(X,Ix,Ierror)
   !           Corrected order of sections in prologue and added TYPE
   !           section.  (WRB)
   !   920127  Revised PURPOSE section of prologue.  (DWL)
+!   251217  Eliminated GOTO 50/100 per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.2 (IF construct)
+!           Original: Lozier, D.W. & Smith, J.M. (NBS)
   USE XBLK ,ONLY: radixx_com, radixl_com, dlg10r_com, l_com
   INTEGER :: Ierror, Ix
   REAL(SP) :: X
@@ -142,9 +145,7 @@ SUBROUTINE XCON(X,Ix,Ierror)
       IF( Ierror/=0 ) RETURN
       X = X*z
       Ix = j
-      IF( icase==1 ) GOTO 50
-      IF( icase==2 ) GOTO 100
-    END IF
+    ELSE
     i1 = i/itemp
     X = X*radixx_com**(-i1*itemp)
     Ix = Ix + i1*itemp
@@ -158,22 +159,23 @@ SUBROUTINE XCON(X,Ix,Ierror)
     j2 = j - j1*ispace
     X = X*z*10._SP**j2
     Ix = j1*ispace
+    END IF
     !
     ! AT THIS POINT,
     !  10.0**(-2*ISPACE) <= ABS(X) < 1.0                IN CASE 1,
     !           10.0**-1 <= ABS(X) < 10.0**(2*ISPACE-1) IN CASE 2.
-    IF( icase==2 ) GOTO 100
-    50 CONTINUE
-    DO WHILE( b*ABS(X)<1._SP )
-      X = X*b
-      Ix = Ix - ispace
-    END DO
-    RETURN
-    100 CONTINUE
-    DO WHILE( 10._SP*ABS(X)>=b )
-      X = X/b
-      Ix = Ix + ispace
-    END DO
+    ! Final processing based on icase (was labels 50 and 100)
+    IF( icase==1 ) THEN
+      DO WHILE( b*ABS(X)<1._SP )
+        X = X*b
+        Ix = Ix - ispace
+      END DO
+    ELSE  ! icase==2
+      DO WHILE( 10._SP*ABS(X)>=b )
+        X = X/b
+        Ix = Ix + ispace
+      END DO
+    END IF
   END IF
   RETURN
 END SUBROUTINE XCON
