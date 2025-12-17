@@ -20,6 +20,10 @@ PURE SUBROUTINE POS3D1(Lp,L,Mp,M,N,A,B,C,Ldimf,Mdimf,F,Xrt,Yrt,T,D,Wx,Wy,C1,C2,B
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900308  Changed call to TRID to call to TRIDQ.  (WRB)
   !   900402  Added TYPE section.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100/200 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.9 (SELECT CASE)
+  !           Original: Adams, Swarztrauber, Sweet (NCAR)
   USE integ_trans, ONLY : COSQB, COSQF, COSQI, COST, COSTI, RFFTB, RFFTF, RFFTI, &
     SINQB, SINQF, SINQI, SINT, SINTI
   !
@@ -42,40 +46,41 @@ PURE SUBROUTINE POS3D1(Lp,L,Mp,M,N,A,B,C,Ldimf,Mdimf,F,Xrt,Yrt,T,D,Wx,Wy,C1,C2,B
   lrdel = ((Lp-1)*(Lp-3)*(Lp-5))/3
   scalx = lr + lrdel
   dx = pi/(2._SP*scalx)
-  SELECT CASE (Lp)
-    CASE (1)
-      Xrt(1) = 0._SP
-      Xrt(lr) = -4._SP*C1
-      DO i = 3, lr, 2
-        Xrt(i-1) = -4._SP*C1*(SIN((i-1)*dx))**2
-        Xrt(i) = Xrt(i-1)
-      END DO
-      CALL RFFTI(lr,Wx)
-      GOTO 100
-    CASE (2)
-      di = 0._SP
-    CASE (4)
-      di = 1._SP
-    CASE DEFAULT
-      di = 0.5
-      scalx = 2._SP*scalx
-  END SELECT
-  DO i = 1, lr
-    Xrt(i) = -4._SP*C1*(SIN((i-di)*dx))**2
-  END DO
-  scalx = 2._SP*scalx
-  SELECT CASE (Lp)
-    CASE (1)
-    CASE (3)
-      CALL SINQI(lr,Wx)
-    CASE (4)
-      CALL COSTI(lr,Wx)
-    CASE (5)
-      CALL COSQI(lr,Wx)
-    CASE DEFAULT
-      CALL SINTI(lr,Wx)
-  END SELECT
-  100  mrdel = ((Mp-1)*(Mp-3)*(Mp-5))/3
+  IF( Lp==1 ) THEN  ! Special X initialization (was GOTO 100 skip)
+    Xrt(1) = 0._SP
+    Xrt(lr) = -4._SP*C1
+    DO i = 3, lr, 2
+      Xrt(i-1) = -4._SP*C1*(SIN((i-1)*dx))**2
+      Xrt(i) = Xrt(i-1)
+    END DO
+    CALL RFFTI(lr,Wx)
+  ELSE
+    SELECT CASE (Lp)
+      CASE (2)
+        di = 0._SP
+      CASE (4)
+        di = 1._SP
+      CASE DEFAULT
+        di = 0.5
+        scalx = 2._SP*scalx
+    END SELECT
+    DO i = 1, lr
+      Xrt(i) = -4._SP*C1*(SIN((i-di)*dx))**2
+    END DO
+    scalx = 2._SP*scalx
+    SELECT CASE (Lp)
+      CASE (3)
+        CALL SINQI(lr,Wx)
+      CASE (4)
+        CALL COSTI(lr,Wx)
+      CASE (5)
+        CALL COSQI(lr,Wx)
+      CASE DEFAULT
+        CALL SINTI(lr,Wx)
+    END SELECT
+  END IF
+  ! (Label 100 removed)
+  mrdel = ((Mp-1)*(Mp-3)*(Mp-5))/3
   scaly = mr + mrdel
   dy = pi/(2._SP*scaly)
   SELECT CASE (Mp)
