@@ -108,6 +108,10 @@ SUBROUTINE HPSORT(Hx,N,Strbeg,Strend,Iperm,Kflag,Work,Ier)
   !   890620  Algorithm for rearranging the data vector corrected by R. Boisvert.
   !   890622  Prologue upgraded to Version 4.0 style by D. Lozier.
   !   920507  Modified by M. McClain to revise prologue text.
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100-400 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.4 (DO construct)
+  !           Original: Jones, Rhoads, Wisniewski (SNLA/NBS)
   !   920818  Declarations section rebuilt and code restructured to use
   !           IF-THEN-ELSE-ENDIF.  (SMR, WRB)
 
@@ -172,15 +176,18 @@ SUBROUTINE HPSORT(Hx,N,Strbeg,Strend,Iperm,Kflag,Work,Ier)
   j = nn
   r = .375_SP
   !
-  100 CONTINUE
-  IF( i==j ) GOTO 300
+  main_sort: DO  ! Main quicksort loop (was GOTO 100 target)
+    IF( i==j ) THEN
+      ! Single element - go to stack pop (was GOTO 300)
+    ELSE
   IF( r<=0.5898437_SP ) THEN
     r = r + 3.90625E-2_SP
   ELSE
     r = r - 0.21875_SP
   END IF
   !
-  200  k = i
+      partition: DO  ! Partition loop (was GOTO 200 target)
+        k = i
   !
   !     Select a central element of the array and save it in location L
   !
@@ -249,16 +256,19 @@ SUBROUTINE HPSORT(Hx,N,Strbeg,Strend,Iperm,Kflag,Work,Ier)
               j = l
               m = m + 1
             END IF
-            GOTO 400
+            EXIT partition  ! (was GOTO 400)
           END IF
         END IF
       END DO
     END IF
   END DO
-  !
-  !     Begin again on another portion of the unsorted array
-  !
-  300  m = m - 1
+      END DO partition
+    END IF
+    !
+    !     Begin again on another portion of the unsorted array
+    !
+    ! (Label 300 - stack pop)
+    m = m - 1
   IF( m==0 ) THEN
     !
     !     Clean up
@@ -315,14 +325,14 @@ SUBROUTINE HPSORT(Hx,N,Strbeg,Strend,Iperm,Kflag,Work,Ier)
     j = iu(m)
   END IF
   !
-  400 CONTINUE
-  IF( j-i>=1 ) GOTO 200
-  IF( i==1 ) GOTO 100
+    ! (Label 400 removed)
+    IF( j-i>=1 ) CYCLE main_sort  ! Back to partition (was GOTO 200 via 100)
+    IF( i==1 ) CYCLE main_sort  ! Reset r and continue (was GOTO 100)
   i = i - 1
   DO
     !
     i = i + 1
-    IF( i==j ) GOTO 300
+    IF( i==j ) EXIT main_sort  ! Go to stack pop (was GOTO 300)
     lm = Iperm(i+1)
     IF( Hx(Iperm(i))(Strbeg:Strend)>Hx(lm)(Strbeg:Strend) ) THEN
       k = i
@@ -337,7 +347,7 @@ SUBROUTINE HPSORT(Hx,N,Strbeg,Strend,Iperm,Kflag,Work,Ier)
         END IF
       END DO
     END IF
-  END DO
+  END DO main_sort
   !
   RETURN
 END SUBROUTINE HPSORT
