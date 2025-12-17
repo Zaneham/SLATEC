@@ -22,6 +22,10 @@ PURE SUBROUTINE CKSCL(Zr,Fnu,N,Y,Nz,Rz,Ascle,Tol,Elim)
   !* REVISION HISTORY  (YYMMDD)
   !   ??????  DATE WRITTEN
   !   910415  Prologue converted to Version 4.0 format.  (BAB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100/200 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.1 (IF construct)
+  !           Original: Amos (SNLA)
 
   INTEGER, INTENT(IN) :: N
   INTEGER, INTENT(OUT) :: Nz
@@ -99,7 +103,10 @@ PURE SUBROUTINE CKSCL(Zr,Fnu,N,Y,Nz,Rz,Ascle,Tol,Elim)
       IF( nw==0 ) THEN
         Y(i) = cs
         Nz = Nz - 1
-        IF( ic==(kk-1) ) GOTO 100
+        IF( ic==(kk-1) ) THEN
+          early_exit = .TRUE.  ! (Was GOTO 100)
+          EXIT
+        END IF
         ic = kk
         CYCLE
       END IF
@@ -111,11 +118,13 @@ PURE SUBROUTINE CKSCL(Zr,Fnu,N,Y,Nz,Rz,Ascle,Tol,Elim)
       zd = CMPLX(xx,zri,SP)
     END IF
   END DO
-  Nz = N
-  IF( ic==N ) Nz = N - 1
-  GOTO 200
-  100  Nz = kk - 2
-  200 CONTINUE
+  ! Compute Nz (labels 100, 200 removed)
+  IF( early_exit ) THEN
+    Nz = kk - 2
+  ELSE
+    Nz = N
+    IF( ic==N ) Nz = N - 1
+  END IF
   DO k = 1, Nz
     Y(k) = (0._SP,0._SP)
   END DO

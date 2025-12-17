@@ -182,18 +182,17 @@ For each modernised routine, we must verify numerical equivalence with the origi
 ## Change Log
 | Date | File | Change | Reference |
 |------|------|--------|-----------|
-| 2025-12-16 | Project setup | Copied Mehdi base | Prior Work |
-| 2025-12-16 | diff_integ/davint.f90 | Eliminated GOTO 50 | �1 |
-| 2025-12-16 | quadpack/dqelg,qelg | Eliminated GOTO 100 | �1, QUADPACK |
-| 2025-12-16 | quadpack/dqmomo,qmomo | Eliminated GOTO 100 | �1, QUADPACK |
-| 2025-12-16 | approx/dlsei,lsei,dwnlit,wnlit | Eliminated GOTOs | �1, Hanson |
-| 2025-12-16 | depac/dslvs,slvs,dhstrt,hstart | Eliminated GOTOs | �1, Watts |
-| 2025-12-16 | bvsup/dmgsbv,mgsbv,dreort,reort | Eliminated GOTOs | �1, Watts |
-| 2025-12-16 | fishpack/bcrh,bsrh,blktr1 | Eliminated GOTOs | �1, Swarztrauber |
-| 2025-12-16 | interp/dplint,polint,bspvn | Eliminated GOTOs | �1, de Boor |
-| 2025-12-16 | pchip/14 files | Eliminated X-array GOTOs | �1, PCHIP84 |
-| 2025-12-16 | fftpack/cffti1,rffti1,ezfft1 | Named CYCLE | �1, FFT82 |
-| 2025-12-16 | Project setup | Copied Mehdi's base | §Prior Work |
-| | | | |
 
-| 2025-12-16 | diff_integ/davint.f90 | Eliminated GOTO 50 | §1, SC-M-69-335 |
+| 2025-12-16 | Project setup | Copied Mehdi base | Prior Work |
+| 2025-12-17 | special/dxlegf,xlegf | GOTO 100 → ERROR STOP | §1, Smith |
+| 2025-12-17 | special/dxpqnu,xpqnu | GOTO 100 → DO loop | §1, Smith |
+| 2025-12-17 | special/dxqnu,xqnu | GOTO 100 → named CYCLE | §1, Smith |
+| 2025-12-17 | special/cbuni,zbuni | GOTO 100 → inline IF | §1, Amos |
+| 2025-12-17 | special/cunhj,zunhj,cunik,zunik | GOTO 20 → EXIT | §1, Amos |
+| 2025-12-17 | splp/dplpfe,splpfe | GOTO 50 → CYCLE | §1, Hanson |
+| 2025-12-17 | fishpack/spelip | GOTO 100 → DO loop | §1, Swarztrauber |
+| 2025-12-17 | special/cacai,zacai | GOTO 100 → error return | §1, Amos |
+| 2025-12-17 | special/casyi,zasyi | GOTO 20/100 → EXIT | §1, Amos |
+| 2025-12-17 | special/cbiry,zbiry | GOTO 50/100 → error returns | §1, Amos |
+| 2025-12-17 | special/ckscl,zkscl | GOTO 100/200 → flag+EXIT | §1, Amos |
+| 2025-12-17 | special/cmlri,zmlri | GOTO 100/200 → EXIT | §1, Amos |

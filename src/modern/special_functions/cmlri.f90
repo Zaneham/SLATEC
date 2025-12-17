@@ -21,6 +21,10 @@ PURE SUBROUTINE CMLRI(Z,Fnu,Kode,N,Y,Nz,Tol)
   !* REVISION HISTORY  (YYMMDD)
   !   830501  DATE WRITTEN
   !   910415  Prologue converted to Version 4.0 format.  (BAB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100/200 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.12 (EXIT statement)
+  !           Original: Amos (SNLA)
   USE service, ONLY : tiny_sp
   !
   INTEGER, INTENT(IN) :: Kode, N
@@ -61,12 +65,14 @@ PURE SUBROUTINE CMLRI(Z,Fnu,Kode,N,Y,Nz,Tol)
     p1 = pt
     ck = ck + rz
     ap = ABS(p2)
-    IF( ap>tst*ak*ak ) GOTO 100
+    IF( ap>tst*ak*ak ) EXIT  ! Converged (was GOTO 100)
     ak = ak + 1._SP
   END DO
-  Nz = -2
-  RETURN
-  100  i = i + 1
+  IF( i > 80 ) THEN  ! Loop exhausted
+    Nz = -2
+    RETURN
+  END IF
+  i = i + 1  ! (Label 100 removed)
   k = 0
   IF( inu>=iaz ) THEN
     !-----------------------------------------------------------------------
@@ -86,7 +92,7 @@ PURE SUBROUTINE CMLRI(Z,Fnu,Kode,N,Y,Nz,Tol)
       ck = ck + rz
       ap = ABS(p2)
       IF( ap>=tst ) THEN
-        IF( itime==2 ) GOTO 200
+        IF( itime==2 ) EXIT  ! Converged (was GOTO 200)
         ack = ABS(ck)
         flam = ack + SQRT(ack*ack-1._SP)
         fkap = ap/ABS(p1)
@@ -95,13 +101,15 @@ PURE SUBROUTINE CMLRI(Z,Fnu,Kode,N,Y,Nz,Tol)
         itime = 2
       END IF
     END DO
-    Nz = -2
-    RETURN
+    IF( k > 80 ) THEN  ! Loop exhausted
+      Nz = -2
+      RETURN
+    END IF
   END IF
   !-----------------------------------------------------------------------
   !     BACKWARD RECURRENCE AND SUM NORMALIZING RELATION
   !-----------------------------------------------------------------------
-  200  k = k + 1
+  k = k + 1  ! (Label 200 removed)
   kk = MAX(i+iaz,k+inu)
   fkk = kk
   p1 = (0._SP,0._SP)
