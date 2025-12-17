@@ -183,10 +183,6 @@ REAL(SP) PURE FUNCTION PCHID(N,X,F,D,Incfd,Ia,Ib)
   !
   PCHID = value
   RETURN
-  !
-  !     X-ARRAY NOT STRICTLY INCREASING.
-  200 ERROR STOP 'PCHID : X-ARRAY NOT STRICTLY INCREASING'
-  !
-  ! (Label 300 removed - handled inline)
+  ! (Labels 200, 300 removed - handled inline)
   !------------- LAST LINE OF PCHID FOLLOWS ------------------------------
 END FUNCTION PCHID

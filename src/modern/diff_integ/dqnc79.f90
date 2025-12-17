@@ -77,6 +77,9 @@ PURE SUBROUTINE DQNC79(FUN,A,B,Err,Ans,Ierr,K)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   920218  Code redone to parallel QNC79.  (WRB)
   !   930120  Increase array size 80->99, and KMX 2000->5000 for SUN -r8 wordlength.  (RWC)
+!   251217  Eliminated GOTO 100/200/300/400 per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.4 (DO construct with EXIT)
+!           Original: Kahaner, D.K. (NBS), Jones, R.E. (SNLA)
   USE service, ONLY : log10_radix_dp, eps_dp, digits_dp
   !     .. Function Arguments ..
   INTERFACE
@@ -91,7 +94,7 @@ PURE SUBROUTINE DQNC79(FUN,A,B,Err,Ans,Ierr,K)
   REAL(DP), INTENT(OUT) :: Ans
   !     .. Local Scalars ..
   REAL(DP) :: ae, area, bank, blocal, c, ce, ee, ef, eps, q13, q7, q7l, test, tol, vr
-  INTEGER :: i, l, lmn, lmx, nib
+  INTEGER :: i, l, lmn, lmx, nib, istate
   !     .. Local Arrays ..
   REAL(DP) :: aa(99), f(13), f1(99), f2(99), f3(99), f4(99), f5(99), f6(99), &
     f7(99), hh(99), q7r(99), vl(99)
@@ -108,17 +111,26 @@ PURE SUBROUTINE DQNC79(FUN,A,B,Err,Ans,Ierr,K)
   Ans = 0._DP
   Ierr = 1
   ce = 0._DP
-  IF( A==B ) GOTO 400
+  IF( A==B ) THEN
+    Ierr = -1
+    RETURN
+  END IF
   lmx = nlmx
   lmn = nlmn
   IF( B/=0._DP ) THEN
     IF( SIGN(1._DP,B)*A>0._DP ) THEN
       c = ABS(1._DP-A/B)
       IF( c<=0.1_DP ) THEN
-        IF( c<=0._DP ) GOTO 400
+        IF( c<=0._DP ) THEN
+          Ierr = -1
+          RETURN
+        END IF
         nib = INT( 0.5_DP - LOG(c)/LOG(2._DP) )
         lmx = MIN(nlmx,nbits-nib-4)
-        IF( lmx<2 ) GOTO 400
+        IF( lmx<2 ) THEN
+          Ierr = -1
+          RETURN
+        END IF
         lmn = MIN(lmn,lmx)
       END IF
     END IF
@@ -142,137 +154,155 @@ PURE SUBROUTINE DQNC79(FUN,A,B,Err,Ans,Ierr,K)
   bank = 0._DP
   !
   !     Compute refined estimates, estimate the error, etc.
+  !     Main adaptive loop (istate: 1=refine, 2=deeper, 3=right)
   !
-  100 CONTINUE
-  DO i = 2, 12, 2
-    f(i) = FUN(aa(l)+(i-1)*hh(l))
-  END DO
-  K = K + 6
-  !
-  !     Compute left and right half estimates
-  !
-  q7l = hh(l)*((w1*(f(1)+f(7))+w2*(f(2)+f(6)))+(w3*(f(3)+f(5))+w4*f(4)))
-  q7r(l) = hh(l)&
-    *((w1*(f(7)+f(13))+w2*(f(8)+f(12)))+(w3*(f(9)+f(11))+w4*f(10)))
-  !
-  !     Update estimate of integral of absolute value
-  !
-  area = area + (ABS(q7l)+ABS(q7r(l))-ABS(q7))
-  !
-  !     Do not bother to test convergence before minimum refinement level
-  !
-  IF( l>=lmn ) THEN
+  istate = 1
+  adaptive_loop: DO
     !
-    !     Estimate the error in new value for whole interval, Q13
-    !
-    q13 = q7l + q7r(l)
-    ee = ABS(q7-q13)*ef
-    !
-    !     Compute nominal allowed error
-    !
-    ae = eps*area
-    !
-    !     Borrow from bank account, but not too much
-    !
-    test = MIN(ae+0.8_DP*bank,10._DP*ae)
-    !
-    !     Don't ask for excessive accuracy
-    !
-    test = MAX(test,tol*ABS(q13),0.00003_DP*tol*area)
-    !
-    !     Now, did this interval pass or not?
-    !
-    IF( ee<=test ) THEN
-      !
-      !     On good intervals accumulate the theoretical estimate
-      !
-      ce = ce + (q7-q13)/255._DP
-    ELSE
-      !
-      !     Consider the left half of next deeper level
-      !
-      IF( K>kmx ) lmx = MIN(kml,lmx)
-      IF( l<lmx ) GOTO 200
-      !
-      !     Have hit maximum refinement level -- penalize the cumulative error
-      !
-      ce = ce + (q7-q13)
-    END IF
-    !
-    !     Update the bank account.  Don't go into debt.
-    !
-    bank = bank + (ae-ee)
-    IF( bank<0._DP ) bank = 0._DP
-    !
-    !     Did we just finish a left half or a right half?
-    !
-    IF( lr(l)<=0 ) THEN
-      !
-      !     Proceed to right half at this level
-      !
-      vl(l) = q13
-      GOTO 300
-    ELSE
-      !
-      !     Left and right halves are done, so go back up a level
-      !
-      vr = q13
-      DO WHILE( l>1 )
-        IF( l<=17 ) ef = ef*sq2
-        eps = eps*2._DP
-        l = l - 1
-        IF( lr(l)<=0 ) THEN
-          vl(l) = vl(l+1) + vr
-          GOTO 300
-        ELSE
-          vr = vl(l+1) + vr
-        END IF
+    IF( istate==1 ) THEN
+      !     Refine (was label 100)
+      DO i = 2, 12, 2
+        f(i) = FUN(aa(l)+(i-1)*hh(l))
       END DO
+      K = K + 6
       !
-      !     Exit
+      !     Compute left and right half estimates
       !
-      Ans = vr
-      IF( ABS(ce)>2._DP*tol*area ) THEN
-        Ierr = 2
-        ERROR STOP 'DQNC79 : ANS is probably insufficiently accurate.'
+      q7l = hh(l)*((w1*(f(1)+f(7))+w2*(f(2)+f(6)))+(w3*(f(3)+f(5))+w4*f(4)))
+      q7r(l) = hh(l)&
+        *((w1*(f(7)+f(13))+w2*(f(8)+f(12)))+(w3*(f(9)+f(11))+w4*f(10)))
+      !
+      !     Update estimate of integral of absolute value
+      !
+      area = area + (ABS(q7l)+ABS(q7r(l))-ABS(q7))
+      !
+      !     Do not bother to test convergence before minimum refinement level
+      !
+      IF( l>=lmn ) THEN
+        !
+        !     Estimate the error in new value for whole interval, Q13
+        !
+        q13 = q7l + q7r(l)
+        ee = ABS(q7-q13)*ef
+        !
+        !     Compute nominal allowed error
+        !
+        ae = eps*area
+        !
+        !     Borrow from bank account, but not too much
+        !
+        test = MIN(ae+0.8_DP*bank,10._DP*ae)
+        !
+        !     Don't ask for excessive accuracy
+        !
+        test = MAX(test,tol*ABS(q13),0.00003_DP*tol*area)
+        !
+        !     Now, did this interval pass or not?
+        !
+        IF( ee<=test ) THEN
+          !
+          !     On good intervals accumulate the theoretical estimate
+          !
+          ce = ce + (q7-q13)/255._DP
+        ELSE
+          !
+          !     Consider the left half of next deeper level
+          !
+          IF( K>kmx ) lmx = MIN(kml,lmx)
+          IF( l<lmx ) THEN
+            istate = 2  ! Go deeper
+            CYCLE adaptive_loop
+          END IF
+          !
+          !     Have hit maximum refinement level -- penalize the cumulative error
+          !
+          ce = ce + (q7-q13)
+        END IF
+        !
+        !     Update the bank account.  Don't go into debt.
+        !
+        bank = bank + (ae-ee)
+        IF( bank<0._DP ) bank = 0._DP
+        !
+        !     Did we just finish a left half or a right half?
+        !
+        IF( lr(l)<=0 ) THEN
+          !
+          !     Proceed to right half at this level
+          !
+          vl(l) = q13
+          istate = 3  ! Go right
+          CYCLE adaptive_loop
+        ELSE
+          !
+          !     Left and right halves are done, so go back up a level
+          !
+          vr = q13
+          DO WHILE( l>1 )
+            IF( l<=17 ) ef = ef*sq2
+            eps = eps*2._DP
+            l = l - 1
+            IF( lr(l)<=0 ) THEN
+              vl(l) = vl(l+1) + vr
+              istate = 3  ! Go right
+              CYCLE adaptive_loop
+            ELSE
+              vr = vl(l+1) + vr
+            END IF
+          END DO
+          !
+          !     Exit - all done
+          !
+          Ans = vr
+          IF( ABS(ce)>2._DP*tol*area ) THEN
+            Ierr = 2
+            ERROR STOP 'DQNC79 : ANS is probably insufficiently accurate.'
+          END IF
+          RETURN
+        END IF
       END IF
-      RETURN
+      istate = 2  ! Default: go deeper if not converged
+    !
+    ELSEIF( istate==2 ) THEN
+      !     Go deeper (was label 200)
+      l = l + 1
+      eps = eps*0.5_DP
+      IF( l<=17 ) ef = ef/sq2
+      hh(l) = hh(l-1)*0.5_DP
+      lr(l) = -1
+      aa(l) = aa(l-1)
+      q7 = q7l
+      f1(l) = f(7)
+      f2(l) = f(8)
+      f3(l) = f(9)
+      f4(l) = f(10)
+      f5(l) = f(11)
+      f6(l) = f(12)
+      f7(l) = f(13)
+      f(13) = f(7)
+      f(11) = f(6)
+      f(9) = f(5)
+      f(7) = f(4)
+      f(5) = f(3)
+      f(3) = f(2)
+      istate = 1  ! Back to refine
+    !
+    ELSE  ! istate==3
+      !     Go right (was label 300)
+      q7 = q7r(l-1)
+      lr(l) = 1
+      aa(l) = aa(l) + 12._DP*hh(l)
+      f(1) = f1(l)
+      f(3) = f2(l)
+      f(5) = f3(l)
+      f(7) = f4(l)
+      f(9) = f5(l)
+      f(11) = f6(l)
+      f(13) = f7(l)
+      istate = 1  ! Back to refine
     END IF
-  END IF
-  200  l = l + 1
-  eps = eps*0.5_DP
-  IF( l<=17 ) ef = ef/sq2
-  hh(l) = hh(l-1)*0.5_DP
-  lr(l) = -1
-  aa(l) = aa(l-1)
-  q7 = q7l
-  f1(l) = f(7)
-  f2(l) = f(8)
-  f3(l) = f(9)
-  f4(l) = f(10)
-  f5(l) = f(11)
-  f6(l) = f(12)
-  f7(l) = f(13)
-  f(13) = f(7)
-  f(11) = f(6)
-  f(9) = f(5)
-  f(7) = f(4)
-  f(5) = f(3)
-  f(3) = f(2)
-  GOTO 100
-  300  q7 = q7r(l-1)
-  lr(l) = 1
-  aa(l) = aa(l) + 12._DP*hh(l)
-  f(1) = f1(l)
-  f(3) = f2(l)
-  f(5) = f3(l)
-  f(7) = f4(l)
-  f(9) = f5(l)
-  f(11) = f6(l)
-  f(13) = f7(l)
-  GOTO 100
-  400  Ierr = -1
-  ! 'DQNC79 : A and B are too nearly equal to allow normal integration. &
-    ! ANS is set to zero and IERR to -1.'
+  END DO adaptive_loop
+  ! (Label 400 error exit moved inline at start of routine)
+  !
   RETURN
 END SUBROUTINE DQNC79
