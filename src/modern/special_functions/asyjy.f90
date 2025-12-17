@@ -62,6 +62,9 @@ PURE SUBROUTINE ASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900328  Added TYPE section.  (WRB)
   !   910408  Updated the AUTHOR section.  (WRB)
+!   251217  Eliminated GOTO 50/100/150 per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.4 (logical flag control flow)
+!           Original: Amos, D. E. (SNLA)
   USE service, ONLY : digits_sp, min_exp_sp, eps_2_sp, log10_radix_sp, tiny_sp
   !
   INTERFACE
@@ -76,6 +79,7 @@ PURE SUBROUTINE ASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
   INTEGER, INTENT(OUT) :: Iflw
   REAL(SP), INTENT(IN) :: Flgjy, Fnu, X
   REAL(SP), INTENT(OUT) :: Wk(7), Y(In)
+  LOGICAL :: do_phi_calc
   INTEGER :: i, j, jn, jr, ju, k, kb, klast, kmax(5), kp1, &
     ks, ksp1, kstemp, l, lr, lrp1, iseta, isetb
   REAL(SP) :: abw2, akm, ap, asum, az, bsum, cr(10), crz32, dfi, elim, dr(10), fi, &
@@ -220,6 +224,7 @@ PURE SUBROUTINE ASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
   fn = Fnu
   Iflw = 0
   DO jn = 1, In
+    do_phi_calc = .FALSE.  ! Flag for phi computation path
     xx = X/fn
     Wk(1) = 1._SP - xx*xx
     abw2 = ABS(Wk(1))
@@ -243,7 +248,7 @@ PURE SUBROUTINE ASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
           Wk(7) = fn**con2
           Wk(5) = rtz*Wk(7)
           Wk(6) = Wk(5)*Wk(5)
-          GOTO 100
+          do_phi_calc = .TRUE.
         END IF
       ELSE
         !
@@ -256,7 +261,7 @@ PURE SUBROUTINE ASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
         rtz = z32**con2
         Wk(5) = rtz*Wk(7)
         Wk(6) = -Wk(5)*Wk(5)
-        GOTO 100
+        do_phi_calc = .TRUE.
       END IF
     ELSE
       !
@@ -291,7 +296,7 @@ PURE SUBROUTINE ASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
       Wk(5) = rtz*Wk(7)
       Wk(6) = -Wk(5)*Wk(5)
       IF( z>0._SP ) THEN
-        IF( Wk(4)>elim ) GOTO 50
+        IF( Wk(4)>elim ) Iflw = 1; RETURN
         Wk(6) = -Wk(6)
       END IF
       phi = SQRT(SQRT(sa+sa+sa+sa))
@@ -335,7 +340,7 @@ PURE SUBROUTINE ASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
         IF( ABS(ta)<=tol .AND. ABS(tb)<=relb ) EXIT
       END DO
       bsum = bsum/(fn*Wk(7))
-      GOTO 150
+      ! Skip phi calculation (asymptotic path)
     END IF
     !
     50  Iflw = 1
@@ -408,7 +413,9 @@ PURE SUBROUTINE ASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
     IF( Wk(1)>0._SP ) tb = -tb
     bsum = bsum/tb
     !
-    150  CALL FUNJY(Wk(6),Wk(5),Wk(4),fi,dfi)
+    END IF  ! do_phi_calc
+  ! (was label 150)
+  CALL FUNJY(Wk(6),Wk(5),Wk(4),fi,dfi)
     ta = 1._SP/tol
     tb = tiny_sp*ta*1.0E+3_SP
     IF( ABS(fi)<=tb ) THEN
