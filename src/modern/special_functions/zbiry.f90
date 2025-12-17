@@ -136,6 +136,10 @@ ELEMENTAL SUBROUTINE ZBIRY(Z,Id,Kode,Bi,Ierr)
   !   890801  REVISION DATE from Version 3.2
   !   910415  Prologue converted to Version 4.0 format.  (BAB)
   !   920128  Category corrected.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 50/100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.2.2 (RETURN statement)
+  !           Original: Amos (SNLA)
   !   920811  Prologue revised.  (DWL)
   !   930122  Added ZSQRT to EXTERNAL statement.  (RWC)
   USE service, ONLY : eps_dp, log10_radix_dp, digits_dp, huge_int, max_exp_dp, min_exp_dp
@@ -228,7 +232,11 @@ ELEMENTAL SUBROUTINE ZBIRY(Z,Id,Kode,Bi,Ierr)
         IF( bb>=alim ) THEN
           bb = bb + 0.25_DP*LOG(az)
           sfac = tol
-          IF( bb>elim ) GOTO 50
+          IF( bb>elim ) THEN
+            nz = 0
+            Ierr = 2  ! Overflow (was GOTO 50)
+            RETURN
+          END IF
         END IF
       END IF
       fmr = 0._DP
@@ -266,12 +274,12 @@ ELEMENTAL SUBROUTINE ZBIRY(Z,Id,Kode,Bi,Ierr)
           RETURN
         END IF
       ELSEIF( nz/=(-1) ) THEN
-        GOTO 100
+        nz = 0
+        Ierr = 5  ! Error from CBINU (was GOTO 100)
+        RETURN
       END IF
     END IF
-    50  nz = 0
-    Ierr = 2
-    RETURN
+    ! (Label 50 removed - handled inline)
   ELSE
     !-----------------------------------------------------------------------
     !     POWER SERIES FOR ABS(Z)<=1.
@@ -335,8 +343,5 @@ ELEMENTAL SUBROUTINE ZBIRY(Z,Id,Kode,Bi,Ierr)
       END IF
     END IF
   END IF
-  100  nz = 0
-  Ierr = 5
-  !
-  RETURN
+  ! (Label 100 removed - handled inline)
 END SUBROUTINE ZBIRY

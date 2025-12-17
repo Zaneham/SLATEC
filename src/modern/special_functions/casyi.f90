@@ -23,6 +23,10 @@ PURE SUBROUTINE CASYI(Z,Fnu,Kode,N,Y,Nz,Rl,Tol,Elim,Alim)
   !* REVISION HISTORY  (YYMMDD)
   !   830501  DATE WRITTEN
   !   910415  Prologue converted to Version 4.0 format.  (BAB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 20/100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.12 (EXIT statement)
+  !           Original: Amos (SNLA)
   USE service, ONLY : tiny_sp
   !
   INTEGER, INTENT(IN) :: Kode, N
@@ -110,10 +114,13 @@ PURE SUBROUTINE CASYI(Z,Fnu,Kode,N,Y,Nz,Rl,Tol,Elim,Alim)
         bb = bb + aez
         ak = ak + 8._SP
         sqk = sqk - ak
-        IF( aa<=atol ) GOTO 20
+        IF( aa<=atol ) EXIT  ! Converged
       END DO
-      GOTO 100
-      20  s2 = cs1
+      IF( j > jl ) THEN  ! Loop exhausted - no convergence
+        Nz = -2
+        RETURN
+      END IF
+      s2 = cs1  ! (Label 20 removed)
       IF( x+x<Elim ) s2 = s2 + p1*cs2*EXP(-Z-Z)
       fdn = fdn + 8._SP*dfnu + 4._SP
       p1 = -p1
@@ -138,6 +145,5 @@ PURE SUBROUTINE CASYI(Z,Fnu,Kode,N,Y,Nz,Rl,Tol,Elim,Alim)
     END DO
     RETURN
   END IF
-  100  Nz = -2
-  !
+  ! (Label 100 removed - handled inline)
 END SUBROUTINE CASYI

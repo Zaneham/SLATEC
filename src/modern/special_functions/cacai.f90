@@ -29,6 +29,10 @@ PURE SUBROUTINE CACAI(Z,Fnu,Kode,Mr,N,Y,Nz,Rl,Tol,Elim,Alim)
   !* REVISION HISTORY  (YYMMDD)
   !   830501  DATE WRITTEN
   !   910415  Prologue converted to Version 4.0 format.  (BAB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.2.2 (RETURN statement)
+  !           Original: Amos (SNLA)
   USE service, ONLY : tiny_sp
   !
   INTEGER, INTENT(IN) :: Kode, Mr, N
@@ -58,13 +62,21 @@ PURE SUBROUTINE CACAI(Z,Fnu,Kode,Mr,N,Y,Nz,Rl,Tol,Elim,Alim)
       !     MILLER ALGORITHM NORMALIZED BY THE SERIES FOR THE I FUNCTION
       !-----------------------------------------------------------------------
       CALL CMLRI(zn,Fnu,Kode,nn,Y,nw,Tol)
-      IF( nw<0 ) GOTO 100
+      IF( nw<0 ) THEN
+        Nz = -1
+        IF( nw==(-2) ) Nz = -2
+        RETURN
+      END IF
     ELSE
       !-----------------------------------------------------------------------
       !     ASYMPTOTIC EXPANSION FOR LARGE Z FOR THE I FUNCTION
       !-----------------------------------------------------------------------
       CALL CASYI(zn,Fnu,Kode,nn,Y,nw,Rl,Tol,Elim,Alim)
-      IF( nw<0 ) GOTO 100
+      IF( nw<0 ) THEN
+        Nz = -1
+        IF( nw==(-2) ) Nz = -2
+        RETURN
+      END IF
     END IF
   ELSE
     CALL CSERI(zn,Fnu,Kode,nn,Y,nw,Tol,Elim,Alim)
@@ -104,7 +116,5 @@ PURE SUBROUTINE CACAI(Z,Fnu,Kode,Mr,N,Y,Nz,Rl,Tol,Elim,Alim)
     Y(1) = cspn*c1 + csgn*c2
     RETURN
   END IF
-  100  Nz = -1
-  IF( nw==(-2) ) Nz = -2
-  !
+  ! (Label 100 removed - error handled inline)
 END SUBROUTINE CACAI
