@@ -1,46 +1,41 @@
 # SLATEC-Modern
 
-Kia Ora! A complete modernisation of the SLATEC Common Mathematical Library from FORTRAN 77 to modern Fortran (2018+).
+Kia ora! Welcome to a complete modernisation of the SLATEC Common Mathematical Library, taking this 1990s FORTRAN 77 codebase into the modern Fortran era (2018+).
+
+## What's the Story?
+
+Saw this massive old-school maths library sitting there with thousands of GOTOs and thought "screw it, why not give it a go?" Turns out SLATEC gets used in quite a bit of scientific code out there, built by US national laboratories (Sandia, Los Alamos, Lawrence Livermore, NIST, Oak Ridge). The maths is mint, but the code style is properly vintage.
+
+So here we are, keeping the mathematical goodness while making the code actually readable.
 
 ## Original Library
 
 - **Version**: 4.1 (July 1993)
 - **Source**: [Netlib SLATEC](https://netlib.org/slatec/)
 - **Licence**: Public Domain (US Government work)
-- **Statistics**: 735 files, 168,216 lines of FORTRAN 77
+- **Size**: 735 files, 168,216 lines of FORTRAN 77
 
-## What is SLATEC?
+## What's Inside?
 
-SLATEC (Sandia, Los Alamos, Air Force Weapons Laboratory Technical Exchange Committee) is a comprehensive mathematical library developed by US national laboratories:
+SLATEC packs in some absolute classics:
 
-- Sandia National Laboratories
-- Los Alamos National Laboratory
-- Lawrence Livermore National Laboratory
-- Air Force Weapons Laboratory
-- National Institute of Standards and Technology
-- Oak Ridge National Laboratory
-
-## Included Sub-Libraries
-
-SLATEC incorporates several well-known numerical libraries:
-
-| Library | Purpose |
-|---------|---------|
-| BLAS | Basic Linear Algebra Subprograms |
+| Library | What it Does |
+|---------|--------------|
+| BLAS | Basic Linear Algebra, the foundation of everything |
 | LINPACK | Linear equation solving |
 | EISPACK | Eigenvalue computation |
 | FFTPACK | Fast Fourier Transforms |
-| QUADPACK | Numerical integration |
+| QUADPACK | Numerical integration (proper good stuff) |
 | PCHIP | Piecewise Cubic Hermite Interpolation |
 | SLAP | Sparse Linear Algebra |
-| FNLIB | Special functions |
+| FNLIB | Special functions galore |
 | BSPLINE | B-spline interpolation |
 
 ## Mathematical Categories
 
-| Cat | Description | Routines |
+| Cat | Description | Examples |
 |-----|-------------|----------|
-| A | Arithmetic, error analysis | |
+| A | Arithmetic, error analysis | Machine constants |
 | C | Elementary & special functions | Bessel, Gamma, Airy, Error functions |
 | D | Linear algebra | Vectors, matrices, eigenvalues, SVD |
 | E | Interpolation | Splines, PCHIP, polynomial |
@@ -49,20 +44,22 @@ SLATEC incorporates several well-known numerical libraries:
 | H | Differentiation & integration | QUADPACK routines |
 | I | Differential equations | ODEs, BVPs, PDEs |
 | J | Integral transforms | FFT, Laplace |
-| K | Approximation | Least squares, fitting |
+| K | Approximation | Least squares, curve fitting |
 | L | Statistics & probability | RNG, distributions |
 
-## Modernisation Goals
+## Modernisation Progress
 
-- [ ] Convert to free-form Fortran 2018
-- [ ] Create proper modules with explicit interfaces
-- [ ] Replace GOTOs with structured control flow
+The big cleanup jobs:
+
+- [x] Convert to free-form Fortran 2018
+- [x] Create proper modules with explicit interfaces
+- [ ] **Replace GOTOs with structured control flow** *(in progress, started with ~2000, chipping away)*
 - [ ] Replace arithmetic IFs
 - [ ] Replace COMMON blocks with module variables
 - [ ] Replace DATA statements with parameter constants
-- [ ] Add `intent` attributes to all arguments
+- [x] Add `intent` attributes to all arguments
 - [ ] Replace `EXTERNAL` with procedure interfaces
-- [ ] Modern error handling (replacing XERMSG)
+- [x] Modern error handling (ERROR STOP replacing XERMSG calls)
 - [ ] Add optional OpenMP parallelisation where applicable
 - [ ] Comprehensive test suite
 - [ ] Documentation with FORD
@@ -72,20 +69,16 @@ SLATEC incorporates several well-known numerical libraries:
 ```
 slatec-modern/
 ├── src/
-│   ├── original/     # Original FORTRAN 77 source
-│   └── modern/       # Modernised Fortran 2018+ source
-│       ├── core/     # Machine constants, error handling
-│       ├── blas/     # Basic Linear Algebra
-│       ├── special/  # Special functions (Category C)
-│       ├── linalg/   # Linear algebra (Category D)
-│       ├── interp/   # Interpolation (Category E)
-│       ├── nonlin/   # Nonlinear equations (Category F)
-│       ├── optim/    # Optimisation (Category G)
-│       ├── integ/    # Integration/differentiation (Category H)
-│       ├── diffeq/   # Differential equations (Category I)
-│       ├── fft/      # FFT routines (Category J)
-│       ├── approx/   # Approximation (Category K)
-│       └── stats/    # Statistics (Category L)
+│   ├── original/          # Original FORTRAN 77 source (for reference)
+│   └── modern/            # Modernised Fortran 2018+ source
+│       ├── approximation/ # Curve fitting, least squares
+│       ├── diff_integ/    # Differentiation & integration
+│       ├── diff_integ_eq/ # Differential equations
+│       ├── interpolation/ # Splines, PCHIP
+│       ├── linear/        # Linear algebra
+│       ├── service/       # Utility routines
+│       └── special_functions/
+├── scripts/               # Python fix scripts for batch GOTO elimination
 ├── tests/
 ├── examples/
 └── docs/
@@ -95,16 +88,20 @@ slatec-modern/
 
 TODO: Add fpm.toml and CMake support
 
-## Authors & Credits
+## Credits
 
 **Original SLATEC**: US National Laboratories (Public Domain)
 
-**Prior Modernisation Work**: [Mehdi Chinoune](https://github.com/MehdiChinoune/SLATEC) - Started SLATEC modernisation in 2021, converting to free-form, adding intents/KIND, marking pure/elemental procedures, and organising into modules. This project builds upon and continues his excellent foundational work.
+**Prior Modernisation**: [Mehdi Chinoune](https://github.com/MehdiChinoune/SLATEC) kicked off the modernisation back in 2021, converting to free-form, adding intents and KIND parameters, marking pure/elemental procedures, and organising into modules. Massive props for the groundwork.
 
-**Current Modernisation**: Zane Hambly
+**Current Work**: Zane Hambly, continuing the GOTO elimination crusade and general cleanup.
 
 ## References
 
 - [SLATEC Guide](https://www.netlib.org/slatec/guide)
 - [SLATEC Table of Contents](https://www.netlib.org/slatec/toc)
 - [John Burkardt's SLATEC page](https://people.math.sc.edu/Burkardt/f_src/slatec/slatec.html)
+
+## Contributing
+
+Got a GOTO that's doing your head in? Found a gnarly bit of code that needs sorting? PRs welcome.
