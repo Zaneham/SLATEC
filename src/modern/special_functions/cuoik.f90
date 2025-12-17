@@ -49,6 +49,7 @@ PURE SUBROUTINE CUOIK(Z,Fnu,Kode,Ikflg,N,Y,Nuf,Tol,Elim,Alim)
   INTEGER :: i, iform, init, nn, nw
   COMPLEX(SP) :: arg, asum, bsum, cwrk(16), cz, phi, summ, zb, zeta1, zeta2, zn, zr
   REAL(SP) :: aarg, aphi, ascle, ax, ay, fnn, gnn, gnu, rcz, x, yy
+  LOGICAL :: continue_process
   REAL(SP), PARAMETER :: aic = 1.265512123484645396_SP
   !* FIRST EXECUTABLE STATEMENT  CUOIK
   Nuf = 0
@@ -95,30 +96,36 @@ PURE SUBROUTINE CUOIK(Z,Fnu,Kode,Ikflg,N,Y,Nuf,Tol,Elim,Alim)
     Nuf = -1
     RETURN
   ELSE
+    continue_process = .FALSE.
     IF( rcz<Alim ) THEN
       !-----------------------------------------------------------------------
       !     UNDERFLOW TEST
       !-----------------------------------------------------------------------
       IF( rcz>=(-Elim) ) THEN
-        IF( rcz>(-Alim) ) GOTO 50
-        rcz = rcz + LOG(aphi)
-        IF( iform==2 ) rcz = rcz - 0.25_SP*LOG(aarg) - aic
-        IF( rcz>(-Elim) ) THEN
-          ascle = 1.E+3_SP*tiny_sp/Tol
-          cz = cz + LOG(phi)
-          IF( iform/=1 ) cz = cz - CMPLX(0.25_SP,0._SP,SP)*LOG(arg)- CMPLX(aic,0._SP,SP)
-          ax = EXP(rcz)/Tol
-          ay = AIMAG(cz)
-          cz = CMPLX(ax,0._SP,SP)*CMPLX(COS(ay),SIN(ay),SP)
-          CALL CUCHK(cz,nw,ascle,Tol)
-          IF( nw/=1 ) GOTO 50
+        IF( rcz>(-Alim) ) THEN
+          continue_process = .TRUE.
+        ELSE
+          rcz = rcz + LOG(aphi)
+          IF( iform==2 ) rcz = rcz - 0.25_SP*LOG(aarg) - aic
+          IF( rcz>(-Elim) ) THEN
+            ascle = 1.E+3_SP*tiny_sp/Tol
+            cz = cz + LOG(phi)
+            IF( iform/=1 ) cz = cz - CMPLX(0.25_SP,0._SP,SP)*LOG(arg)- CMPLX(aic,0._SP,SP)
+            ax = EXP(rcz)/Tol
+            ay = AIMAG(cz)
+            cz = CMPLX(ax,0._SP,SP)*CMPLX(COS(ay),SIN(ay),SP)
+            CALL CUCHK(cz,nw,ascle,Tol)
+            IF( nw/=1 ) continue_process = .TRUE.
+          END IF
         END IF
       END IF
-      DO i = 1, nn
-        Y(i) = (0._SP,0._SP)
-      END DO
-      Nuf = nn
-      RETURN
+      IF( .NOT. continue_process ) THEN
+        DO i = 1, nn
+          Y(i) = (0._SP,0._SP)
+        END DO
+        Nuf = nn
+        RETURN
+      END IF
     ELSE
       rcz = rcz + LOG(aphi)
       IF( iform==2 ) rcz = rcz - 0.25_SP*LOG(aarg) - aic
@@ -126,14 +133,18 @@ PURE SUBROUTINE CUOIK(Z,Fnu,Kode,Ikflg,N,Y,Nuf,Tol,Elim,Alim)
         Nuf = -1
         RETURN
       END IF
+      continue_process = .TRUE.
     END IF
-    50  IF( Ikflg==2 ) RETURN
-    IF( N==1 ) RETURN
+    IF( continue_process ) THEN
+      IF( Ikflg==2 ) RETURN
+      IF( N==1 ) RETURN
+    END IF
   END IF
   !-----------------------------------------------------------------------
   !     SET UNDERFLOWS ON I SEQUENCE
   !-----------------------------------------------------------------------
-  100  gnu = Fnu + (nn-1)
+  underflow_loop: DO
+    gnu = Fnu + (nn-1)
   IF( iform==2 ) THEN
     CALL CUNHJ(zn,gnu,1,Tol,phi,arg,zeta1,zeta2,asum,bsum)
     cz = -zeta1 + zeta2
@@ -161,11 +172,11 @@ PURE SUBROUTINE CUOIK(Z,Fnu,Kode,Ikflg,N,Y,Nuf,Tol,Elim,Alim)
       IF( nw/=1 ) RETURN
     END IF
   END IF
-  Y(nn) = (0._SP,0._SP)
-  nn = nn - 1
-  Nuf = Nuf + 1
-  IF( nn==0 ) RETURN
-  GOTO 100
+    Y(nn) = (0._SP,0._SP)
+    nn = nn - 1
+    Nuf = Nuf + 1
+    IF( nn==0 ) RETURN
+  END DO underflow_loop
   !
   RETURN
 END SUBROUTINE CUOIK

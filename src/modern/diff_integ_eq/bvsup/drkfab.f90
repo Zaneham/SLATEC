@@ -33,6 +33,9 @@ SUBROUTINE DRKFAB(Ncomp,Xpts,Nxpts,Nfc,Iflag,Z,Mxnon,P,Ntp,Ip,Yhp,Niv,U,V,&
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900328  Added TYPE section.  (WRB)
   !   910722  Updated AUTHOR section.  (ALS)
+!   251217  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (DO with CYCLE)
+!           Original: Watts, H.A. (SNLA)
   USE DML, ONLY : c_com, inhomo_com, kkkint_com, lllint_com, x_com, xbeg_com, &
     xend_com, xop_com, info_com, kop_com, ae_com, re_com, nopg_com, ndisk_com, &
     ntape_com, neq_com, integ_com, nps_com, numort_com
@@ -85,7 +88,8 @@ SUBROUTINE DRKFAB(Ncomp,Xpts,Nxpts,Nfc,Iflag,Z,Mxnon,P,Ntp,Ip,Yhp,Niv,U,V,&
     !
     !              BEGIN BLOCK PERMITTING ...EXITS TO 190
     !                 BEGIN BLOCK PERMITTING ...EXITS TO 30
-    50  xxop = xop_com
+    step_loop: DO  ! Replaces label 50
+      xxop = xop_com
     !                 ...EXIT
     IF( nopg_com/=0 ) THEN
       IF( xend_com>xbeg_com .AND. xop_com>Z(jon) ) xxop = Z(jon)
@@ -146,8 +150,8 @@ SUBROUTINE DRKFAB(Ncomp,Xpts,Nxpts,Nfc,Iflag,Z,Mxnon,P,Ntp,Ip,Yhp,Niv,U,V,&
         ELSEIF( jflag==10 ) THEN
           xop_com = Xpts(kop_com)
           IF( ndisk_com==0 ) kod = kop_com
-          !              ............EXIT
-          GOTO 50
+          !              ............CYCLE to step_loop
+          CYCLE step_loop
           !
         ELSEIF( jflag==0 ) THEN
           !
@@ -180,8 +184,8 @@ SUBROUTINE DRKFAB(Ncomp,Xpts,Nxpts,Nfc,Iflag,Z,Mxnon,P,Ntp,Ip,Yhp,Niv,U,V,&
           END IF
           info_com(1) = 0
           jon = jon + 1
-          !                 ......EXIT
-          IF( nopg_com==1 .AND. x_com/=xop_com ) GOTO 50
+          !                 ......CYCLE to step_loop
+          IF( nopg_com==1 .AND. x_com/=xop_com ) CYCLE step_loop
           !
           !                       ************************************************
           !                           CONTINUE INTEGRATION IF WE ARE NOT AT AN
@@ -209,6 +213,8 @@ SUBROUTINE DRKFAB(Ncomp,Xpts,Nxpts,Nfc,Iflag,Z,Mxnon,P,Ntp,Ip,Yhp,Niv,U,V,&
         END IF
       END IF
     END DO
+      EXIT step_loop  ! Normal exit from step_loop
+    END DO step_loop
     !
     !           STORAGE OF HOMOGENEOUS SOLUTIONS IN U AND THE PARTICULAR
     !           SOLUTION IN V AT THE OUTPUT POINTS.
