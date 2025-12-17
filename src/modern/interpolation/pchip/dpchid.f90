@@ -105,6 +105,7 @@ REAL(DP) PURE FUNCTION DPCHID(N,X,F,D,Incfd,Ia,Ib)
   !   251216  Eliminated GOTO 200 per MODERNISATION_GUIDE.md S1. (ZH)
   !           Ref: ISO/IEC 1539-1:2018 S11.2.1 (EXIT with error flag)
   !           Original: Fritsch, LLNL (PCHIP)
+  !   251217  Eliminated GOTO 300 per MODERNISATION_GUIDE.md S1. (ZH)
   !   930504  Corrected to set VALUE=0 when IERR/=0.  (FNF)
 
   !
@@ -163,8 +164,9 @@ REAL(DP) PURE FUNCTION DPCHID(N,X,F,D,Incfd,Ia,Ib)
   !
   !  FUNCTION DEFINITION IS OK, GO ON.
   !
-  IF( (Ia<1) .OR. (Ia>N) ) GOTO 300
-  IF( (Ib<1) .OR. (Ib>N) ) GOTO 300
+  IF( (Ia<1) .OR. (Ia>N) .OR. (Ib<1) .OR. (Ib>N) ) THEN
+    ERROR STOP 'DPCHID : IA OR IB OUT OF RANGE'  ! (Was GOTO 300)
+  END IF
   !
   !  COMPUTE INTEGRAL VALUE.
   !
@@ -188,7 +190,6 @@ REAL(DP) PURE FUNCTION DPCHID(N,X,F,D,Incfd,Ia,Ib)
   !     X-ARRAY NOT STRICTLY INCREASING.
   200 ERROR STOP 'DPCHID : X-ARRAY NOT STRICTLY INCREASING'
   !
-  !     IA OR IB OUT OF RANGE RETURN.
-  300 ERROR STOP 'DPCHID : IA OR IB OUT OF RANGE'
+  ! (Label 300 removed - handled inline)
   !------------- LAST LINE OF DPCHID FOLLOWS -----------------------------
 END FUNCTION DPCHID
