@@ -55,6 +55,9 @@ PURE SUBROUTINE CPZERO(In,A,R,T,Iflg,S)
   !   890531  Changed all specific intrinsics to generic.  (WRB)
   !   890531  REVISION DATE from Version 3.2
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
+!   251217  Eliminated GOTO 50/100/200 per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.4 (DO construct EXIT)
+!           Original: Kahaner, D. K. (NBS)
 
   INTEGER, INTENT(IN) :: In
   INTEGER, INTENT(INOUT) :: Iflg
@@ -110,7 +113,7 @@ PURE SUBROUTINE CPZERO(In,A,R,T,Iflg,S)
                     u = (3.14159265_SP/n)*(2*i-1.5_SP)
                     R(i) = MAX(x,.001_SP*ABS(temp(1)))*CMPLX(COS(u),SIN(u),SP) + temp(1)
                   END DO
-                  GOTO 50
+                  EXIT  ! Go to main iteration (was GOTO 50)
                 END IF
               END DO
             END IF
@@ -146,14 +149,13 @@ PURE SUBROUTINE CPZERO(In,A,R,T,Iflg,S)
       DO i = 1, n
         R(i) = R(i) - T(i)
       END DO
-      IF( nr==n ) GOTO 100
-    END DO
-    GOTO 200
+      IF( nr==n ) EXIT iteration_loop  ! Converged
+    END DO iteration_loop
+    Iflg = 2; RETURN  ! Failed to converge
   END IF
   !
   !          CALCULATE ERROR BOUNDS FOR ZEROS
   !
-  100 CONTINUE
   DO nr = 1, n
     CALL CPEVL(n,n,A,R(nr),T,T(n+2),.TRUE.)
     x = ABS(CMPLX(ABS(REAL(T(1))),ABS(AIMAG(T(1))),SP)+T(n+2))
@@ -166,10 +168,5 @@ PURE SUBROUTINE CPZERO(In,A,R,T,Iflg,S)
     END DO
     S(nr) = 1._SP/S(nr)
   END DO
-  RETURN
-  !        ERROR EXITS
-  200 CONTINUE
-  IFlg = 2
-
   RETURN
 END SUBROUTINE CPZERO
