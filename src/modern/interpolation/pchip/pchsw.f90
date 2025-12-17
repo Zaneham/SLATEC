@@ -72,6 +72,10 @@ ELEMENTAL SUBROUTINE PCHSW(Dfmax,Iextrm,D1,D2,H,Slope,Ierr)
   !   910408  Updated AUTHOR and DATE WRITTEN sections in prologue.  (WRB)
   !   920526  Eliminated possible divide by zero problem.  (FNF)
   !   930503  Improved purpose.  (FNF)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100/200 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.8 (IF construct)
+  !           Original: Fritsch (LLNL)
   USE service, ONLY : eps_sp
   !
   !**End
@@ -112,7 +116,12 @@ ELEMENTAL SUBROUTINE PCHSW(Dfmax,Iextrm,D1,D2,H,Slope,Ierr)
     !        SPECIAL CASE -- D1=ZERO .
     !
     !          IF D2 IS ALSO ZERO, THIS ROUTINE SHOULD NOT HAVE BEEN CALLED.
-    IF( D2==0._SP ) GOTO 200
+    IF( D2==0._SP ) THEN
+      ! D1 and D2 both zero (was GOTO 200)
+      Ierr = -1
+      ERROR STOP 'PCHSW : D1 AND/OR D2 INVALID'
+      RETURN
+    END IF
     !
     rho = Slope/D2
     !          EXTREMUM IS OUTSIDE INTERVAL WHEN RHO >= 1/3 .
@@ -137,12 +146,21 @@ ELEMENTAL SUBROUTINE PCHSW(Dfmax,Iextrm,D1,D2,H,Slope,Ierr)
       !           SPECIAL CASE -- D2=ZERO .
       !
       !             EXTREMUM IS OUTSIDE INTERVAL WHEN RHO >= 1/3 .
-      IF( rho>=third ) GOTO 100
+      IF( rho>=third ) THEN
+        ! Extremum outside interval, normal return (was GOTO 100)
+        Ierr = 0
+        RETURN
+      END IF
       cp = 2._SP - 3._SP*rho
       nu = 1._SP - 2._SP*rho
       that = 1._SP/(3._SP*nu)
     ELSE
-      IF( lambda<=0._SP ) GOTO 200
+      IF( lambda<=0._SP ) THEN
+        ! D1 and D2 same sign (was GOTO 200)
+        Ierr = -1
+        ERROR STOP 'PCHSW : D1 AND/OR D2 INVALID'
+        RETURN
+      END IF
       !
       !           NORMAL CASE -- D1 AND D2 BOTH NONZERO, OPPOSITE SIGNS.
       !

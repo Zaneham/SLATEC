@@ -95,6 +95,10 @@ PURE SUBROUTINE DBINTK(X,Y,T,N,K,Bcoef,Q,Work)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900326  Removed duplicate information from DESCRIPTION section.  (WRB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 20/50 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S7.4 (STOP statement)
+  !           Original: Amos (SNLA), DeBoor
 
   INTEGER, INTENT(IN) :: K, N
   REAL(DP), INTENT(IN) :: Y(N), T(N+K), X(N)
@@ -112,7 +116,7 @@ PURE SUBROUTINE DBINTK(X,Y,T,N,K,Bcoef,Q,Work)
       jj = N - 1
       IF( jj/=0 ) THEN
         DO i = 1, jj
-          IF( X(i)>=X(i+1) ) GOTO 50
+          IF( X(i)>=X(i+1) ) ERROR STOP 'DBINTK : X(I) DOES NOT SATISFY X(I)<X(I+1) FOR SOME I'
         END DO
       END IF
       np1 = N + 1
@@ -133,13 +137,15 @@ PURE SUBROUTINE DBINTK(X,Y,T,N,K,Bcoef,Q,Work)
         !                T(LEFT) <= X(I) < T(LEFT+1)
         !        MATRIX IS SINGULAR IF THIS IS NOT POSSIBLE
         left = MAX(left,i)
-        IF( xi<T(left) ) GOTO 20
+        IF( xi<T(left) ) ERROR STOP 'DBINTK : SOME ABSCISSA WAS NOT IN THE SUPPORT OF THE&
+          & CORRESPONDING BASIS FUNCTION AND THE SYSTEM IS SINGULAR.'  ! (was GOTO 20)
         DO WHILE( xi>=T(left+1) )
           left = left + 1
           IF( left>=ilp1mx ) THEN
             left = left - 1
             IF( xi<=T(left+1) ) EXIT
-            GOTO 20
+            ERROR STOP 'DBINTK : SOME ABSCISSA WAS NOT IN THE SUPPORT OF THE&
+              & CORRESPONDING BASIS FUNCTION AND THE SYSTEM IS SINGULAR.'  ! (was GOTO 20)
           END IF
         END DO
         !        *** THE I-TH EQUATION ENFORCES INTERPOLATION AT XI, HENCE

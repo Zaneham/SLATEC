@@ -83,40 +83,40 @@ PURE SUBROUTINE POS3D1(Lp,L,Mp,M,N,A,B,C,Ldimf,Mdimf,F,Xrt,Yrt,T,D,Wx,Wy,C1,C2,B
   mrdel = ((Mp-1)*(Mp-3)*(Mp-5))/3
   scaly = mr + mrdel
   dy = pi/(2._SP*scaly)
-  SELECT CASE (Mp)
-    CASE (1)
-      Yrt(1) = 0._SP
-      Yrt(mr) = -4._SP*C2
-      DO j = 3, mr, 2
-        Yrt(j-1) = -4._SP*C2*(SIN((j-1)*dy))**2
-        Yrt(j) = Yrt(j-1)
-      END DO
-      CALL RFFTI(mr,Wy)
-      GOTO 200
-    CASE (2)
-      dj = 0._SP
-    CASE (4)
-      dj = 1._SP
-    CASE DEFAULT
-      dj = 0.5
-      scaly = 2._SP*scaly
-  END SELECT
-  DO j = 1, mr
-    Yrt(j) = -4._SP*C2*(SIN((j-dj)*dy))**2
-  END DO
-  scaly = 2._SP*scaly
-  SELECT CASE (Mp)
-    CASE (1)
-    CASE (3)
-      CALL SINQI(mr,Wy)
-    CASE (4)
-      CALL COSTI(mr,Wy)
-    CASE (5)
-      CALL COSQI(mr,Wy)
-    CASE DEFAULT
-      CALL SINTI(mr,Wy)
-  END SELECT
-  200 CONTINUE
+  IF( Mp==1 ) THEN  ! Special Y initialization (was GOTO 200 skip)
+    Yrt(1) = 0._SP
+    Yrt(mr) = -4._SP*C2
+    DO j = 3, mr, 2
+      Yrt(j-1) = -4._SP*C2*(SIN((j-1)*dy))**2
+      Yrt(j) = Yrt(j-1)
+    END DO
+    CALL RFFTI(mr,Wy)
+  ELSE
+    SELECT CASE (Mp)
+      CASE (2)
+        dj = 0._SP
+      CASE (4)
+        dj = 1._SP
+      CASE DEFAULT
+        dj = 0.5
+        scaly = 2._SP*scaly
+    END SELECT
+    DO j = 1, mr
+      Yrt(j) = -4._SP*C2*(SIN((j-dj)*dy))**2
+    END DO
+    scaly = 2._SP*scaly
+    SELECT CASE (Mp)
+      CASE (3)
+        CALL SINQI(mr,Wy)
+      CASE (4)
+        CALL COSTI(mr,Wy)
+      CASE (5)
+        CALL COSQI(mr,Wy)
+      CASE DEFAULT
+        CALL SINTI(mr,Wy)
+    END SELECT
+  END IF
+  ! (Label 200 removed)
   ifwrd = 1
   DO
     !

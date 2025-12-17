@@ -119,6 +119,10 @@ PURE SUBROUTINE LSSODS(A,X,B,M,N,Nrda,Iflag,Irank,Iscale,Q,Diag,Kpivot,Iter,&
   !   900402  Added TYPE section.  (WRB)
   !   910408  Updated the REFERENCES section.  (WRB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.4 (BLOCK construct)
+  !           Original: Golub, Businger (Numerical Methods)
   USE service, ONLY : eps_2_sp
   !
   INTEGER, INTENT(IN) :: Iscale, M, N, Nrda
@@ -138,6 +142,7 @@ PURE SUBROUTINE LSSODS(A,X,B,M,N,Nrda,Iflag,Irank,Iscale,Q,Diag,Kpivot,Iter,&
   !     THE FUNCTION R1MACH.
   !
   !* FIRST EXECUTABLE STATEMENT  LSSODS
+  success: BLOCK  ! Main processing block (was GOTO 100 target)
   uro = eps_2_sp
   !
   !- *********************************************************************
@@ -170,7 +175,7 @@ PURE SUBROUTINE LSSODS(A,X,B,M,N,Nrda,Iflag,Irank,Iscale,Q,Diag,Kpivot,Iter,&
           DO k = 1, N
             Div(k) = Diag(k)
           END DO
-          GOTO 100
+          EXIT success  ! Continue to solution (was GOTO 100)
         ELSE
           !
           !     FOR RANK DEFICIENT PROBLEMS USE ADDITIONAL ORTHOGONAL
@@ -180,7 +185,7 @@ PURE SUBROUTINE LSSODS(A,X,B,M,N,Nrda,Iflag,Irank,Iscale,Q,Diag,Kpivot,Iter,&
           RETURN
         END IF
       ELSEIF( Iflag==1 ) THEN
-        GOTO 100
+        EXIT success  ! Continue to solution (was GOTO 100)
       END IF
     END IF
   END IF
@@ -189,8 +194,10 @@ PURE SUBROUTINE LSSODS(A,X,B,M,N,Nrda,Iflag,Irank,Iscale,Q,Diag,Kpivot,Iter,&
   Iflag = 2
   ERROR STOP 'LSSODS : INVALID INPUT PARAMETERS.'
   RETURN
+  END BLOCK success
   !
-  100  irm = Irank - 1
+  ! (Label 100 removed)
+  irm = Irank - 1
   irp = Irank + 1
   iterp = MIN(Iter+1,11)
   acc = 10._SP*uro

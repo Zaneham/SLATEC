@@ -42,6 +42,10 @@ SUBROUTINE DXADJ(X,Ix,Ierror)
   !           section.  (WRB)
   !           CALLs to XERROR changed to CALLs to XERMSG.  (WRB)
   !   920127  Revised PURPOSE section of prologue.  (DWL)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100/200 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.8 (IF construct)
+  !           Original: Lozier, Smith (NBS)
   USE DXBLK ,ONLY: radixl_com, rad2l_com, l2_com, kmax_com
 
   INTEGER :: Ierror, Ix
@@ -58,32 +62,36 @@ SUBROUTINE DXADJ(X,Ix,Ierror)
   Ierror = 0
   IF( X==0._DP ) THEN
     Ix = 0
-    GOTO 200
   ELSEIF( ABS(X)>=1._DP ) THEN
-    IF( ABS(X)<radixl_com ) GOTO 200
-    X = X/rad2l_com
-    IF( Ix<=0 ) THEN
-      Ix = Ix + l2_com
-      RETURN
-    ELSEIF( Ix<=kmax_com-l2_com ) THEN
-      Ix = Ix + l2_com
-      RETURN
+    IF( ABS(X)>=radixl_com ) THEN
+      X = X/rad2l_com
+      IF( Ix<=0 .OR. Ix<=kmax_com-l2_com ) THEN
+        Ix = Ix + l2_com
+        RETURN
+      ELSE
+        ! Overflow in adjustment (was GOTO 100)
+        ERROR STOP 'DXADJ : overflow in auxiliary index'
+        Ierror = 207
+        RETURN
+      END IF
     END IF
   ELSE
-    IF( radixl_com*ABS(X)>=1._DP ) GOTO 200
-    X = X*rad2l_com
-    IF( Ix>=0 ) THEN
-      Ix = Ix - l2_com
-      RETURN
-    ELSEIF( Ix>=-kmax_com+l2_com ) THEN
-      Ix = Ix - l2_com
-      RETURN
+    IF( radixl_com*ABS(X)<1._DP ) THEN
+      X = X*rad2l_com
+      IF( Ix>=0 .OR. Ix>=-kmax_com+l2_com ) THEN
+        Ix = Ix - l2_com
+        RETURN
+      ELSE
+        ! Overflow in adjustment (was GOTO 100)
+        ERROR STOP 'DXADJ : overflow in auxiliary index'
+        Ierror = 207
+        RETURN
+      END IF
     END IF
   END IF
-  100  ERROR STOP 'DXADJ : overflow in auxiliary index'
-  Ierror = 207
-  RETURN
-  200 CONTINUE
-  IF( ABS(Ix)>kmax_com ) GOTO 100
-  RETURN
+  ! Final overflow check (was label 200)
+  IF( ABS(Ix)>kmax_com ) THEN
+    ERROR STOP 'DXADJ : overflow in auxiliary index'
+    Ierror = 207
+  END IF
 END SUBROUTINE DXADJ
