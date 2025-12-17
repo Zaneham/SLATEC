@@ -194,6 +194,10 @@ PURE SUBROUTINE DBNDSL(Mode,G,Mdg,Nb,Ip,Ir,X,N,Rnorm)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.2.3 (ERROR STOP)
+  !           Original: Hanson (SNLA)
 
   INTEGER, INTENT(IN) :: Ip, Ir, Mdg, Mode, N, Nb
   REAL(DP), INTENT(IN) :: G(Mdg,Nb+1)
@@ -218,7 +222,11 @@ PURE SUBROUTINE DBNDSL(Mode,G,Mdg,Nb,Ip,Ir,X,N,Rnorm)
           END DO
         END IF
         l = MAX(0,j-Ip)
-        IF( G(j,l+1)==0 ) GOTO 100
+        IF( G(j,l+1)==0 ) THEN
+          nerr = 1
+          iopt = 2
+          ERROR STOP 'DBNDSL : A ZERO DIAGONAL TERM IS IN THE N BY N UPPER TRIANGULAR MATRIX.'
+        END IF
         X(j) = (X(j)-s)/G(j,l+1)
       END DO
       RETURN
@@ -257,14 +265,15 @@ PURE SUBROUTINE DBNDSL(Mode,G,Mdg,Nb,Ip,Ir,X,N,Rnorm)
       END DO
     END IF
     !                                   ALG. STEP 31
-    IF( G(i,l+1)==0 ) GOTO 100
+    IF( G(i,l+1)==0 ) THEN
+      nerr = 1
+      iopt = 2
+      ERROR STOP 'DBNDSL : A ZERO DIAGONAL TERM IS IN THE N BY N UPPER TRIANGULAR MATRIX.'
+    END IF
     X(i) = (X(i)-s)/G(i,l+1)
   END DO
   !                                   ALG. STEP 32
   RETURN
   !
-  100  nerr = 1
-  iopt = 2
-  ERROR STOP 'DBNDSL : A ZERO DIAGONAL TERM IS IN THE N BY N UPPER TRIANGULAR MATRIX.'
-
+  ! (Label 100 removed - error handled inline)
 END SUBROUTINE DBNDSL

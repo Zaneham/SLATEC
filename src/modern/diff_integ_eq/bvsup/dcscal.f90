@@ -49,20 +49,20 @@ PURE SUBROUTINE DCSCAL(A,Nrda,Nrow,Ncol,Cols,Colsav,Rows,Rowsav,Anorm,Scales,Isc
     ascale = Anorm/Ncol
     DO k = 1, Ncol
       cs = Cols(k)
-      !        .........EXIT
-      IF( (cs>ten4*ascale) .OR. (ten4*cs<ascale) ) GOTO 100
-      !        .........EXIT
-      IF( (cs<1._DP/ten20) .OR. (cs>ten20) ) GOTO 100
+      IF( (cs>ten4*ascale) .OR. (ten4*cs<ascale) ) EXIT  ! Needs scaling
+      IF( (cs<1._DP/ten20) .OR. (cs>ten20) ) EXIT  ! Needs scaling
     END DO
   END IF
   !
-  DO k = 1, Ncol
-    Scales(k) = 1._DP
-  END DO
-  !     ......EXIT
-  RETURN
+  IF( k > Ncol ) THEN  ! Loop completed - no scaling needed
+    DO k = 1, Ncol
+      Scales(k) = 1._DP
+    END DO
+    RETURN
+  END IF
   !
-  100  alog2 = LOG(2._DP)
+  ! Scaling required (was label 100)
+  alog2 = LOG(2._DP)
   Anorm = 0._DP
   DO k = 1, Ncol
     cs = Cols(k)

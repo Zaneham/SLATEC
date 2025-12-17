@@ -53,8 +53,9 @@ PURE SUBROUTINE CPRODP(Nd,Bd,Nm1,Bm1,Nm2,Bm2,Na,Aa,X,Yy,M,A,B,C,D,U,Y)
   m1 = Nm1
   m2 = Nm2
   ia = Na
-  100 CONTINUE
-  IFlg = 0
+  ! Main iteration loop (was GOTO 100 target)
+  DO
+    IFlg = 0
   IF( id>0 ) THEN
     crt = Bd(id)
     id = id - 1
@@ -111,11 +112,11 @@ PURE SUBROUTINE CPRODP(Nd,Bd,Nm1,Bm1,Nm2,Bm2,Na,Aa,X,Yy,M,A,B,C,D,U,Y)
           Y(j) = rt*Y(j)
         END DO
       END IF
-      IF( iflg>0 ) GOTO 100
+      IF( iflg>0 ) CYCLE  ! Continue iteration (was GOTO 100)
       DO j = 1, M
         Yy(j) = REAL(Y(j))
       END DO
-      RETURN
+      EXIT  ! Done
     ELSE
       rt = Bm2(m2)
       m2 = m2 - 1
@@ -145,7 +146,6 @@ PURE SUBROUTINE CPRODP(Nd,Bd,Nm1,Bm1,Nm2,Bm2,Na,Aa,X,Yy,M,A,B,C,D,U,Y)
   Y(M) = A(M)*Y(M-1) + (B(M)-rt)*Y(M) + C(M)*yh
   Y(M-1) = y1
   iflg = 1
-  GOTO 100
+  END DO  ! Main iteration loop
   !
-  RETURN
 END SUBROUTINE CPRODP

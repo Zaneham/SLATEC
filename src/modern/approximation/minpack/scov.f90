@@ -195,7 +195,7 @@ PURE SUBROUTINE SCOV(FCN,Iopt,M,N,X,Fvec,R,Ldr,Info,Wa1,Wa2,Wa3,Wa4)
         DO i = 1, M
           nrow = i
           CALL FCN(iflag,M,N,X,Fvec,Wa1,nrow)
-          IF( iflag<0 ) GOTO 100
+          IF( iflag<0 ) EXIT process  ! Error (was GOTO 100)
           temp = Fvec(i)
           CALL RWUPDT(N,R,Ldr,Wa1,Wa2,temp,Wa3,Wa4)
         END DO
@@ -212,7 +212,7 @@ PURE SUBROUTINE SCOV(FCN,Iopt,M,N,X,Fvec,R,Ldr,Info,Wa1,Wa2,Wa3,Wa4)
           iflag = 2
           CALL FCN(iflag,M,N,X,Fvec,R,Ldr)
         END IF
-        IF( iflag<0 ) GOTO 100
+        IF( iflag<0 ) EXIT process  ! Error (was GOTO 100)
         !
         !     COMPUTE THE QR DECOMPOSITION
         CALL QRFAC(M,N,R,Ldr,.FALSE.,idum,1,Wa1,dum1,dum2)
@@ -267,8 +267,8 @@ PURE SUBROUTINE SCOV(FCN,Iopt,M,N,X,Fvec,R,Ldr,Info,Wa1,Wa2,Wa3,Wa4)
       END IF
     END IF
   END IF
+  END BLOCK process  ! (Label 100 removed)
   !
-  100 CONTINUE
   IF( M<=0 .OR. N<=0 ) Info = 0
   IF( iflag<0 ) Info = iflag
   IF( sing ) Info = 2
