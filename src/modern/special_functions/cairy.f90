@@ -230,7 +230,11 @@ ELEMENTAL SUBROUTINE CAIRY(Z,Id,Kode,Ai,Nz,Ierr)
             aa = -aa + 0.25_SP*alaz
             iflag = 1
             sfac = tol
-            IF( aa>elim ) GOTO 50
+            IF( aa>elim ) THEN
+            Nz = 0
+            Ierr = 2
+            RETURN
+          END IF
           END IF
         END IF
         !-----------------------------------------------------------------------
@@ -240,8 +244,15 @@ ELEMENTAL SUBROUTINE CAIRY(Z,Id,Kode,Ai,Nz,Ierr)
         IF( zi<0._SP ) mr = -1
         CALL CACAI(zta,fnu,Kode,mr,1,cy,nn,rl,tol,elim,alim)
         IF( nn<0 ) THEN
-          IF( nn/=(-1) ) GOTO 100
-          GOTO 50
+          IF( nn/=(-1) ) THEN
+            Nz = 0
+            Ierr = 5
+            RETURN
+          ELSE
+            Nz = 0
+            Ierr = 2
+            RETURN
+          END IF
         ELSE
           Nz = Nz + nn
         END IF
@@ -284,9 +295,7 @@ ELEMENTAL SUBROUTINE CAIRY(Z,Id,Kode,Ai,Nz,Ierr)
         RETURN
       END IF
     END IF
-    50  Nz = 0
-    Ierr = 2
-    RETURN
+    ! (Label 50 removed - overflow error handling moved inline)
   ELSE
     !-----------------------------------------------------------------------
     !     POWER SERIES FOR ABS(Z)<=1.
@@ -356,8 +365,6 @@ ELEMENTAL SUBROUTINE CAIRY(Z,Id,Kode,Ai,Nz,Ierr)
       END IF
     END IF
   END IF
-  100  Nz = 0
-  Ierr = 5
-  !
+  ! (Label 100 removed - error handling moved inline)
   RETURN
 END SUBROUTINE CAIRY
