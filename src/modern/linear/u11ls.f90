@@ -29,6 +29,9 @@ PURE SUBROUTINE U11LS(A,Mda,M,N,Ub,Db,Mode,Np,Krank,Ksure,H,W,Eb,Ic,Ir)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900328  Added TYPE section.  (WRB)
+!   251217  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.4 (DO construct with state)
+!           Original: SNLA
   USE blas, ONLY : SAXPY, SSWAP
 
   INTEGER, INTENT(IN) :: Mda, Mode, N, Np, M
@@ -39,6 +42,7 @@ PURE SUBROUTINE U11LS(A,Mda,M,N,Ub,Db,Mode,Np,Krank,Ksure,H,W,Eb,Ic,Ir)
   INTEGER :: mm, nmk, i, ii, im1, imin, is, j, jm1, jmax, jp1, kk, km1, kmi, &
     kp1, kz, l, lm1
   REAL(SP) :: bb, r2, rmin, summ, t, temp, tn, tt
+  LOGICAL :: rank_ok
   !
   !        INITIALIZATION
   !
@@ -111,154 +115,177 @@ PURE SUBROUTINE U11LS(A,Mda,M,N,Ub,Db,Mode,Np,Krank,Ksure,H,W,Eb,Ic,Ir)
   !
   !        M A I N    L O O P
   !
-  100  j = j + 1
-  jp1 = j + 1
-  jm1 = j - 1
-  kz = Krank
-  IF( j<=Np ) kz = j
+  !        State machine: 1=main_start, 2=col_pivot, 3=mat_reduce, 4=col_swap, 5=compute_ksure
   !
-  !        EACH COL HAS MM=M-J+1 COMPONENTS
-  !
-  mm = M - j + 1
-  !
-  !         UB DETERMINES COLUMN PIVOT
-  !
-  200  imin = j
-  IF( H(j)/=0. ) THEN
-    rmin = Ub(j)/H(j)
-    DO i = j, kz
-      IF( Ub(i)<H(i)*rmin ) THEN
-        rmin = Ub(i)/H(i)
-        imin = i
-      END IF
-    END DO
+  istate = 1
+  main_loop: DO
+    SELECT CASE (istate)
     !
-    !     TEST FOR RANK DEFICIENCY
+    CASE (1)  ! Main loop start (was label 100)
+      j = j + 1
+      jp1 = j + 1
+      jm1 = j - 1
+      kz = Krank
+      IF( j<=Np ) kz = j
+      mm = M - j + 1
+      istate = 2  ! Go to column pivot selection
     !
-    IF( rmin<1._SP ) GOTO 400
-    tt = (Eb(imin)+ABS(Db(imin)))/H(imin)
-    IF( tt<1._SP ) THEN
-      !     COMPUTE EXACT UB
-      DO i = 1, jm1
-        W(i) = A(i,imin)
-      END DO
-      l = jm1
-      DO
-        W(l) = W(l)/A(l,l)
-        IF( l==1 ) THEN
-          tt = Eb(imin)
-          DO i = 1, jm1
-            tt = tt + ABS(W(i))*Eb(i)
-          END DO
-          Ub(imin) = tt
-          IF( Ub(imin)/H(imin)<1._SP ) GOTO 400
-          EXIT
+    CASE (2)  ! Column pivot selection (was label 200)
+      imin = j
+      rank_ok = .FALSE.
+      IF( H(j)/=0._SP ) THEN
+        rmin = Ub(j)/H(j)
+        DO i = j, kz
+          IF( Ub(i)<H(i)*rmin ) THEN
+            rmin = Ub(i)/H(i)
+            imin = i
+          END IF
+        END DO
+        !
+        !     TEST FOR RANK DEFICIENCY
+        !
+        IF( rmin<1._SP ) THEN
+          rank_ok = .TRUE.
         ELSE
-          lm1 = l - 1
-          DO i = l, jm1
-            W(lm1) = W(lm1) - A(lm1,i)*W(i)
-          END DO
-          l = lm1
-        END IF
-      END DO
-    END IF
-  END IF
-  !
-  !        MATRIX REDUCTION
-  !
-  300  kk = Krank
-  Krank = Krank - 1
-  kz = Krank
-  IF( Mode==0 ) RETURN
-  IF( j>Np ) THEN
-    IF( imin<=Krank ) THEN
-      CALL ISWAP(1,Ic(imin),1,Ic(kk),1)
-      CALL SSWAP(M,A(1,imin),1,A(1,kk),1)
-      CALL SSWAP(1,Eb(imin),1,Eb(kk),1)
-      CALL SSWAP(1,Ub(imin),1,Ub(kk),1)
-      CALL SSWAP(1,Db(imin),1,Db(kk),1)
-      CALL SSWAP(1,W(imin),1,W(kk),1)
-      CALL SSWAP(1,H(imin),1,H(kk),1)
-    END IF
-    IF( j<=Krank ) GOTO 200
-    GOTO 500
-  ELSE
-    ! 'U11LS : FIRST NP COLUMNS ARE LINEARLY DEPENDENT'
-    Krank = j - 1
-    RETURN
-  END IF
-  !
-  !        COLUMN PIVOT
-  !
-  400 CONTINUE
-  IF( imin/=j ) THEN
-    CALL SSWAP(1,H(j),1,H(imin),1)
-    CALL SSWAP(M,A(1,j),1,A(1,imin),1)
-    CALL SSWAP(1,Eb(j),1,Eb(imin),1)
-    CALL SSWAP(1,Ub(j),1,Ub(imin),1)
-    CALL SSWAP(1,Db(j),1,Db(imin),1)
-    CALL SSWAP(1,W(j),1,W(imin),1)
-    CALL ISWAP(1,Ic(j),1,Ic(imin),1)
-  END IF
-  !
-  !        ROW PIVOT
-  !
-  jmax = MAXLOC(A(j:M,j),1)
-  jmax = jmax + j - 1
-  IF( jmax/=j ) THEN
-    CALL SSWAP(N,A(j,1),Mda,A(jmax,1),Mda)
-    CALL ISWAP(1,Ir(j),1,Ir(jmax),1)
-  END IF
-  !
-  !     APPLY HOUSEHOLDER TRANSFORMATION
-  !
-  tn = NORM2(A(j:M,j))
-  IF( tn==0._SP ) GOTO 300
-  IF( A(j,j)/=0._SP ) tn = SIGN(tn,A(j,j))
-  A(j:M,j) = A(j:M,j)/tn
-  A(j,j) = A(j,j) + 1._SP
-  IF( j/=N ) THEN
-    DO i = jp1, N
-      bb = -DOT_PRODUCT(A(j:M,j),A(j:M,i))/A(j,j)
-      CALL SAXPY(mm,bb,A(j:M,j),1,A(j:M,i),1)
-      IF( i>Np ) THEN
-        IF( H(i)/=0._SP ) THEN
-          tt = 1._SP - (ABS(A(j,i))/H(i))**2
-          tt = MAX(tt,0._SP)
-          t = tt
-          tt = 1._SP + 0.05_SP*tt*(H(i)/W(i))**2
-          IF( tt==1._SP ) THEN
-            H(i) = NORM2(A(j+1:M,i))
-            W(i) = H(i)
-          ELSE
-            H(i) = H(i)*SQRT(t)
+          tt = (Eb(imin)+ABS(Db(imin)))/H(imin)
+          IF( tt<1._SP ) THEN
+            !     COMPUTE EXACT UB
+            DO i = 1, jm1
+              W(i) = A(i,imin)
+            END DO
+            l = jm1
+            DO
+              W(l) = W(l)/A(l,l)
+              IF( l==1 ) THEN
+                tt = Eb(imin)
+                DO i = 1, jm1
+                  tt = tt + ABS(W(i))*Eb(i)
+                END DO
+                Ub(imin) = tt
+                IF( Ub(imin)/H(imin)<1._SP ) rank_ok = .TRUE.
+                EXIT
+              ELSE
+                lm1 = l - 1
+                DO i = l, jm1
+                  W(lm1) = W(lm1) - A(lm1,i)*W(i)
+                END DO
+                l = lm1
+              END IF
+            END DO
           END IF
         END IF
       END IF
-    END DO
-  END IF
-  H(j) = A(j,j)
-  A(j,j) = -tn
-  !
-  !
-  !          UPDATE UB, DB
-  !
-  Ub(j) = Ub(j)/ABS(A(j,j))
-  Db(j) = (SIGN(Eb(j),Db(j))+Db(j))/A(j,j)
-  IF( j/=Krank ) THEN
-    DO i = jp1, Krank
-      Ub(i) = Ub(i) + ABS(A(j,i))*Ub(j)
-      Db(i) = Db(i) - A(j,i)*Db(j)
-    END DO
-    GOTO 100
-  END IF
+      IF( rank_ok ) THEN
+        istate = 4  ! Go to column swap
+      ELSE
+        istate = 3  ! Go to matrix reduction
+      END IF
+    !
+    CASE (3)  ! Matrix reduction (was label 300)
+      kk = Krank
+      Krank = Krank - 1
+      kz = Krank
+      IF( Mode==0 ) RETURN
+      IF( j>Np ) THEN
+        IF( imin<=Krank ) THEN
+          CALL ISWAP(1,Ic(imin),1,Ic(kk),1)
+          CALL SSWAP(M,A(1,imin),1,A(1,kk),1)
+          CALL SSWAP(1,Eb(imin),1,Eb(kk),1)
+          CALL SSWAP(1,Ub(imin),1,Ub(kk),1)
+          CALL SSWAP(1,Db(imin),1,Db(kk),1)
+          CALL SSWAP(1,W(imin),1,W(kk),1)
+          CALL SSWAP(1,H(imin),1,H(kk),1)
+        END IF
+        IF( j<=Krank ) THEN
+          istate = 2  ! Continue column pivot
+        ELSE
+          istate = 5  ! Done, compute KSURE
+        END IF
+      ELSE
+        ! 'U11LS : FIRST NP COLUMNS ARE LINEARLY DEPENDENT'
+        Krank = j - 1
+        RETURN
+      END IF
+    !
+    CASE (4)  ! Column pivot swap (was label 400)
+      IF( imin/=j ) THEN
+        CALL SSWAP(1,H(j),1,H(imin),1)
+        CALL SSWAP(M,A(1,j),1,A(1,imin),1)
+        CALL SSWAP(1,Eb(j),1,Eb(imin),1)
+        CALL SSWAP(1,Ub(j),1,Ub(imin),1)
+        CALL SSWAP(1,Db(j),1,Db(imin),1)
+        CALL SSWAP(1,W(j),1,W(imin),1)
+        CALL ISWAP(1,Ic(j),1,Ic(imin),1)
+      END IF
+      !
+      !        ROW PIVOT
+      !
+      jmax = MAXLOC(A(j:M,j),1)
+      jmax = jmax + j - 1
+      IF( jmax/=j ) THEN
+        CALL SSWAP(N,A(j,1),Mda,A(jmax,1),Mda)
+        CALL ISWAP(1,Ir(j),1,Ir(jmax),1)
+      END IF
+      !
+      !     APPLY HOUSEHOLDER TRANSFORMATION
+      !
+      tn = NORM2(A(j:M,j))
+      IF( tn==0._SP ) THEN
+        istate = 3  ! Go to matrix reduction
+        CYCLE main_loop
+      END IF
+      IF( A(j,j)/=0._SP ) tn = SIGN(tn,A(j,j))
+      A(j:M,j) = A(j:M,j)/tn
+      A(j,j) = A(j,j) + 1._SP
+      IF( j/=N ) THEN
+        DO i = jp1, N
+          bb = -DOT_PRODUCT(A(j:M,j),A(j:M,i))/A(j,j)
+          CALL SAXPY(mm,bb,A(j,j),1,A(j,i),1)
+          IF( i>Np ) THEN
+            IF( H(i)/=0._SP ) THEN
+              tt = 1._SP - (ABS(A(j,i))/H(i))**2
+              tt = MAX(tt,0._SP)
+              t = tt
+              tt = 1._SP + .05_SP*tt*(H(i)/W(i))**2
+              IF( tt==1._SP ) THEN
+                H(i) = NORM2(A(j+1:M,i))
+                W(i) = H(i)
+              ELSE
+                H(i) = H(i)*SQRT(t)
+              END IF
+            END IF
+          END IF
+        END DO
+      END IF
+      H(j) = A(j,j)
+      A(j,j) = -tn
+      !
+      !          UPDATE UB, DB
+      !
+      Ub(j) = Ub(j)/ABS(A(j,j))
+      Db(j) = (SIGN(Eb(j),Db(j))+Db(j))/A(j,j)
+      IF( j/=Krank ) THEN
+        DO i = jp1, Krank
+          Ub(i) = Ub(i) + ABS(A(j,i))*Ub(j)
+          Db(i) = Db(i) - A(j,i)*Db(j)
+        END DO
+        istate = 1  ! Continue main loop
+      ELSE
+        istate = 5  ! Done, compute KSURE
+      END IF
+    !
+    CASE (5)  ! Compute KSURE (was label 500)
+      EXIT main_loop
+    !
+    END SELECT
+  END DO main_loop
   !
   !        E N D    M A I N    L O O P
   !
   !
   !        COMPUTE KSURE
   !
-  500  km1 = Krank - 1
+  km1 = Krank - 1
   DO i = 1, km1
     is = 0
     kmi = Krank - i
