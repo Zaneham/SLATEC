@@ -209,6 +209,10 @@ PURE SUBROUTINE QAWFE(F,A,Omega,Integr,Epsabs,Limlst,Limit,Maxp1,Result,Abserr,&
   !   891009  Removed unreferenced variable.  (WRB)
   !   891009  REVISION DATE from Version 3.2
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 50 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.2.1 (RETURN)
+  !           Original: Piessens, de Doncker (K. U. Leuven)
   USE service, ONLY : tiny_sp
   INTERFACE
     REAL(SP) PURE FUNCTION F(X)
@@ -309,11 +313,19 @@ PURE SUBROUTINE QAWFE(F,A,Omega,Integr,Epsabs,Limlst,Limit,Maxp1,Result,Abserr,&
         !
         !           TEST ON ACCURACY WITH PARTIAL SUM
         !
-        IF( errsum+drl<=Epsabs .AND. Lst>=6 ) GOTO 50
+        IF( errsum+drl<=Epsabs .AND. Lst>=6 ) THEN
+          Result = psum(numrl2)  ! (Was GOTO 50)
+          Abserr = errsum + drl
+          RETURN
+        END IF
         correc = MAX(correc,Erlst(Lst))
         IF( Ierlst(Lst)/=0 ) eps = MAX(ep,correc*p1)
         IF( Ierlst(Lst)/=0 ) Ier = 7
-        IF( Ier==7 .AND. (errsum+drl)<=correc*10._SP .AND. Lst>5 ) GOTO 50
+        IF( Ier==7 .AND. (errsum+drl)<=correc*10._SP .AND. Lst>5 ) THEN
+          Result = psum(numrl2)  ! (Was GOTO 50)
+          Abserr = errsum + drl
+          RETURN
+        END IF
         numrl2 = numrl2 + 1
         IF( Lst>1 ) THEN
           psum(numrl2) = psum(ll) + Rslst(Lst)
@@ -360,7 +372,11 @@ PURE SUBROUTINE QAWFE(F,A,Omega,Integr,Epsabs,Limlst,Limit,Maxp1,Result,Abserr,&
       Abserr = Abserr + 10._SP*correc
       IF( Ier==0 ) RETURN
       IF( Result==0._SP .OR. psum(numrl2)==0._SP ) THEN
-        IF( Abserr>errsum ) GOTO 50
+        IF( Abserr>errsum ) THEN
+          Result = psum(numrl2)  ! (Was GOTO 50)
+          Abserr = errsum + drl
+          RETURN
+        END IF
         IF( psum(numrl2)==0._SP ) RETURN
       END IF
       IF( Abserr/ABS(Result)<=(errsum+drl)/ABS(psum(numrl2)) ) THEN
@@ -380,7 +396,8 @@ PURE SUBROUTINE QAWFE(F,A,Omega,Integr,Epsabs,Limlst,Limit,Maxp1,Result,Abserr,&
       Lst = 1
       RETURN
     END IF
-    50  Result = psum(numrl2)
+    ! (Label 50 removed - exits inlined)
+    Result = psum(numrl2)
     Abserr = errsum + drl
   END IF
   !

@@ -235,6 +235,10 @@ PURE SUBROUTINE POIS3D(Lperod,L,C1,Mperod,M,C2,Nperod,N,A,B,C,Ldimf,Mdimf,F,Ierr
   !   890531  Changed all specific intrinsics to generic.  (WRB)
   !   890531  REVISION DATE from Version 3.2
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100/200/300 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.12 (EXIT statement)
+  !           Original: Adams (NCAR)
 
   INTEGER, INTENT(IN) :: L, Ldimf, Lperod, M, Mdimf, Mperod, N, Nperod
   INTEGER, INTENT(OUT) :: Ierror
@@ -261,17 +265,16 @@ PURE SUBROUTINE POIS3D(Lperod,L,C1,Mperod,M,C2,Nperod,N,A,B,C,Ldimf,Mdimf,F,Ierr
   IF( N<3 ) Ierror = 6
   IF( Ldimf<L ) Ierror = 7
   IF( Mdimf<M ) Ierror = 8
-  IF( np/=1 ) GOTO 200
-  DO k = 1, N
-    IF( A(k)/=C(1) ) GOTO 100
-    IF( C(k)/=C(1) ) GOTO 100
-    IF( B(k)/=B(1) ) GOTO 100
-  END DO
-  GOTO 300
-  100  Ierror = 9
-  200 CONTINUE
+  IF( np==1 ) THEN  ! Check coefficient consistency (was GOTO 200 skip)
+    check_coeff: DO k = 1, N
+      IF( A(k)/=C(1) .OR. C(k)/=C(1) .OR. B(k)/=B(1) ) THEN
+        Ierror = 9  ! (Was GOTO 100)
+        EXIT check_coeff
+      END IF
+    END DO check_coeff
+  END IF
+  ! (Labels 100, 200, 300 removed)
   IF( Nperod==1 .AND. (A(1)/=0. .OR. C(N)/=0._SP) ) Ierror = 10
-  300 CONTINUE
   IF( Ierror==0 ) THEN
     iwyrt = L + 1
     iwt = iwyrt + M
