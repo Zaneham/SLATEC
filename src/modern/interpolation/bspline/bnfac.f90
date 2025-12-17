@@ -78,6 +78,9 @@ PURE SUBROUTINE BNFAC(W,Nroww,Nrow,Nbandl,Nbandu,Iflag)
   !   890831  Modified array declarations.  (WRB)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900328  Added TYPE section.  (WRB)
+!   251217  Eliminated GOTO 100 per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.4 (inline error return)
+!           Original: de Boor, C. (A Practical Guide to Splines)
 
   !
   INTEGER, INTENT(IN) :: Nbandl, Nbandu, Nrow, Nroww
@@ -91,12 +94,12 @@ PURE SUBROUTINE BNFAC(W,Nroww,Nrow,Nbandl,Nbandu,Iflag)
   middle = Nbandu + 1
   !                         W(MIDDLE,.) CONTAINS THE MAIN DIAGONAL OF  A .
   nrowm1 = Nrow - 1
-  IF( nrowm1<0 ) GOTO 100
+  IF( nrowm1<0 ) Iflag = 2; RETURN
   IF( nrowm1/=0 ) THEN
     IF( Nbandl<=0 ) THEN
       !                A IS UPPER TRIANGULAR. CHECK THAT DIAGONAL IS NONZERO .
       DO i = 1, nrowm1
-        IF( W(middle,i)==0._SP ) GOTO 100
+        IF( W(middle,i)==0._SP ) Iflag = 2; RETURN
       END DO
     ELSEIF( Nbandu>0 ) THEN
       !
@@ -104,7 +107,7 @@ PURE SUBROUTINE BNFAC(W,Nroww,Nrow,Nbandl,Nbandu,Iflag)
       DO i = 1, nrowm1
         !                                  W(MIDDLE,I)  IS PIVOT FOR I-TH STEP .
         pivot = W(middle,i)
-        IF( pivot==0._SP ) GOTO 100
+        IF( pivot==0._SP ) Iflag = 2; RETURN
         !                 JMAX  IS THE NUMBER OF (NONZERO) ENTRIES IN COLUMN  I
         !                     BELOW THE DIAGONAL .
         jmax = MIN(Nbandl,Nrow-i)
@@ -131,7 +134,7 @@ PURE SUBROUTINE BNFAC(W,Nroww,Nrow,Nbandl,Nbandu,Iflag)
       !                 DIVIDE EACH COLUMN BY ITS DIAGONAL .
       DO i = 1, nrowm1
         pivot = W(middle,i)
-        IF( pivot==0._SP ) GOTO 100
+        IF( pivot==0._SP ) Iflag = 2; RETURN
         jmax = MIN(Nbandl,Nrow-i)
         DO j = 1, jmax
           W(middle+j,i) = W(middle+j,i)/pivot
@@ -142,7 +145,4 @@ PURE SUBROUTINE BNFAC(W,Nroww,Nrow,Nbandl,Nbandu,Iflag)
   END IF
   !                                       CHECK THE LAST DIAGONAL ENTRY .
   IF( W(middle,Nrow)/=0._SP ) RETURN
-  100 CONTINUE
-  IFlag = 2
-
 END SUBROUTINE BNFAC

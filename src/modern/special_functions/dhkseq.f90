@@ -32,6 +32,9 @@ PURE SUBROUTINE DHKSEQ(X,M,H,Ierr)
   !   900328  Added TYPE section.  (WRB)
   !   910722  Updated AUTHOR section.  (ALS)
   !   920528  DESCRIPTION and REFERENCES sections revised.  (WRB)
+!   251217  Eliminated GOTO 100-200 per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.4 (DO construct)
+!           Original: Amos, D. E. (SNLA)
   USE service, ONLY : log10_radix_dp, eps_dp, digits_dp
   !
   INTEGER, INTENT(IN) :: M
@@ -91,16 +94,17 @@ PURE SUBROUTINE DHKSEQ(X,M,H,Ierr)
   s = t*b(3)
   IF( ABS(s)>=tst ) THEN
     tk = 2._DP
-    DO k = 4, 22
+    coef_loop: DO k = 4, 22
       t = t*((tk+fn+1._DP)/(tk+1._DP))*((tk+fn)/(tk+2._DP))*rxsq
       trm(k) = t*b(k)
-      IF( ABS(trm(k))<tst ) GOTO 100
+      IF( ABS(trm(k))<tst ) EXIT coef_loop
       s = s + trm(k)
       tk = tk + 2._DP
-    END DO
-    GOTO 200
+    END DO coef_loop
+    Ierr = 2  ! Series did not converge
+    RETURN
   END IF
-  100  H(M) = s + 0.5_DP
+  H(M) = s + 0.5_DP
   IF( M/=1 ) THEN
     !-----------------------------------------------------------------------
     !     GENERATE LOWER DERIVATIVES, I<M-1
@@ -111,15 +115,16 @@ PURE SUBROUTINE DHKSEQ(X,M,H,Ierr)
       s = fnp*hrx*b(3)
       IF( ABS(s)>=tst ) THEN
         fk = fnp + 3._DP
-        DO k = 4, 22
+        deriv_loop: DO k = 4, 22
           trm(k) = trm(k)*fnp/fk
-          IF( ABS(trm(k))<tst ) GOTO 120
+          IF( ABS(trm(k))<tst ) EXIT deriv_loop
           s = s + trm(k)
           fk = fk + 2._DP
-        END DO
-        GOTO 200
+        END DO deriv_loop
+        Ierr = 2  ! Series did not converge
+        RETURN
       END IF
-      120  mx = M - i + 1
+      mx = M - i + 1
       H(mx) = s + 0.5_DP
     END DO
   END IF
@@ -153,6 +158,4 @@ PURE SUBROUTINE DHKSEQ(X,M,H,Ierr)
     H(j) = H(j)*trmr(mx) + s
   END DO
   RETURN
-  200  Ierr = 2
-
 END SUBROUTINE DHKSEQ
