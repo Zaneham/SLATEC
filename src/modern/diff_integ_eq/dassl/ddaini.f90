@@ -55,6 +55,10 @@ PURE SUBROUTINE DDAINI(X,Y,Yprime,Neq,RES,JAC,H,Wt,Idid,Phi,Delta,E,&
   !   901026  Added explicit declarations for all variables and minor
   !           cosmetic changes to prologue.  (FNF)
   !   901030  Minor corrections to declarations.  (FNF)
+  !   211001  Converted to free-form.  (Mehdi Chinoune)
+  !   251217  Eliminated GOTO 100 per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.4 (DO construct)
+  !           Original: Petzold (LLNL)
   !
   INTERFACE
     PURE SUBROUTINE RES(T,Y,Yprime,Delta,Ires)
@@ -115,7 +119,8 @@ PURE SUBROUTINE DDAINI(X,Y,Yprime,Neq,RES,JAC,H,Wt,Idid,Phi,Delta,E,&
   !----------------------------------------------------
   !
   !     SET UP FOR START OF CORRECTOR ITERATION
-  100  cj = 1._DP/H
+  retry: DO  ! Backward Euler retry loop (was GOTO 100 target)
+    cj = 1._DP/H
   X = X + H
   !
   !     PREDICT SOLUTION AND DERIVATIVE
@@ -280,14 +285,16 @@ PURE SUBROUTINE DDAINI(X,Y,Yprime,Neq,RES,JAC,H,Wt,Idid,Phi,Delta,E,&
     r = 0.90_DP/(2._DP*err+0.0001_DP)
     r = MAX(0.1_DP,MIN(0.5_DP,r))
     H = H*r
-    IF( ABS(H)>=Hmin .AND. nef<10 ) GOTO 100
+    IF( ABS(H)>=Hmin .AND. nef<10 ) CYCLE retry  ! Retry with smaller step (was GOTO 100)
+      Idid = -12
+      EXIT retry
   ELSEIF( ier==0 ) THEN
     IF( ires>-2 ) THEN
       ncf = ncf + 1
       H = H*0.25_DP
-      IF( ncf<10 .AND. ABS(H)>=Hmin ) GOTO 100
+      IF( ncf<10 .AND. ABS(H)>=Hmin ) CYCLE retry  ! Retry with smaller step (was GOTO 100)
       Idid = -12
-      RETURN
+      EXIT retry
     ELSE
       Idid = -12
       RETURN
@@ -295,11 +302,10 @@ PURE SUBROUTINE DDAINI(X,Y,Yprime,Neq,RES,JAC,H,Wt,Idid,Phi,Delta,E,&
   ELSE
     nsf = nsf + 1
     H = H*0.25_DP
-    IF( nsf<3 .AND. ABS(H)>=Hmin ) GOTO 100
+    IF( nsf<3 .AND. ABS(H)>=Hmin ) CYCLE retry  ! Retry with smaller step (was GOTO 100)
     Idid = -12
-    RETURN
+    EXIT retry
   END IF
-  Idid = -12
-  RETURN
+  END DO retry
   !-------------END OF SUBROUTINE DDAINI----------------------
 END SUBROUTINE DDAINI
