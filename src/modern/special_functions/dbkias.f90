@@ -99,41 +99,44 @@ PURE SUBROUTINE DBKIAS(X,N,Ktrms,T,Ans,Ind,Ms,Gmrn,H,Ierr)
   g1 = gs + gs
   rg1 = 1._DP/g1
   Gmrn = (rz+rz)/Gmrn
-  IF( Ind>1 ) GOTO 200
-  !-----------------------------------------------------------------------
-  !     EVALUATE ERROR FOR M=MS
-  !-----------------------------------------------------------------------
-  hn = 0.5_DP*fln
-  den2 = Ktrms + Ktrms + N
-  den3 = den2 - 2._DP
-  den1 = X + den2
-  err = rg1*(X+X)/(den1-1._DP)
-  IF( N/=0 ) rat = 1._DP/(fln*fln)
-  IF( Ktrms/=0 ) THEN
-    fj = Ktrms
-    rat = 0.25_DP/(hrtpi*den3*SQRT(fj))
-  END IF
-  err = err*rat
-  fj = -3._DP
-  DO j = 1, 15
-    IF( j<=5 ) err = err/den1
-    fm1 = MAX(1._DP,fj)
-    fj = fj + 1._DP
-    er = bnd(j)*err
-    IF( Ktrms==0 ) THEN
-      er = er*(1._DP+hn/fm1)
-      IF( er<tol ) GOTO 100
-      IF( j>=5 ) err = err/fln
-    ELSE
-      er = er/fm1
-      IF( er<tol ) GOTO 100
-      IF( j>=5 ) err = err/den3
+  IF( Ind<=1 ) THEN
+    !-----------------------------------------------------------------------
+    !     EVALUATE ERROR FOR M=MS
+    !-----------------------------------------------------------------------
+    hn = 0.5_DP*fln
+    den2 = Ktrms + Ktrms + N
+    den3 = den2 - 2._DP
+    den1 = X + den2
+    err = rg1*(X+X)/(den1-1._DP)
+    IF( N/=0 ) rat = 1._DP/(fln*fln)
+    IF( Ktrms/=0 ) THEN
+      fj = Ktrms
+      rat = 0.25_DP/(hrtpi*den3*SQRT(fj))
     END IF
-  END DO
-  Ierr = 2
-  RETURN
-  100  Ms = j
-  200  mm = Ms + Ms
+    err = err*rat
+    fj = -3._DP
+    convergence_loop: DO j = 1, 15
+      IF( j<=5 ) err = err/den1
+      fm1 = MAX(1._DP,fj)
+      fj = fj + 1._DP
+      er = bnd(j)*err
+      IF( Ktrms==0 ) THEN
+        er = er*(1._DP+hn/fm1)
+        IF( er<tol ) EXIT convergence_loop
+        IF( j>=5 ) err = err/fln
+      ELSE
+        er = er/fm1
+        IF( er<tol ) EXIT convergence_loop
+        IF( j>=5 ) err = err/den3
+      END IF
+    END DO convergence_loop
+    IF( er>=tol ) THEN
+      Ierr = 2
+      RETURN
+    END IF
+    Ms = j
+  END IF
+  mm = Ms + Ms
   mp = mm + 1
   !-----------------------------------------------------------------------
   !     H(K)=(-Z)**(K)*(PSI(K-1,Z)-PSI(K-1,Z+0.5))/GAMMA(K), K=1,2,...,MM
