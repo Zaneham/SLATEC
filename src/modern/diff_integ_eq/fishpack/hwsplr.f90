@@ -315,6 +315,8 @@ PURE SUBROUTINE HWSPLR(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   !   890531  REVISION DATE from Version 3.2
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+!   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
 
   INTEGER, INTENT(IN) :: Idimf, M, Mbdcnd, N, Nbdcnd
   INTEGER, INTENT(OUT) :: Ierror
@@ -325,9 +327,14 @@ PURE SUBROUTINE HWSPLR(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   !
   INTEGER :: i, id2, id3, id4, id5, id6, ierr1, ij, ip, iwstor, j, k, l, lp, &
     mp1, mstart, mstop, munk, np, np1, nstart, nstop, nunk
+  LOGICAL :: skip_theta_bdy, skip_pertrb, need_pole_adjust, use_zero_pole
   REAL(SP) :: a1, a2, deltar, deltht, dlrby2, dlrsq, dlthsq, r, s, s1, s2, ypole
   !* FIRST EXECUTABLE STATEMENT  HWSPLR
   Ierror = 0
+  skip_theta_bdy = .FALSE.
+  skip_pertrb = .FALSE.
+  need_pole_adjust = .FALSE.
+  use_zero_pole = .FALSE.
   IF( A<0. ) Ierror = 1
   IF( A>=B ) Ierror = 2
   IF( Mbdcnd<=0 .OR. Mbdcnd>=7 ) Ierror = 3
@@ -448,7 +455,7 @@ PURE SUBROUTINE HWSPLR(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   lp = id6 - mstart + 1
   SELECT CASE (np)
     CASE (1)
-      GOTO 100
+      skip_theta_bdy = .TRUE.
     CASE (4,5)
       a1 = 2._SP/deltht
       DO i = mstart, mstop
@@ -461,26 +468,27 @@ PURE SUBROUTINE HWSPLR(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
         F(i,2) = F(i,2) - a1*W(j)*F(i,1)
       END DO
   END SELECT
-  a1 = 1._SP/dlthsq
-  SELECT CASE (np)
-    CASE (1)
-    CASE (3,4)
-      a1 = 2._SP/deltht
-      DO i = mstart, mstop
-        j = i + lp
-        F(i,np1) = F(i,np1) - a1*W(j)*Bdd(i)
-      END DO
-    CASE DEFAULT
-      DO i = mstart, mstop
-        j = i + lp
-        F(i,N) = F(i,N) - a1*W(j)*F(i,np1)
-      END DO
-  END SELECT
+  IF( .NOT. skip_theta_bdy ) THEN
+    a1 = 1._SP/dlthsq
+    SELECT CASE (np)
+      CASE (1)
+      CASE (3,4)
+        a1 = 2._SP/deltht
+        DO i = mstart, mstop
+          j = i + lp
+          F(i,np1) = F(i,np1) - a1*W(j)*Bdd(i)
+        END DO
+      CASE DEFAULT
+        DO i = mstart, mstop
+          j = i + lp
+          F(i,N) = F(i,N) - a1*W(j)*F(i,np1)
+        END DO
+    END SELECT
+  END IF
   !
   !     ADJUST RIGHT SIDE OF EQUATION FOR UNKNOWN AT POLE WHEN HAVE
   !     DERIVATIVE SPECIFIED BOUNDARY CONDITIONS.
   !
-  100 CONTINUE
   IF( Mbdcnd>=5 .AND. Nbdcnd==3 ) F(1,1) = F(1,1) - (Bdd(2)-Bdc(2))&
     *4._SP/(N*deltht*dlrsq)
   !
@@ -492,42 +500,46 @@ PURE SUBROUTINE HWSPLR(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   ELSEIF( Elmbda==0 ) THEN
     IF( Nbdcnd==0 .OR. Nbdcnd==3 ) THEN
       s2 = 0._SP
-      SELECT CASE (Mbdcnd)
-        CASE (1,2,4,5)
-          GOTO 200
-        CASE (6)
-        CASE DEFAULT
-          W(id5+1) = 0.5_SP*(W(id5+2)-dlrby2)
-          s2 = 0.25_SP*deltar
-      END SELECT
-      a2 = 2._SP
-      IF( Nbdcnd==0 ) a2 = 1._SP
-      j = id5 + munk
-      W(j) = 0.5_SP*(W(j-1)+dlrby2)
-      s = 0._SP
-      DO i = mstart, mstop
-        s1 = 0._SP
-        ij = nstart + 1
-        k = nstop - 1
-        DO j = ij, k
-          s1 = s1 + F(i,j)
-        END DO
-        j = i + l
-        s = s + (a2*s1+F(i,nstart)+F(i,nstop))*W(j)
-      END DO
-      s2 = M*A + deltar*((M-1)*(M+1)*.5_SP+.25_SP) + s2
-      s1 = (2._SP+a2*(nunk-2))*s2
-      IF( Mbdcnd/=3 ) THEN
-        s2 = N*a2*deltar/8._SP
-        s = s + F(1,1)*s2
-        s1 = s1 + s2
+      IF( Mbdcnd==1 .OR. Mbdcnd==2 .OR. Mbdcnd==4 .OR. Mbdcnd==5 ) THEN
+        skip_pertrb = .TRUE.
+      ELSE
+        SELECT CASE (Mbdcnd)
+          CASE (6)
+          CASE DEFAULT
+            W(id5+1) = 0.5_SP*(W(id5+2)-dlrby2)
+            s2 = 0.25_SP*deltar
+        END SELECT
       END IF
-      Pertrb = s/s1
-      DO i = mstart, mstop
-        DO j = nstart, nstop
-          F(i,j) = F(i,j) - Pertrb
+      IF( .NOT. skip_pertrb ) THEN
+        a2 = 2._SP
+        IF( Nbdcnd==0 ) a2 = 1._SP
+        j = id5 + munk
+        W(j) = 0.5_SP*(W(j-1)+dlrby2)
+        s = 0._SP
+        DO i = mstart, mstop
+          s1 = 0._SP
+          ij = nstart + 1
+          k = nstop - 1
+          DO j = ij, k
+            s1 = s1 + F(i,j)
+          END DO
+          j = i + l
+          s = s + (a2*s1+F(i,nstart)+F(i,nstop))*W(j)
         END DO
-      END DO
+        s2 = M*A + deltar*((M-1)*(M+1)*.5_SP+.25_SP) + s2
+        s1 = (2._SP+a2*(nunk-2))*s2
+        IF( Mbdcnd/=3 ) THEN
+          s2 = N*a2*deltar/8._SP
+          s = s + F(1,1)*s2
+          s1 = s1 + s2
+        END IF
+        Pertrb = s/s1
+        DO i = mstart, mstop
+          DO j = nstart, nstop
+            F(i,j) = F(i,j) - Pertrb
+          END DO
+        END DO
+      END IF
     END IF
   ELSE
     Ierror = 11
@@ -535,7 +547,6 @@ PURE SUBROUTINE HWSPLR(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   !
   !     MULTIPLY I-TH EQUATION THROUGH BY (R(I)*DELTHT)**2.
   !
-  200 CONTINUE
   DO i = mstart, mstop
     k = i - mstart + 1
     j = i + lp
@@ -559,17 +570,24 @@ PURE SUBROUTINE HWSPLR(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   iwstor = INT( W(id4+1) ) + 3*munk
   SELECT CASE (Mbdcnd)
     CASE (1,2,3,4)
-      GOTO 400
+      ! No pole adjustment needed
     CASE (5)
+      need_pole_adjust = .TRUE.
+      IF( Elmbda==0. ) THEN
+        ypole = 0._SP
+        use_zero_pole = .TRUE.
+      END IF
     CASE DEFAULT
       !
       !     ADJUST THE SOLUTION AS NECESSARY FOR THE PROBLEMS WHERE A = 0.
       !
+      need_pole_adjust = .TRUE.
       IF( Elmbda==0. ) THEN
         ypole = 0._SP
-        GOTO 300
+        use_zero_pole = .TRUE.
       END IF
   END SELECT
+  IF( need_pole_adjust .AND. .NOT. use_zero_pole ) THEN
   j = id5 + munk
   W(j) = W(id2)/W(id3)
   DO ip = 3, munk
@@ -580,31 +598,32 @@ PURE SUBROUTINE HWSPLR(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
     W(j) = W(i)/(W(lp)-W(k)*W(j+1))
   END DO
   W(id5+1) = -.5_SP*dlthsq/(W(id2+1)-W(id3+1)*W(id5+2))
-  DO i = 2, munk
-    j = id5 + i
-    W(j) = -W(j)*W(j-1)
-  END DO
-  s = 0._SP
-  DO j = nstart, nstop
-    s = s + F(2,j)
-  END DO
-  a2 = nunk
-  IF( Nbdcnd/=0 ) THEN
-    s = s - 0.5_SP*(F(2,nstart)+F(2,nstop))
-    a2 = a2 - 1._SP
-  END IF
-  ypole = (.25_SP*dlrsq*F(1,1)-s/a2)/(W(id5+1)-1._SP+Elmbda*dlrsq*.25_SP)
-  DO i = mstart, mstop
-    k = l + i
-    DO j = nstart, nstop
-      F(i,j) = F(i,j) + ypole*W(k)
+    DO i = 2, munk
+      j = id5 + i
+      W(j) = -W(j)*W(j-1)
     END DO
-  END DO
-  300 CONTINUE
-  DO j = 1, np1
-    F(1,j) = ypole
-  END DO
-  400 CONTINUE
+    s = 0._SP
+    DO j = nstart, nstop
+      s = s + F(2,j)
+    END DO
+    a2 = nunk
+    IF( Nbdcnd/=0 ) THEN
+      s = s - 0.5_SP*(F(2,nstart)+F(2,nstop))
+      a2 = a2 - 1._SP
+    END IF
+    ypole = (.25_SP*dlrsq*F(1,1)-s/a2)/(W(id5+1)-1._SP+Elmbda*dlrsq*.25_SP)
+    DO i = mstart, mstop
+      k = l + i
+      DO j = nstart, nstop
+        F(i,j) = F(i,j) + ypole*W(k)
+      END DO
+    END DO
+  END IF
+  IF( need_pole_adjust ) THEN
+    DO j = 1, np1
+      F(1,j) = ypole
+    END DO
+  END IF
   IF( Nbdcnd==0 ) THEN
     DO i = mstart, mstop
       F(i,np1) = F(i,1)

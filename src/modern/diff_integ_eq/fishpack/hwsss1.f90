@@ -18,6 +18,8 @@ PURE SUBROUTINE HWSSS1(Ts,Tf,M,Mbdcnd,Bdts,Bdtf,Ps,Pf,N,Nbdcnd,Bdps,Bdpf,&
   !   891009  Removed unreferenced variables.  (WRB)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900402  Added TYPE section.  (WRB)
+!   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
 
   INTEGER, INTENT(IN) :: Idimf, M, Mbdcnd, N, Nbdcnd
   REAL(SP), INTENT(IN) :: Elmbda, Pf, Ps, Tf, Ts
@@ -31,7 +33,9 @@ PURE SUBROUTINE HWSSS1(Ts,Tf,M,Mbdcnd,Bdts,Bdtf,Ps,Pf,N,Nbdcnd,Bdps,Bdpf,&
   REAL(SP) :: at, cf, cnp, cp, csp, ct, den, dfn, dfs, dnn, dns, dphi, dphi2, dsn, &
     dss, dth, dth2, fim1, fjj, fm, fn, hdth, hld, hne, rtn, rts, summ, sum1, sum2, &
     t1, tdp, tdt, theta, wp, wpf, wps, wtf, wts, yhld
+  LOGICAL :: pole_done
   !* FIRST EXECUTABLE STATEMENT  HWSSS1
+  pole_done = .FALSE.
   mp1 = M + 1
   np1 = N + 1
   fn = N
@@ -302,13 +306,13 @@ PURE SUBROUTINE HWSSS1(Ts,Tf,M,Mbdcnd,Bdts,Bdtf,Ps,Pf,N,Nbdcnd,Bdps,Bdpf,&
         DO j = 1, np1
           F(M+1,j) = 0._SP
         END DO
-        GOTO 100
+        pole_done = .TRUE.
       END IF
     ELSEIF( isp<=0 ) THEN
       DO j = 1, np1
         F(1,j) = 0._SP
       END DO
-      GOTO 100
+      pole_done = .TRUE.
     END IF
   END IF
   IF( inp>0 ) THEN
@@ -330,58 +334,59 @@ PURE SUBROUTINE HWSSS1(Ts,Tf,M,Mbdcnd,Bdts,Bdtf,Ps,Pf,N,Nbdcnd,Bdps,Bdpf,&
       DO j = 1, np1
         F(1,j) = cnp
       END DO
-      GOTO 100
+      pole_done = .TRUE.
     END IF
   ELSEIF( isp<=0 ) THEN
-    GOTO 100
+    pole_done = .TRUE.
   END IF
-  summ = wps*F(itf,jps) + wpf*F(itf,jpf)
-  DO j = jpsp, jpfm
-    summ = summ + F(itf,j)
-  END DO
-  dfs = cp*summ
-  dss = cp*((wps+wpf+fjj)*(Ss(M)-1._SP)) + Elmbda
-  dns = cp*(wps+wpf+fjj)*Ss(2)
-  IF( inp<=0 ) THEN
-    csp = (F(M+1,1)-dfs)/dss
-    DO i = its, itf
-      hld = csp*Ss(i)
-      DO j = jps, jpf
-        F(i,j) = F(i,j) + hld
+  IF( .NOT. pole_done ) THEN
+    summ = wps*F(itf,jps) + wpf*F(itf,jpf)
+    DO j = jpsp, jpfm
+      summ = summ + F(itf,j)
+    END DO
+    dfs = cp*summ
+    dss = cp*((wps+wpf+fjj)*(Ss(M)-1._SP)) + Elmbda
+    dns = cp*(wps+wpf+fjj)*Ss(2)
+    IF( inp<=0 ) THEN
+      csp = (F(M+1,1)-dfs)/dss
+      DO i = its, itf
+        hld = csp*Ss(i)
+        DO j = jps, jpf
+          F(i,j) = F(i,j) + hld
+        END DO
       END DO
-    END DO
-    DO j = 1, np1
-      F(M+1,j) = csp
-    END DO
-  ELSE
-    rtn = F(1,1) - dfn
-    rts = F(M+1,1) - dfs
-    IF( ising>0 ) THEN
-      csp = 0._SP
-      cnp = rtn/dnn
-    ELSEIF( ABS(dnn)<=ABS(dsn) ) THEN
-      den = dns - dss*dnn/dsn
-      rtn = rtn - rts*dnn/dsn
-      csp = rtn/den
-      cnp = (rts-dss*csp)/dsn
+      DO j = 1, np1
+        F(M+1,j) = csp
+      END DO
     ELSE
-      den = dss - dns*dsn/dnn
-      rts = rts - rtn*dsn/dnn
-      csp = rts/den
-      cnp = (rtn-csp*dns)/dnn
-    END IF
-    DO i = its, itf
-      hld = cnp*Sn(i) + csp*Ss(i)
-      DO j = jps, jpf
-        F(i,j) = F(i,j) + hld
+      rtn = F(1,1) - dfn
+      rts = F(M+1,1) - dfs
+      IF( ising>0 ) THEN
+        csp = 0._SP
+        cnp = rtn/dnn
+      ELSEIF( ABS(dnn)<=ABS(dsn) ) THEN
+        den = dns - dss*dnn/dsn
+        rtn = rtn - rts*dnn/dsn
+        csp = rtn/den
+        cnp = (rts-dss*csp)/dsn
+      ELSE
+        den = dss - dns*dsn/dnn
+        rts = rts - rtn*dsn/dnn
+        csp = rts/den
+        cnp = (rtn-csp*dns)/dnn
+      END IF
+      DO i = its, itf
+        hld = cnp*Sn(i) + csp*Ss(i)
+        DO j = jps, jpf
+          F(i,j) = F(i,j) + hld
+        END DO
       END DO
-    END DO
-    DO j = 1, np1
-      F(1,j) = cnp
-      F(M+1,j) = csp
-    END DO
+      DO j = 1, np1
+        F(1,j) = cnp
+        F(M+1,j) = csp
+      END DO
+    END IF
   END IF
-  100 CONTINUE
   IF( Nbdcnd==0 ) THEN
     DO i = 1, mp1
       F(i,jpf+1) = F(i,jps)
