@@ -70,6 +70,9 @@ SUBROUTINE DDSTP(Eps,F,FA,Hmax,Impl,Ierror,JACOBN,Matdim,Maxord,Mint,&
   !* REVISION HISTORY  (YYMMDD)
   !   790601  DATE WRITTEN
   !   900329  Initial submission to SLATEC.
+  !   251218  Refactored to eliminate all GOTO statements.
+  !           Replaced labelled blocks with structured control flow.
+  !           (C. Markwardt, modernisation project)
   INTERFACE
     PURE SUBROUTINE F(N,T,Y,Ydot)
       IMPORT DP
@@ -117,6 +120,11 @@ SUBROUTINE DDSTP(Eps,F,FA,Hmax,Impl,Ierror,JACOBN,Matdim,Maxord,Mint,&
     RMFAIL = 2._DP, RMNORM = 10._DP, TRSHLD = 1._DP
   INTEGER, PARAMETER :: NDJSTP = 10
   LOGICAL, SAVE :: ier = .FALSE.
+  !
+  ! Control flow flags
+  LOGICAL :: do_step_retry, do_corrector_retry, converged, step_failed
+  LOGICAL :: n_zero_error, h_zero_error, singular_error
+  !
   !* FIRST EXECUTABLE STATEMENT  DDSTP
   nsv = N
   bnd = 0._DP
@@ -124,211 +132,303 @@ SUBROUTINE DDSTP(Eps,F,FA,Hmax,Impl,Ierror,JACOBN,Matdim,Maxord,Mint,&
   ntry = 0
   told = T
   nfail = 0
+  n_zero_error = .FALSE.
+  h_zero_error = .FALSE.
+  singular_error = .FALSE.
+  !
   IF( Jtask<=0 ) THEN
     CALL DDNTL(Eps,F,FA,Hmax,Hold,Impl,Jtask,Matdim,Maxord,Mint,Miter,Ml,Mu,&
       N,Nde,Save1,T,Uround,USERS,Y,Ywt,H,Mntold,Mtrold,Nfe,Rc,Yh,A,&
       Convrg,El,Fac,ier,Ipvt,Nq,Nwait,rh,Rmax,Save2,Tq,Trend,Iswflg,Jstate)
-    IF( N==0 ) GOTO 800
-    IF( H==0._DP ) GOTO 500
-    IF( ier ) GOTO 600
+    IF( N==0 ) THEN
+      Hold = H
+      RETURN
+    END IF
+    IF( H==0._DP ) THEN
+      Jstate = 2
+      Hold = H
+      DO i = 1, N
+        Y(i) = Yh(i,1)
+      END DO
+      RETURN
+    END IF
+    IF( ier ) THEN
+      Jstate = 4
+      Hold = H
+      RETURN
+    END IF
   END IF
-  100  ntry = ntry + 1
-  IF( ntry>MXTRY ) THEN
+  !
+  !-----------------------------------------------------------------------
+  !     MAIN STEP RETRY LOOP
+  !-----------------------------------------------------------------------
+  !
+  step_loop: DO
+    ntry = ntry + 1
+    IF( ntry>MXTRY ) THEN
+      Jstate = 3
+      Hold = H
+      RETURN
+    END IF
     !
-    Jstate = 3
-    Hold = H
-    RETURN
-  ELSE
     T = T + H
     CALL DDPSC(1,N,Nq,Yh)
     evaljc = (((ABS(Rc-1._DP)>RCTEST) .OR. (Nstep>=Jstepl+NDJSTP)) .AND. (Miter/=0))
     evalfa = .NOT. evaljc
-  END IF
-  !
-  200  iter = 0
-  DO i = 1, N
-    Y(i) = Yh(i,1)
-  END DO
-  CALL F(N,T,Y,Save2)
-  IF( N==0 ) THEN
-    Jstate = 6
-    GOTO 700
-  END IF
-  Nfe = Nfe + 1
-  IF( evaljc .OR. ier ) THEN
-    CALL DDPST(El,F,FA,H,Impl,JACOBN,Matdim,Miter,Ml,Mu,N,Nde,Nq,Save2,T,&
-      USERS,Y,Yh,Ywt,Uround,Nfe,Nje,A,Dfdy,Fac,ier,Ipvt,Save1,Iswflg,bnd,Jstate)
-    IF( N==0 ) GOTO 700
-    IF( ier ) GOTO 300
-    Convrg = .FALSE.
-    Rc = 1._DP
-    Jstepl = Nstep
-  END IF
-  DO i = 1, N
-    Save1(i) = 0._DP
-  END DO
-  DO
-    !                      Up to MXITER corrector iterations are taken.
-    !                      Convergence is tested by requiring the r.m.s.
-    !                      norm of changes to be less than EPS.  The sum of
-    !                      the corrections is accumulated in the vector
-    !                      SAVE1(I).  It is approximately equal to the L-th
-    !                      derivative of Y multiplied by
-    !                      H**L/(factorial(L-1)*EL(L,NQ)), and is thus
-    !                      proportional to the actual errors to the lowest
-    !                      power of H present (H**L).  The YH array is not
-    !                      altered in the correction loop.  The norm of the
-    !                      iterate difference is stored in D.  If
-    !                      ITER > 0, an estimate of the convergence rate
-    !                      constant is stored in TREND, and this is used in
-    !                      the convergence test.
     !
-    CALL DDCOR(Dfdy,El,FA,H,Ierror,Impl,Ipvt,Matdim,Miter,Ml,Mu,N,Nde,Nq,T,&
-      USERS,Y,Yh,Ywt,evalfa,Save1,Save2,A,d,Jstate)
-    IF( N==0 ) GOTO 700
-    IF( Iswflg==3 .AND. Mint==1 ) THEN
-      IF( iter==0 ) THEN
-        numer = NORM2(Save1(1:N))
-        DO i = 1, N
-          Dfdy(1,i) = Save1(i)
-        END DO
-        y0nrm = NORM2(Yh(1:N,1))
-      ELSE
-        denom = numer
-        DO i = 1, N
-          Dfdy(1,i) = Save1(i) - Dfdy(1,i)
-        END DO
-        numer = NORM2(Dfdy(1,1:N))
-        IF( El(1,Nq)*numer<=100._DP*Uround*y0nrm ) THEN
-          IF( Rmax==RMFAIL ) THEN
-            switch = .TRUE.
-            GOTO 400
-          END IF
-        END IF
-        DO i = 1, N
-          Dfdy(1,i) = Save1(i)
-        END DO
-        IF( denom/=0._DP ) bnd = MAX(bnd,numer/(denom*ABS(H)*El(1,Nq)))
-      END IF
-    END IF
-    IF( iter>0 ) Trend = MAX(.9_DP*Trend,d/d1)
-    d1 = d
-    ctest = MIN(2._DP*Trend,1._DP)*d
-    IF( ctest<=Eps ) GOTO 400
-    iter = iter + 1
-    IF( iter<MXITER ) THEN
+    !-----------------------------------------------------------------------
+    !     CORRECTOR ITERATION
+    !-----------------------------------------------------------------------
+    !
+    do_corrector_retry = .TRUE.
+    corrector_outer: DO WHILE( do_corrector_retry )
+      do_corrector_retry = .FALSE.
+      iter = 0
       DO i = 1, N
-        Y(i) = Yh(i,1) + El(1,Nq)*Save1(i)
+        Y(i) = Yh(i,1)
       END DO
       CALL F(N,T,Y,Save2)
       IF( N==0 ) THEN
         Jstate = 6
-        GOTO 700
+        n_zero_error = .TRUE.
+        EXIT step_loop
       END IF
       Nfe = Nfe + 1
-      CYCLE
-    END IF
-    !                     The corrector iteration failed to converge in
-    !                     MXITER tries.  If partials are involved but are
-    !                     not up to date, they are reevaluated for the next
-    !                     try.  Otherwise the YH array is retracted to its
-    !                     values before prediction, and H is reduced, if
-    !                     possible.  If not, a no-convergence exit is taken.
-    IF( Convrg ) THEN
-      evaljc = .TRUE.
-      evalfa = .FALSE.
-      GOTO 200
-    END IF
-    EXIT
-  END DO
-  300  T = told
-  CALL DDPSC(-1,N,Nq,Yh)
-  Nwait = Nq + 2
-  IF( Jtask/=0 .AND. Jtask/=2 ) Rmax = RMFAIL
-  IF( iter==0 ) THEN
-    rh = .3_DP
-  ELSE
-    rh = .9_DP*(Eps/ctest)**(.2_DP)
-  END IF
-  IF( rh*H==0._DP ) GOTO 500
-  CALL DDSCL(Hmax,N,Nq,Rmax,H,Rc,rh,Yh)
-  GOTO 100
-  !                          The corrector has converged.  CONVRG is set
-  !                          to .TRUE. if partial derivatives were used,
-  !                          to indicate that they may need updating on
-  !                          subsequent steps.  The error test is made.
-  400  Convrg = (Miter/=0)
-  IF( Ierror==1 .OR. Ierror==5 ) THEN
-    DO i = 1, Nde
-      Save2(i) = Save1(i)/Ywt(i)
-    END DO
-  ELSE
-    DO i = 1, Nde
-      Save2(i) = Save1(i)/MAX(ABS(Y(i)),Ywt(i))
-    END DO
-  END IF
-  etest = NORM2(Save2(1:Nde))/(Tq(2,Nq)*SQRT(REAL(Nde, DP)))
-  !
-  !                           The error test failed.  NFAIL keeps track of
-  !                           multiple failures.  Restore T and the YH
-  !                           array to their previous values, and prepare
-  !                           to try the step again.  Compute the optimum
-  !                           step size for this or one lower order.
-  IF( etest>Eps ) THEN
-    T = told
-    CALL DDPSC(-1,N,Nq,Yh)
-    nfail = nfail + 1
-    IF( nfail<MXFAIL .OR. Nq==1 ) THEN
-      IF( Jtask/=0 .AND. Jtask/=2 ) Rmax = RMFAIL
-      rh2 = 1._DP/(BIAS2*(etest/Eps)**(1._DP/(Nq+1)))
-      IF( Nq>1 ) THEN
-        IF( Ierror==1 .OR. Ierror==5 ) THEN
-          DO i = 1, Nde
-            Save2(i) = Yh(i,Nq+1)/Ywt(i)
-          END DO
-        ELSE
-          DO i = 1, Nde
-            Save2(i) = Yh(i,Nq+1)/MAX(ABS(Y(i)),Ywt(i))
-          END DO
+      IF( evaljc .OR. ier ) THEN
+        CALL DDPST(El,F,FA,H,Impl,JACOBN,Matdim,Miter,Ml,Mu,N,Nde,Nq,Save2,T,&
+          USERS,Y,Yh,Ywt,Uround,Nfe,Nje,A,Dfdy,Fac,ier,Ipvt,Save1,Iswflg,bnd,Jstate)
+        IF( N==0 ) THEN
+          n_zero_error = .TRUE.
+          EXIT step_loop
         END IF
-        erdn = NORM2(Save2(1:Nde))/(Tq(1,Nq)*SQRT(REAL(Nde, DP)))
-        rh1 = 1._DP/MAX(1._DP,BIAS1*(erdn/Eps)**(1._DP/Nq))
-        IF( rh2<rh1 ) THEN
-          Nq = Nq - 1
-          Rc = Rc*El(1,Nq)/El(1,Nq+1)
-          rh = rh1
+        IF( ier ) THEN
+          step_failed = .TRUE.
+          EXIT corrector_outer
+        END IF
+        Convrg = .FALSE.
+        Rc = 1._DP
+        Jstepl = Nstep
+      END IF
+      DO i = 1, N
+        Save1(i) = 0._DP
+      END DO
+      !
+      converged = .FALSE.
+      step_failed = .FALSE.
+      !
+      corrector_loop: DO
+        !                      Up to MXITER corrector iterations are taken.
+        !                      Convergence is tested by requiring the r.m.s.
+        !                      norm of changes to be less than EPS.
+        !
+        CALL DDCOR(Dfdy,El,FA,H,Ierror,Impl,Ipvt,Matdim,Miter,Ml,Mu,N,Nde,Nq,T,&
+          USERS,Y,Yh,Ywt,evalfa,Save1,Save2,A,d,Jstate)
+        IF( N==0 ) THEN
+          n_zero_error = .TRUE.
+          EXIT step_loop
+        END IF
+        IF( Iswflg==3 .AND. Mint==1 ) THEN
+          IF( iter==0 ) THEN
+            numer = NORM2(Save1(1:N))
+            DO i = 1, N
+              Dfdy(1,i) = Save1(i)
+            END DO
+            y0nrm = NORM2(Yh(1:N,1))
+          ELSE
+            denom = numer
+            DO i = 1, N
+              Dfdy(1,i) = Save1(i) - Dfdy(1,i)
+            END DO
+            numer = NORM2(Dfdy(1,1:N))
+            IF( El(1,Nq)*numer<=100._DP*Uround*y0nrm ) THEN
+              IF( Rmax==RMFAIL ) THEN
+                switch = .TRUE.
+                converged = .TRUE.
+                EXIT corrector_loop
+              END IF
+            END IF
+            DO i = 1, N
+              Dfdy(1,i) = Save1(i)
+            END DO
+            IF( denom/=0._DP ) bnd = MAX(bnd,numer/(denom*ABS(H)*El(1,Nq)))
+          END IF
+        END IF
+        IF( iter>0 ) Trend = MAX(.9_DP*Trend,d/d1)
+        d1 = d
+        ctest = MIN(2._DP*Trend,1._DP)*d
+        IF( ctest<=Eps ) THEN
+          converged = .TRUE.
+          EXIT corrector_loop
+        END IF
+        iter = iter + 1
+        IF( iter<MXITER ) THEN
+          DO i = 1, N
+            Y(i) = Yh(i,1) + El(1,Nq)*Save1(i)
+          END DO
+          CALL F(N,T,Y,Save2)
+          IF( N==0 ) THEN
+            Jstate = 6
+            n_zero_error = .TRUE.
+            EXIT step_loop
+          END IF
+          Nfe = Nfe + 1
+          CYCLE corrector_loop
+        END IF
+        !                     The corrector iteration failed to converge in
+        !                     MXITER tries.  If partials are involved but are
+        !                     not up to date, they are reevaluated for the next
+        !                     try.  Otherwise the YH array is retracted to its
+        !                     values before prediction, and H is reduced.
+        IF( Convrg ) THEN
+          evaljc = .TRUE.
+          evalfa = .FALSE.
+          do_corrector_retry = .TRUE.
+          EXIT corrector_loop
+        END IF
+        step_failed = .TRUE.
+        EXIT corrector_loop
+      END DO corrector_loop
+    END DO corrector_outer
+    !
+    ! Handle step failure (retract and reduce H)
+    IF( step_failed ) THEN
+      T = told
+      CALL DDPSC(-1,N,Nq,Yh)
+      Nwait = Nq + 2
+      IF( Jtask/=0 .AND. Jtask/=2 ) Rmax = RMFAIL
+      IF( iter==0 ) THEN
+        rh = .3_DP
+      ELSE
+        rh = .9_DP*(Eps/ctest)**(.2_DP)
+      END IF
+      IF( rh*H==0._DP ) THEN
+        h_zero_error = .TRUE.
+        EXIT step_loop
+      END IF
+      CALL DDSCL(Hmax,N,Nq,Rmax,H,Rc,rh,Yh)
+      CYCLE step_loop
+    END IF
+    !
+    IF( .NOT. converged ) CYCLE step_loop
+    !
+    !                          The corrector has converged.  CONVRG is set
+    !                          to .TRUE. if partial derivatives were used.
+    !                          The error test is made.
+    Convrg = (Miter/=0)
+    IF( Ierror==1 .OR. Ierror==5 ) THEN
+      DO i = 1, Nde
+        Save2(i) = Save1(i)/Ywt(i)
+      END DO
+    ELSE
+      DO i = 1, Nde
+        Save2(i) = Save1(i)/MAX(ABS(Y(i)),Ywt(i))
+      END DO
+    END IF
+    etest = NORM2(Save2(1:Nde))/(Tq(2,Nq)*SQRT(REAL(Nde, DP)))
+    !
+    !                           The error test failed.  NFAIL keeps track of
+    !                           multiple failures.  Restore T and the YH
+    !                           array to their previous values, and prepare
+    !                           to try the step again.
+    IF( etest>Eps ) THEN
+      T = told
+      CALL DDPSC(-1,N,Nq,Yh)
+      nfail = nfail + 1
+      IF( nfail<MXFAIL .OR. Nq==1 ) THEN
+        IF( Jtask/=0 .AND. Jtask/=2 ) Rmax = RMFAIL
+        rh2 = 1._DP/(BIAS2*(etest/Eps)**(1._DP/(Nq+1)))
+        IF( Nq>1 ) THEN
+          IF( Ierror==1 .OR. Ierror==5 ) THEN
+            DO i = 1, Nde
+              Save2(i) = Yh(i,Nq+1)/Ywt(i)
+            END DO
+          ELSE
+            DO i = 1, Nde
+              Save2(i) = Yh(i,Nq+1)/MAX(ABS(Y(i)),Ywt(i))
+            END DO
+          END IF
+          erdn = NORM2(Save2(1:Nde))/(Tq(1,Nq)*SQRT(REAL(Nde, DP)))
+          rh1 = 1._DP/MAX(1._DP,BIAS1*(erdn/Eps)**(1._DP/Nq))
+          IF( rh2<rh1 ) THEN
+            Nq = Nq - 1
+            Rc = Rc*El(1,Nq)/El(1,Nq+1)
+            rh = rh1
+          ELSE
+            rh = rh2
+          END IF
         ELSE
           rh = rh2
         END IF
-      ELSE
-        rh = rh2
+        Nwait = Nq + 2
+        IF( rh*H==0._DP ) THEN
+          h_zero_error = .TRUE.
+          EXIT step_loop
+        END IF
+        CALL DDSCL(Hmax,N,Nq,Rmax,H,Rc,rh,Yh)
+        CYCLE step_loop
       END IF
-      Nwait = Nq + 2
-      IF( rh*H==0._DP ) GOTO 500
-      CALL DDSCL(Hmax,N,Nq,Rmax,H,Rc,rh,Yh)
-      GOTO 100
+      !                Control reaches this section if the error test has
+      !                failed MXFAIL or more times.  It is assumed that the
+      !                derivatives that have accumulated in the YH array have
+      !                errors of the wrong order.  Hence the first derivative
+      !                is recomputed, the order is set to 1, and the step is
+      !                retried.
+      nfail = 0
+      Jtask = 2
+      DO i = 1, N
+        Y(i) = Yh(i,1)
+      END DO
+      CALL DDNTL(Eps,F,FA,Hmax,Hold,Impl,Jtask,Matdim,Maxord,Mint,Miter,Ml,Mu,&
+        N,Nde,Save1,T,Uround,USERS,Y,Ywt,H,Mntold,Mtrold,Nfe,Rc,Yh,A,&
+        Convrg,El,Fac,ier,Ipvt,Nq,Nwait,rh,Rmax,Save2,Tq,Trend,Iswflg,Jstate)
+      Rmax = RMNORM
+      IF( N==0 ) THEN
+        Hold = H
+        RETURN
+      END IF
+      IF( H==0._DP ) THEN
+        h_zero_error = .TRUE.
+        EXIT step_loop
+      END IF
+      IF( ier ) THEN
+        singular_error = .TRUE.
+        EXIT step_loop
+      END IF
+      CYCLE step_loop
     END IF
-    !                Control reaches this section if the error test has
-    !                failed MXFAIL or more times.  It is assumed that the
-    !                derivatives that have accumulated in the YH array have
-    !                errors of the wrong order.  Hence the first derivative
-    !                is recomputed, the order is set to 1, and the step is
-    !                retried.
-    nfail = 0
-    Jtask = 2
+    !
+    !                          After a successful step, update the YH array.
+    EXIT step_loop
+    !
+  END DO step_loop
+  !
+  ! Handle error exits
+  IF( n_zero_error ) THEN
+    T = told
+    CALL DDPSC(-1,nsv,Nq,Yh)
+    DO i = 1, nsv
+      Y(i) = Yh(i,1)
+    END DO
+    Hold = H
+    RETURN
+  END IF
+  !
+  IF( h_zero_error ) THEN
+    Jstate = 2
+    Hold = H
     DO i = 1, N
       Y(i) = Yh(i,1)
     END DO
-    CALL DDNTL(Eps,F,FA,Hmax,Hold,Impl,Jtask,Matdim,Maxord,Mint,Miter,Ml,Mu,&
-      N,Nde,Save1,T,Uround,USERS,Y,Ywt,H,Mntold,Mtrold,Nfe,Rc,Yh,A,&
-      Convrg,El,Fac,ier,Ipvt,Nq,Nwait,rh,Rmax,Save2,Tq,Trend,Iswflg,Jstate)
-    Rmax = RMNORM
-    IF( N==0 ) GOTO 800
-    IF( H==0._DP ) GOTO 500
-    IF( .NOT. (ier) ) GOTO 100
-    GOTO 600
+    RETURN
   END IF
-  !                          After a successful step, update the YH array.
+  !
+  IF( singular_error ) THEN
+    Jstate = 4
+    Hold = H
+    RETURN
+  END IF
+  !
+  !                          Successful step - update YH array
   Nstep = Nstep + 1
   Hused = H
   Nqused = Nq
@@ -411,15 +511,7 @@ SUBROUTINE DDSTP(Eps,F,FA,Hmax,Impl,Ierror,JACOBN,Matdim,Maxord,Mint,&
     END IF
     !             If a change in H is considered, an increase or decrease in
     !             order by one is considered also.  A change in H is made
-    !             only if it is by a factor of at least TRSHLD.  Factors
-    !             RH1, RH2, and RH3 are computed, by which H could be
-    !             multiplied at order NQ - 1, order NQ, or order NQ + 1,
-    !             respectively.  The largest of these is determined and the
-    !             new order chosen accordingly.  If the order is to be
-    !             increased, we compute one additional scaled derivative.
-    !             If there is a change of order, reset NQ and the
-    !             coefficients.  In any case H is reset according to RH and
-    !             the YH array is rescaled.
+    !             only if it is by a factor of at least TRSHLD.
   ELSE
     IF( Nq==1 ) THEN
       rh1 = 0._DP
@@ -454,50 +546,38 @@ SUBROUTINE DDSTP(Eps,F,FA,Hmax,Impl,Ierror,JACOBN,Matdim,Maxord,Mint,&
     END IF
     IF( rh1>rh2 .AND. rh1>=rh3 ) THEN
       rh = rh1
-      IF( rh<=TRSHLD ) GOTO 450
-      Nq = Nq - 1
-      Rc = Rc*El(1,Nq)/El(1,Nq+1)
+      IF( rh>TRSHLD ) THEN
+        Nq = Nq - 1
+        Rc = Rc*El(1,Nq)/El(1,Nq+1)
+        CALL DDSCL(Hmax,N,Nq,Rmax,H,Rc,rh,Yh)
+        Rmax = RMNORM
+      END IF
     ELSEIF( rh2>=rh1 .AND. rh2>=rh3 ) THEN
       rh = rh2
-      IF( rh<=TRSHLD ) GOTO 450
+      IF( rh>TRSHLD ) THEN
+        CALL DDSCL(Hmax,N,Nq,Rmax,H,Rc,rh,Yh)
+        Rmax = RMNORM
+      END IF
     ELSE
       rh = rh3
-      IF( rh<=TRSHLD ) GOTO 450
-      DO i = 1, N
-        Yh(i,Nq+2) = Save1(i)*El(Nq+1,Nq)/(Nq+1)
-      END DO
-      Nq = Nq + 1
-      Rc = Rc*El(1,Nq)/El(1,Nq-1)
+      IF( rh>TRSHLD ) THEN
+        DO i = 1, N
+          Yh(i,Nq+2) = Save1(i)*El(Nq+1,Nq)/(Nq+1)
+        END DO
+        Nq = Nq + 1
+        Rc = Rc*El(1,Nq)/El(1,Nq-1)
+        IF( Iswflg==3 .AND. Mint==1 ) THEN
+          IF( bnd/=0._DP ) rh = MIN(rh,1._DP/(2._DP*El(1,Nq)*bnd*ABS(H)))
+        END IF
+        CALL DDSCL(Hmax,N,Nq,Rmax,H,Rc,rh,Yh)
+        Rmax = RMNORM
+      END IF
     END IF
-    IF( Iswflg==3 .AND. Mint==1 ) THEN
-      IF( bnd/=0._DP ) rh = MIN(rh,1._DP/(2._DP*El(1,Nq)*bnd*ABS(H)))
-    END IF
-    CALL DDSCL(Hmax,N,Nq,Rmax,H,Rc,rh,Yh)
-    Rmax = RMNORM
-    450  Nwait = Nq + 2
+    Nwait = Nq + 2
   END IF
   !               All returns are made through this section.  H is saved
   !               in HOLD to allow the caller to change H on the next step
   Jstate = 1
   Hold = H
-  RETURN
-  !
-  500  Jstate = 2
-  Hold = H
-  DO i = 1, N
-    Y(i) = Yh(i,1)
-  END DO
-  RETURN
-  !
-  600  Jstate = 4
-  Hold = H
-  RETURN
-  !
-  700  T = told
-  CALL DDPSC(-1,nsv,Nq,Yh)
-  DO i = 1, nsv
-    Y(i) = Yh(i,1)
-  END DO
-  800  Hold = H
   !
 END SUBROUTINE DDSTP
