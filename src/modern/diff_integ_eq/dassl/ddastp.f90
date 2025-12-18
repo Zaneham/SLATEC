@@ -93,6 +93,8 @@ PURE SUBROUTINE DDASTP(X,Y,Yprime,Neq,RES,JAC,H,Wt,Jstart,Idid,Phi,&
   !   901019  Merged changes made by C. Ulrich with SLATEC 4.0 format.
   !   901026  Added explicit declarations for all variables and minor
   !           cosmetic changes to prologue.  (FNF)
+  !   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
 
   !
   INTERFACE
@@ -123,7 +125,7 @@ PURE SUBROUTINE DDASTP(X,Y,Yprime,Neq,RES,JAC,H,Wt,Jstart,Idid,Phi,&
   REAL(DP) :: alpha0, alphas, cjlast, ck, delnrm, enorm, erk, erkm1, erkm2, erkp1, &
     err, est, hnew, oldnrm, pnorm, r, rate, temp1, temp2, terk, terkm1, terkm2, &
     terkp1, xold
-  LOGICAL :: convgd
+  LOGICAL :: convgd, skip_stepsize
   !
   INTEGER, PARAMETER :: LMXORD = 3
   INTEGER, PARAMETER :: LNST = 11
@@ -182,66 +184,68 @@ PURE SUBROUTINE DDASTP(X,Y,Yprime,Neq,RES,JAC,H,Wt,Jstart,Idid,Phi,&
   !     COMPUTE COEFFICIENTS OF FORMULAS FOR
   !     THIS STEP.
   !-----------------------------------------------------------------------
-  100  kp1 = K + 1
-  kp2 = K + 2
-  km1 = K - 1
-  xold = X
-  IF( H/=Hold .OR. K/=Kold ) Ns = 0
-  Ns = MIN(Ns+1,Kold+2)
-  nsp1 = Ns + 1
-  IF( kp1>=Ns ) THEN
-    !
-    Beta(1) = 1._DP
-    Alpha(1) = 1._DP
-    temp1 = H
-    Gama(1) = 0._DP
-    Sigma(1) = 1._DP
-    DO i = 2, kp1
-      temp2 = Psi(i-1)
-      Psi(i-1) = temp1
-      Beta(i) = Beta(i-1)*Psi(i-1)/temp2
-      temp1 = temp2 + H
-      Alpha(i) = H/temp1
-      Sigma(i) = (i-1)*Sigma(i-1)*Alpha(i)
-      Gama(i) = Gama(i-1) + Alpha(i-1)/H
-    END DO
-    Psi(kp1) = temp1
-  END IF
   !
-  !     COMPUTE ALPHAS, ALPHA0
-  alphas = 0._DP
-  alpha0 = 0._DP
-  DO i = 1, K
-    alphas = alphas - 1._DP/i
-    alpha0 = alpha0 - Alpha(i)
-  END DO
-  !
-  !     COMPUTE LEADING COEFFICIENT CJ
-  cjlast = Cj
-  Cj = -alphas/H
-  !
-  !     COMPUTE VARIABLE STEPSIZE ERROR COEFFICIENT CK
-  ck = ABS(Alpha(kp1)+alphas-alpha0)
-  ck = MAX(ck,Alpha(kp1))
-  !
-  !     DECIDE WHETHER NEW JACOBIAN IS NEEDED
-  temp1 = (1._DP-xrate)/(1.0_DP+xrate)
-  temp2 = 1._DP/temp1
-  IF( Cj/Cjold<temp1 .OR. Cj/Cjold>temp2 ) Jcalc = -1
-  IF( Cj/=cjlast ) S = 100._DP
-  !
-  !     CHANGE PHI TO PHI STAR
-  IF( kp1>=nsp1 ) THEN
-    DO j = nsp1, kp1
-      DO i = 1, Neq
-        Phi(i,j) = Beta(j)*Phi(i,j)
+  !     Main step loop - retry on recoverable failures
+  step_loop: DO
+    kp1 = K + 1
+    kp2 = K + 2
+    km1 = K - 1
+    xold = X
+    IF( H/=Hold .OR. K/=Kold ) Ns = 0
+    Ns = MIN(Ns+1,Kold+2)
+    nsp1 = Ns + 1
+    IF( kp1>=Ns ) THEN
+      !
+      Beta(1) = 1._DP
+      Alpha(1) = 1._DP
+      temp1 = H
+      Gama(1) = 0._DP
+      Sigma(1) = 1._DP
+      DO i = 2, kp1
+        temp2 = Psi(i-1)
+        Psi(i-1) = temp1
+        Beta(i) = Beta(i-1)*Psi(i-1)/temp2
+        temp1 = temp2 + H
+        Alpha(i) = H/temp1
+        Sigma(i) = (i-1)*Sigma(i-1)*Alpha(i)
+        Gama(i) = Gama(i-1) + Alpha(i-1)/H
       END DO
+      Psi(kp1) = temp1
+    END IF
+    !
+    !     COMPUTE ALPHAS, ALPHA0
+    alphas = 0._DP
+    alpha0 = 0._DP
+    DO i = 1, K
+      alphas = alphas - 1._DP/i
+      alpha0 = alpha0 - Alpha(i)
     END DO
-  END IF
-  !
-  !     UPDATE TIME
-  X = X + H
-  DO
+    !
+    !     COMPUTE LEADING COEFFICIENT CJ
+    cjlast = Cj
+    Cj = -alphas/H
+    !
+    !     COMPUTE VARIABLE STEPSIZE ERROR COEFFICIENT CK
+    ck = ABS(Alpha(kp1)+alphas-alpha0)
+    ck = MAX(ck,Alpha(kp1))
+    !
+    !     DECIDE WHETHER NEW JACOBIAN IS NEEDED
+    temp1 = (1._DP-xrate)/(1.0_DP+xrate)
+    temp2 = 1._DP/temp1
+    IF( Cj/Cjold<temp1 .OR. Cj/Cjold>temp2 ) Jcalc = -1
+    IF( Cj/=cjlast ) S = 100._DP
+    !
+    !     CHANGE PHI TO PHI STAR
+    IF( kp1>=nsp1 ) THEN
+      DO j = nsp1, kp1
+        DO i = 1, Neq
+          Phi(i,j) = Beta(j)*Phi(i,j)
+        END DO
+      END DO
+    END IF
+    !
+    !     UPDATE TIME
+    X = X + H
     !
     !
     !
@@ -253,400 +257,409 @@ PURE SUBROUTINE DDASTP(X,Y,Yprime,Neq,RES,JAC,H,Wt,Jstart,Idid,Phi,&
     !     AND SOLVE THE CORRECTOR EQUATION
     !-----------------------------------------------------------------------
     !
-    !     FIRST,PREDICT THE SOLUTION AND DERIVATIVE
-    DO i = 1, Neq
-      Y(i) = Phi(i,1)
-      Yprime(i) = 0._DP
-    END DO
-    DO j = 2, kp1
+    !     Jacobian retry loop
+    jacobian_retry: DO
+      !
+      !     FIRST,PREDICT THE SOLUTION AND DERIVATIVE
       DO i = 1, Neq
-        Y(i) = Y(i) + Phi(i,j)
-        Yprime(i) = Yprime(i) + Gama(j)*Phi(i,j)
+        Y(i) = Phi(i,1)
+        Yprime(i) = 0._DP
       END DO
-    END DO
-    pnorm = DDANRM(Neq,Y,Wt)
-    !
-    !
-    !
-    !     SOLVE THE CORRECTOR EQUATION USING A
-    !     MODIFIED NEWTON SCHEME.
-    convgd = .TRUE.
-    m = 0
-    Iwm(LNRE) = Iwm(LNRE) + 1
-    ires = 0
-    CALL RES(X,Y,Yprime,Delta,ires)
-    IF( ires<0 ) THEN
+      DO j = 2, kp1
+        DO i = 1, Neq
+          Y(i) = Y(i) + Phi(i,j)
+          Yprime(i) = Yprime(i) + Gama(j)*Phi(i,j)
+        END DO
+      END DO
+      pnorm = DDANRM(Neq,Y,Wt)
       !
       !
-      !     EXITS FROM BLOCK 3
-      !     NO CONVERGENCE WITH CURRENT ITERATION
-      !     MATRIX,OR SINGULAR ITERATION MATRIX
-      convgd = .FALSE.
-      GOTO 300
-    ELSE
       !
-      !
-      !     IF INDICATED,REEVALUATE THE
-      !     ITERATION MATRIX PD = DG/DY + CJ*DG/DYPRIME
-      !     (WHERE G(X,Y,YPRIME)=0). SET
-      !     JCALC TO 0 AS AN INDICATOR THAT
-      !     THIS HAS BEEN DONE.
-      IF( Jcalc==-1 ) THEN
-        Iwm(LNJE) = Iwm(LNJE) + 1
-        Jcalc = 0
-        CALL DDAJAC(Neq,X,Y,Yprime,Delta,Cj,H,ier,Wt,E,Wm,Iwm,RES,ires,&
-          Uround,JAC,Ntemp)
-        Cjold = Cj
-        S = 100._DP
-        IF( ires<0 ) THEN
-          convgd = .FALSE.
-          GOTO 300
-        ELSEIF( ier/=0 ) THEN
-          convgd = .FALSE.
-          GOTO 300
-        ELSE
-          nsf = 0
+      !     SOLVE THE CORRECTOR EQUATION USING A
+      !     MODIFIED NEWTON SCHEME.
+      convgd = .TRUE.
+      m = 0
+      Iwm(LNRE) = Iwm(LNRE) + 1
+      ires = 0
+      CALL RES(X,Y,Yprime,Delta,ires)
+      IF( ires<0 ) THEN
+        !
+        !
+        !     EXITS FROM BLOCK 3
+        !     NO CONVERGENCE WITH CURRENT ITERATION
+        !     MATRIX,OR SINGULAR ITERATION MATRIX
+        convgd = .FALSE.
+      ELSE
+        !
+        !
+        !     IF INDICATED,REEVALUATE THE
+        !     ITERATION MATRIX PD = DG/DY + CJ*DG/DYPRIME
+        !     (WHERE G(X,Y,YPRIME)=0). SET
+        !     JCALC TO 0 AS AN INDICATOR THAT
+        !     THIS HAS BEEN DONE.
+        IF( Jcalc==-1 ) THEN
+          Iwm(LNJE) = Iwm(LNJE) + 1
+          Jcalc = 0
+          CALL DDAJAC(Neq,X,Y,Yprime,Delta,Cj,H,ier,Wt,E,Wm,Iwm,RES,ires,&
+            Uround,JAC,Ntemp)
+          Cjold = Cj
+          S = 100._DP
+          IF( ires<0 .OR. ier/=0 ) THEN
+            convgd = .FALSE.
+          ELSE
+            nsf = 0
+          END IF
+        END IF
+        !
+        IF( convgd ) THEN
+          !
+          !     INITIALIZE THE ERROR ACCUMULATION VECTOR E.
+          DO i = 1, Neq
+            E(i) = 0._DP
+          END DO
+          !
+          !     CORRECTOR LOOP.
+          corrector_loop: DO
+            !
+            !     MULTIPLY RESIDUAL BY TEMP1 TO ACCELERATE CONVERGENCE
+            temp1 = 2._DP/(1.0_DP+Cj/Cjold)
+            DO i = 1, Neq
+              Delta(i) = Delta(i)*temp1
+            END DO
+            !
+            !     COMPUTE A NEW ITERATE (BACK-SUBSTITUTION).
+            !     STORE THE CORRECTION IN DELTA.
+            CALL DDASLV(Neq,Delta,Wm,Iwm)
+            !
+            !     UPDATE Y, E, AND YPRIME
+            DO i = 1, Neq
+              Y(i) = Y(i) - Delta(i)
+              E(i) = E(i) - Delta(i)
+              Yprime(i) = Yprime(i) - Cj*Delta(i)
+            END DO
+            !
+            !     TEST FOR CONVERGENCE OF THE ITERATION
+            delnrm = DDANRM(Neq,Delta,Wt)
+            IF( delnrm<=100._DP*Uround*pnorm ) EXIT corrector_loop
+            IF( m>0 ) THEN
+              rate = (delnrm/oldnrm)**(1._DP/m)
+              IF( rate>0.90_DP ) THEN
+                convgd = .FALSE.
+                EXIT corrector_loop
+              END IF
+              S = rate/(1._DP-rate)
+            ELSE
+              oldnrm = delnrm
+            END IF
+            IF( S*delnrm<=0.33_DP ) EXIT corrector_loop
+            !
+            !     THE CORRECTOR HAS NOT YET CONVERGED.
+            !     UPDATE M AND TEST WHETHER THE
+            !     MAXIMUM NUMBER OF ITERATIONS HAVE
+            !     BEEN TRIED.
+            m = m + 1
+            IF( m>=maxit ) THEN
+              convgd = .FALSE.
+              EXIT corrector_loop
+            END IF
+            !
+            !     EVALUATE THE RESIDUAL
+            !     AND GO BACK TO DO ANOTHER ITERATION
+            Iwm(LNRE) = Iwm(LNRE) + 1
+            ires = 0
+            CALL RES(X,Y,Yprime,Delta,ires)
+            IF( ires<0 ) THEN
+              convgd = .FALSE.
+              EXIT corrector_loop
+            END IF
+          END DO corrector_loop
         END IF
       END IF
-      !
-      !
-      !     INITIALIZE THE ERROR ACCUMULATION VECTOR E.
-      DO i = 1, Neq
-        E(i) = 0._DP
-      END DO
-      DO
-        !
-        !
-        !     CORRECTOR LOOP.
-        !
-        !     MULTIPLY RESIDUAL BY TEMP1 TO ACCELERATE CONVERGENCE
-        temp1 = 2._DP/(1.0_DP+Cj/Cjold)
-        DO i = 1, Neq
-          Delta(i) = Delta(i)*temp1
-        END DO
-        !
-        !     COMPUTE A NEW ITERATE (BACK-SUBSTITUTION).
-        !     STORE THE CORRECTION IN DELTA.
-        CALL DDASLV(Neq,Delta,Wm,Iwm)
-        !
-        !     UPDATE Y, E, AND YPRIME
-        DO i = 1, Neq
-          Y(i) = Y(i) - Delta(i)
-          E(i) = E(i) - Delta(i)
-          Yprime(i) = Yprime(i) - Cj*Delta(i)
-        END DO
-        !
-        !     TEST FOR CONVERGENCE OF THE ITERATION
-        delnrm = DDANRM(Neq,Delta,Wt)
-        IF( delnrm<=100._DP*Uround*pnorm ) GOTO 200
-        IF( m>0 ) THEN
-          rate = (delnrm/oldnrm)**(1._DP/m)
-          IF( rate>0.90_DP ) EXIT
-          S = rate/(1._DP-rate)
-        ELSE
-          oldnrm = delnrm
-        END IF
-        IF( S*delnrm<=0.33_DP ) GOTO 200
-        !
-        !     THE CORRECTOR HAS NOT YET CONVERGED.
-        !     UPDATE M AND TEST WHETHER THE
-        !     MAXIMUM NUMBER OF ITERATIONS HAVE
-        !     BEEN TRIED.
-        m = m + 1
-        IF( m>=maxit ) EXIT
-        !
-        !     EVALUATE THE RESIDUAL
-        !     AND GO BACK TO DO ANOTHER ITERATION
-        Iwm(LNRE) = Iwm(LNRE) + 1
-        ires = 0
-        CALL RES(X,Y,Yprime,Delta,ires)
-        IF( ires<0 ) THEN
-          convgd = .FALSE.
-          GOTO 300
-        END IF
-      END DO
       !
       !
       !     THE CORRECTOR FAILED TO CONVERGE IN MAXIT
       !     ITERATIONS. IF THE ITERATION MATRIX
       !     IS NOT CURRENT,RE-DO THE STEP WITH
       !     A NEW ITERATION MATRIX.
-      IF( Jcalc==0 ) THEN
-        convgd = .FALSE.
-        GOTO 300
-      ELSE
+      IF( .NOT. convgd .AND. Jcalc/=0 ) THEN
         Jcalc = -1
+        CYCLE jacobian_retry
       END IF
-    END IF
-  END DO
-  !
-  !
-  !     THE ITERATION HAS CONVERGED.  IF NONNEGATIVITY OF SOLUTION IS
-  !     REQUIRED, SET THE SOLUTION NONNEGATIVE, IF THE PERTURBATION
-  !     TO DO IT IS SMALL ENOUGH.  IF THE CHANGE IS TOO LARGE, THEN
-  !     CONSIDER THE CORRECTOR ITERATION TO HAVE FAILED.
-  200 CONTINUE
-  IF( Nonneg/=0 ) THEN
-    DO i = 1, Neq
-      Delta(i) = MIN(Y(i),0._DP)
-    END DO
-    delnrm = DDANRM(Neq,Delta,Wt)
-    IF( delnrm>0.33_DP ) THEN
-      convgd = .FALSE.
-    ELSE
+      EXIT jacobian_retry
+    END DO jacobian_retry
+    !
+    !
+    !     THE ITERATION HAS CONVERGED.  IF NONNEGATIVITY OF SOLUTION IS
+    !     REQUIRED, SET THE SOLUTION NONNEGATIVE, IF THE PERTURBATION
+    !     TO DO IT IS SMALL ENOUGH.  IF THE CHANGE IS TOO LARGE, THEN
+    !     CONSIDER THE CORRECTOR ITERATION TO HAVE FAILED.
+    IF( Nonneg/=0 ) THEN
       DO i = 1, Neq
-        E(i) = E(i) - Delta(i)
+        Delta(i) = MIN(Y(i),0._DP)
       END DO
-    END IF
-  END IF
-  300 Jcalc = 1
-  IF( convgd ) THEN
-    !
-    !
-    !
-    !
-    !
-    !-----------------------------------------------------------------------
-    !     BLOCK 4
-    !     ESTIMATE THE ERRORS AT ORDERS K,K-1,K-2
-    !     AS IF CONSTANT STEPSIZE WAS USED. ESTIMATE
-    !     THE LOCAL ERROR AT ORDER K AND TEST
-    !     WHETHER THE CURRENT STEP IS SUCCESSFUL.
-    !-----------------------------------------------------------------------
-    !
-    !     ESTIMATE ERRORS AT ORDERS K,K-1,K-2
-    enorm = DDANRM(Neq,E,Wt)
-    erk = Sigma(K+1)*enorm
-    terk = (K+1)*erk
-    est = erk
-    knew = K
-    IF( K/=1 ) THEN
-      DO i = 1, Neq
-        Delta(i) = Phi(i,kp1) + E(i)
-      END DO
-      erkm1 = Sigma(K)*DDANRM(Neq,Delta,Wt)
-      terkm1 = K*erkm1
-      IF( K>2 ) THEN
+      delnrm = DDANRM(Neq,Delta,Wt)
+      IF( delnrm>0.33_DP ) THEN
+        convgd = .FALSE.
+      ELSE
         DO i = 1, Neq
-          Delta(i) = Phi(i,K) + Delta(i)
+          E(i) = E(i) - Delta(i)
         END DO
-        erkm2 = Sigma(K-1)*DDANRM(Neq,Delta,Wt)
-        terkm2 = (K-1)*erkm2
-        IF( MAX(terkm1,terkm2)>terk ) GOTO 350
-      ELSEIF( terkm1>0.5_DP*terk ) THEN
-        GOTO 350
       END IF
-      !     LOWER THE ORDER
-      knew = K - 1
-      est = erkm1
     END IF
-    !
-    !
-    !     CALCULATE THE LOCAL ERROR FOR THE CURRENT STEP
-    !     TO SEE IF THE STEP WAS SUCCESSFUL
-    350 err = ck*enorm
-    IF( err>1._DP ) GOTO 500
-    !
-    !
-    !
-    !
-    !
-    !-----------------------------------------------------------------------
-    !     BLOCK 5
-    !     THE STEP IS SUCCESSFUL. DETERMINE
-    !     THE BEST ORDER AND STEPSIZE FOR
-    !     THE NEXT STEP. UPDATE THE DIFFERENCES
-    !     FOR THE NEXT STEP.
-    !-----------------------------------------------------------------------
-    Idid = 1
-    Iwm(LNST) = Iwm(LNST) + 1
-    kdiff = K - Kold
-    Kold = K
-    Hold = H
-    !
-    !
-    !     ESTIMATE THE ERROR AT ORDER K+1 UNLESS:
-    !        ALREADY DECIDED TO LOWER ORDER, OR
-    !        ALREADY USING MAXIMUM ORDER, OR
-    !        STEPSIZE NOT CONSTANT, OR
-    !        ORDER RAISED IN PREVIOUS STEP
-    IF( knew==km1 .OR. K==Iwm(LMXORD) ) Iphase = 1
-    IF( Iphase==0 ) THEN
+    Jcalc = 1
+    IF( convgd ) THEN
       !
-      !     IF IPHASE = 0, INCREASE ORDER BY ONE AND MULTIPLY STEPSIZE BY
-      !     FACTOR TWO
-      K = kp1
-      hnew = H*2._DP
-      H = hnew
-      GOTO 450
-    ELSE
-      IF( knew/=km1 ) THEN
-        IF( K/=Iwm(LMXORD) ) THEN
-          IF( kp1<Ns .AND. kdiff/=1 ) THEN
-            DO i = 1, Neq
-              Delta(i) = E(i) - Phi(i,kp2)
-            END DO
-            erkp1 = (1._DP/(K+2))*DDANRM(Neq,Delta,Wt)
-            terkp1 = (K+2)*erkp1
-            IF( K>1 ) THEN
-              IF( terkm1<=MIN(terk,terkp1) ) GOTO 360
-              IF( terkp1>=terk .OR. K==Iwm(LMXORD) ) GOTO 400
-            ELSEIF( terkp1>=0.5_DP*terk ) THEN
-              GOTO 400
+      !
+      !
+      !
+      !
+      !-----------------------------------------------------------------------
+      !     BLOCK 4
+      !     ESTIMATE THE ERRORS AT ORDERS K,K-1,K-2
+      !     AS IF CONSTANT STEPSIZE WAS USED. ESTIMATE
+      !     THE LOCAL ERROR AT ORDER K AND TEST
+      !     WHETHER THE CURRENT STEP IS SUCCESSFUL.
+      !-----------------------------------------------------------------------
+      !
+      !     ESTIMATE ERRORS AT ORDERS K,K-1,K-2
+      enorm = DDANRM(Neq,E,Wt)
+      erk = Sigma(K+1)*enorm
+      terk = (K+1)*erk
+      est = erk
+      knew = K
+      IF( K/=1 ) THEN
+        DO i = 1, Neq
+          Delta(i) = Phi(i,kp1) + E(i)
+        END DO
+        erkm1 = Sigma(K)*DDANRM(Neq,Delta,Wt)
+        terkm1 = K*erkm1
+        IF( K>2 ) THEN
+          DO i = 1, Neq
+            Delta(i) = Phi(i,K) + Delta(i)
+          END DO
+          erkm2 = Sigma(K-1)*DDANRM(Neq,Delta,Wt)
+          terkm2 = (K-1)*erkm2
+          IF( MAX(terkm1,terkm2)>terk ) THEN
+            !     LOWER THE ORDER
+            knew = K - 1
+            est = erkm1
+          END IF
+        ELSEIF( terkm1>0.5_DP*terk ) THEN
+          !     LOWER THE ORDER
+          knew = K - 1
+          est = erkm1
+        END IF
+      END IF
+      !
+      !
+      !     CALCULATE THE LOCAL ERROR FOR THE CURRENT STEP
+      !     TO SEE IF THE STEP WAS SUCCESSFUL
+      err = ck*enorm
+      IF( err<=1._DP ) THEN
+        !
+        !
+        !
+        !
+        !
+        !-----------------------------------------------------------------------
+        !     BLOCK 5
+        !     THE STEP IS SUCCESSFUL. DETERMINE
+        !     THE BEST ORDER AND STEPSIZE FOR
+        !     THE NEXT STEP. UPDATE THE DIFFERENCES
+        !     FOR THE NEXT STEP.
+        !-----------------------------------------------------------------------
+        Idid = 1
+        Iwm(LNST) = Iwm(LNST) + 1
+        kdiff = K - Kold
+        Kold = K
+        Hold = H
+        !
+        !
+        !     ESTIMATE THE ERROR AT ORDER K+1 UNLESS:
+        !        ALREADY DECIDED TO LOWER ORDER, OR
+        !        ALREADY USING MAXIMUM ORDER, OR
+        !        STEPSIZE NOT CONSTANT, OR
+        !        ORDER RAISED IN PREVIOUS STEP
+        IF( knew==km1 .OR. K==Iwm(LMXORD) ) Iphase = 1
+        skip_stepsize = .FALSE.
+        IF( Iphase==0 ) THEN
+          !
+          !     IF IPHASE = 0, INCREASE ORDER BY ONE AND MULTIPLY STEPSIZE BY
+          !     FACTOR TWO
+          K = kp1
+          hnew = H*2._DP
+          H = hnew
+          skip_stepsize = .TRUE.
+        ELSEIF( knew==km1 ) THEN
+          !     LOWER ORDER
+          K = km1
+          est = erkm1
+        ELSEIF( K/=Iwm(LMXORD) .AND. kp1<Ns .AND. kdiff/=1 ) THEN
+          DO i = 1, Neq
+            Delta(i) = E(i) - Phi(i,kp2)
+          END DO
+          erkp1 = (1._DP/(K+2))*DDANRM(Neq,Delta,Wt)
+          terkp1 = (K+2)*erkp1
+          IF( K>1 ) THEN
+            IF( terkm1<=MIN(terk,terkp1) ) THEN
+              !     LOWER ORDER
+              K = km1
+              est = erkm1
+            ELSEIF( terkp1<terk .AND. K/=Iwm(LMXORD) ) THEN
+              !     RAISE ORDER
+              K = kp1
+              est = erkp1
             END IF
-            !
+          ELSEIF( terkp1<0.5_DP*terk ) THEN
             !     RAISE ORDER
             K = kp1
             est = erkp1
           END IF
         END IF
-        GOTO 400
+        !
+        !
+        !     DETERMINE THE APPROPRIATE STEPSIZE FOR
+        !     THE NEXT STEP.
+        IF( .NOT. skip_stepsize ) THEN
+          hnew = H
+          temp2 = K + 1
+          r = (2._DP*est+0.0001_DP)**(-1._DP/temp2)
+          IF( r>=2._DP ) THEN
+            hnew = 2._DP*H
+          ELSEIF( r<=1._DP ) THEN
+            r = MAX(0.5_DP,MIN(0.9_DP,r))
+            hnew = H*r
+          END IF
+          H = hnew
+        END IF
+        !
+        !
+        !     UPDATE DIFFERENCES FOR NEXT STEP
+        IF( Kold/=Iwm(LMXORD) ) THEN
+          DO i = 1, Neq
+            Phi(i,kp2) = E(i)
+          END DO
+        END IF
+        DO i = 1, Neq
+          Phi(i,kp1) = Phi(i,kp1) + E(i)
+        END DO
+        DO j1 = 2, kp1
+          j = kp1 - j1 + 1
+          DO i = 1, Neq
+            Phi(i,j) = Phi(i,j) + Phi(i,j+1)
+          END DO
+        END DO
+        RETURN  ! Successful return
       END IF
-      !
-      !     LOWER ORDER
-      360 K = km1
-      est = erkm1
     END IF
     !
     !
-    !     DETERMINE THE APPROPRIATE STEPSIZE FOR
-    !     THE NEXT STEP.
-    400 hnew = H
-    temp2 = K + 1
-    r = (2._DP*est+0.0001_DP)**(-1._DP/temp2)
-    IF( r>=2._DP ) THEN
-      hnew = 2._DP*H
-    ELSEIF( r<=1._DP ) THEN
-      r = MAX(0.5_DP,MIN(0.9_DP,r))
-      hnew = H*r
-    END IF
-    H = hnew
     !
     !
-    !     UPDATE DIFFERENCES FOR NEXT STEP
-    450 CONTINUE
-    IF( Kold/=Iwm(LMXORD) ) THEN
-      DO i = 1, Neq
-        Phi(i,kp2) = E(i)
+    !
+    !-----------------------------------------------------------------------
+    !     BLOCK 6
+    !     THE STEP IS UNSUCCESSFUL. RESTORE X,PSI,PHI
+    !     DETERMINE APPROPRIATE STEPSIZE FOR
+    !     CONTINUING THE INTEGRATION, OR EXIT WITH
+    !     AN ERROR FLAG IF THERE HAVE BEEN MANY
+    !     FAILURES.
+    !-----------------------------------------------------------------------
+    Iphase = 1
+    !
+    !     RESTORE X,PHI,PSI
+    X = xold
+    IF( kp1>=nsp1 ) THEN
+      DO j = nsp1, kp1
+        temp1 = 1._DP/Beta(j)
+        DO i = 1, Neq
+          Phi(i,j) = temp1*Phi(i,j)
+        END DO
       END DO
     END IF
-    DO i = 1, Neq
-      Phi(i,kp1) = Phi(i,kp1) + E(i)
+    DO i = 2, kp1
+      Psi(i-1) = Psi(i) - H
     END DO
-    DO j1 = 2, kp1
-      j = kp1 - j1 + 1
-      DO i = 1, Neq
-        Phi(i,j) = Phi(i,j) + Phi(i,j+1)
-      END DO
-    END DO
-    RETURN
-  END IF
-  !
-  !
-  !
-  !
-  !
-  !-----------------------------------------------------------------------
-  !     BLOCK 6
-  !     THE STEP IS UNSUCCESSFUL. RESTORE X,PSI,PHI
-  !     DETERMINE APPROPRIATE STEPSIZE FOR
-  !     CONTINUING THE INTEGRATION, OR EXIT WITH
-  !     AN ERROR FLAG IF THERE HAVE BEEN MANY
-  !     FAILURES.
-  !-----------------------------------------------------------------------
-  500  Iphase = 1
-  !
-  !     RESTORE X,PHI,PSI
-  X = xold
-  IF( kp1>=nsp1 ) THEN
-    DO j = nsp1, kp1
-      temp1 = 1._DP/Beta(j)
-      DO i = 1, Neq
-        Phi(i,j) = temp1*Phi(i,j)
-      END DO
-    END DO
-  END IF
-  DO i = 2, kp1
-    Psi(i-1) = Psi(i) - H
-  END DO
-  !
-  !
-  !     TEST WHETHER FAILURE IS DUE TO CORRECTOR ITERATION
-  !     OR ERROR TEST
-  IF( convgd ) THEN
     !
     !
-    !     THE NEWTON SCHEME CONVERGED, AND THE CAUSE
-    !     OF THE FAILURE WAS THE ERROR ESTIMATE
-    !     EXCEEDING THE TOLERANCE.
-    nef = nef + 1
-    Iwm(LETF) = Iwm(LETF) + 1
-    IF( nef<=1 ) THEN
+    !     TEST WHETHER FAILURE IS DUE TO CORRECTOR ITERATION
+    !     OR ERROR TEST
+    IF( convgd ) THEN
       !
-      !     ON FIRST ERROR TEST FAILURE, KEEP CURRENT ORDER OR LOWER
-      !     ORDER BY ONE.  COMPUTE NEW STEPSIZE BASED ON DIFFERENCES
-      !     OF THE SOLUTION.
-      K = knew
-      temp2 = K + 1
-      r = 0.90_DP*(2._DP*est+0.0001_DP)**(-1._DP/temp2)
-      r = MAX(0.25_DP,MIN(0.9_DP,r))
-      H = H*r
-      IF( ABS(H)>=Hmin ) GOTO 100
-      Idid = -6
       !
-      !     ON SECOND ERROR TEST FAILURE, USE THE CURRENT ORDER OR
-      !     DECREASE ORDER BY ONE.  REDUCE THE STEPSIZE BY A FACTOR OF
-      !     FOUR.
-    ELSEIF( nef>2 ) THEN
-      !
-      !     ON THIRD AND SUBSEQUENT ERROR TEST FAILURES, SET THE ORDER TO
-      !     ONE AND REDUCE THE STEPSIZE BY A FACTOR OF FOUR.
-      K = 1
-      H = 0.25_DP*H
-      IF( ABS(H)>=Hmin ) GOTO 100
-      Idid = -6
+      !     THE NEWTON SCHEME CONVERGED, AND THE CAUSE
+      !     OF THE FAILURE WAS THE ERROR ESTIMATE
+      !     EXCEEDING THE TOLERANCE.
+      nef = nef + 1
+      Iwm(LETF) = Iwm(LETF) + 1
+      IF( nef<=1 ) THEN
+        !
+        !     ON FIRST ERROR TEST FAILURE, KEEP CURRENT ORDER OR LOWER
+        !     ORDER BY ONE.  COMPUTE NEW STEPSIZE BASED ON DIFFERENCES
+        !     OF THE SOLUTION.
+        K = knew
+        temp2 = K + 1
+        r = 0.90_DP*(2._DP*est+0.0001_DP)**(-1._DP/temp2)
+        r = MAX(0.25_DP,MIN(0.9_DP,r))
+        H = H*r
+        IF( ABS(H)>=Hmin ) CYCLE step_loop
+        Idid = -6
+        !
+        !     ON SECOND ERROR TEST FAILURE, USE THE CURRENT ORDER OR
+        !     DECREASE ORDER BY ONE.  REDUCE THE STEPSIZE BY A FACTOR OF
+        !     FOUR.
+      ELSEIF( nef>2 ) THEN
+        !
+        !     ON THIRD AND SUBSEQUENT ERROR TEST FAILURES, SET THE ORDER TO
+        !     ONE AND REDUCE THE STEPSIZE BY A FACTOR OF FOUR.
+        K = 1
+        H = 0.25_DP*H
+        IF( ABS(H)>=Hmin ) CYCLE step_loop
+        Idid = -6
+      ELSE
+        K = knew
+        H = 0.25_DP*H
+        IF( ABS(H)>=Hmin ) CYCLE step_loop
+        Idid = -6
+      END IF
     ELSE
-      K = knew
-      H = 0.25_DP*H
-      IF( ABS(H)>=Hmin ) GOTO 100
-      Idid = -6
+      Iwm(LCTF) = Iwm(LCTF) + 1
+      !
+      !
+      !     THE NEWTON ITERATION FAILED TO CONVERGE WITH
+      !     A CURRENT ITERATION MATRIX.  DETERMINE THE CAUSE
+      !     OF THE FAILURE AND TAKE APPROPRIATE ACTION.
+      IF( ier/=0 ) THEN
+        !
+        !     THE ITERATION MATRIX IS SINGULAR. REDUCE
+        !     THE STEPSIZE BY A FACTOR OF 4. IF
+        !     THIS HAPPENS THREE TIMES IN A ROW ON
+        !     THE SAME STEP, RETURN WITH AN ERROR FLAG
+        nsf = nsf + 1
+        r = 0.25_DP
+        H = H*r
+        IF( nsf<3 .AND. ABS(H)>=Hmin ) CYCLE step_loop
+        Idid = -8
+        !
+        !
+        !     THE NEWTON ITERATION FAILED TO CONVERGE FOR A REASON
+        !     OTHER THAN A SINGULAR ITERATION MATRIX.  IF IRES = -2, THEN
+        !     RETURN.  OTHERWISE, REDUCE THE STEPSIZE AND TRY AGAIN, UNLESS
+        !     TOO MANY FAILURES HAVE OCCURRED.
+      ELSEIF( ires>-2 ) THEN
+        ncf = ncf + 1
+        r = 0.25_DP
+        H = H*r
+        IF( ncf<10 .AND. ABS(H)>=Hmin ) CYCLE step_loop
+        Idid = -7
+        IF( ires<0 ) Idid = -10
+        IF( nef>=3 ) Idid = -9
+      ELSE
+        Idid = -11
+      END IF
     END IF
-  ELSE
-    Iwm(LCTF) = Iwm(LCTF) + 1
-    !
-    !
-    !     THE NEWTON ITERATION FAILED TO CONVERGE WITH
-    !     A CURRENT ITERATION MATRIX.  DETERMINE THE CAUSE
-    !     OF THE FAILURE AND TAKE APPROPRIATE ACTION.
-    IF( ier/=0 ) THEN
-      !
-      !     THE ITERATION MATRIX IS SINGULAR. REDUCE
-      !     THE STEPSIZE BY A FACTOR OF 4. IF
-      !     THIS HAPPENS THREE TIMES IN A ROW ON
-      !     THE SAME STEP, RETURN WITH AN ERROR FLAG
-      nsf = nsf + 1
-      r = 0.25_DP
-      H = H*r
-      IF( nsf<3 .AND. ABS(H)>=Hmin ) GOTO 100
-      Idid = -8
-      !
-      !
-      !     THE NEWTON ITERATION FAILED TO CONVERGE FOR A REASON
-      !     OTHER THAN A SINGULAR ITERATION MATRIX.  IF IRES = -2, THEN
-      !     RETURN.  OTHERWISE, REDUCE THE STEPSIZE AND TRY AGAIN, UNLESS
-      !     TOO MANY FAILURES HAVE OCCURRED.
-    ELSEIF( ires>-2 ) THEN
-      ncf = ncf + 1
-      r = 0.25_DP
-      H = H*r
-      IF( ncf<10 .AND. ABS(H)>=Hmin ) GOTO 100
-      Idid = -7
-      IF( ires<0 ) Idid = -10
-      IF( nef>=3 ) Idid = -9
-    ELSE
-      Idid = -11
-    END IF
-  END IF
+    EXIT step_loop
+  END DO step_loop
   !
   !
   !
@@ -654,9 +667,6 @@ PURE SUBROUTINE DDASTP(X,Y,Yprime,Neq,RES,JAC,H,Wt,Jstart,Idid,Phi,&
   !     FOR ALL CRASHES, RESTORE Y TO ITS LAST VALUE,
   !     INTERPOLATE TO FIND YPRIME AT LAST X, AND RETURN
   CALL DDATRP(X,X,Y,Yprime,Neq,K,Phi,Psi)
-  !
-  !
-  !     GO BACK AND TRY THIS STEP AGAIN
   RETURN
   !------END OF SUBROUTINE DDASTP------
 END SUBROUTINE DDASTP
