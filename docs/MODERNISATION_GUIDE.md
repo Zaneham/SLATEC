@@ -196,3 +196,13 @@ For each modernised routine, we must verify numerical equivalence with the origi
 | 2025-12-17 | special/cbiry,zbiry | GOTO 50/100 → error returns | §1, Amos |
 | 2025-12-17 | special/ckscl,zkscl | GOTO 100/200 → flag+EXIT | §1, Amos |
 | 2025-12-17 | special/cmlri,zmlri | GOTO 100/200 → EXIT | §1, Amos |
+| 2025-12-18 | Build architecture | Renamed ~1047 .f90 → .inc for fpm | Build fix |
+| 2025-12-18 | special/drc3jj,rc3jj | Fixed END DO/END IF nesting | S1, Stone |
+| 2025-12-18 | special/drc6j,rc6j | Fixed END DO/END IF nesting | S1, Stone |
+| 2025-12-18 | special/dasyjy,asyjy | Removed orphaned END IF | S1, Amos |
+| 2025-12-18 | special/zkscl,ckscl | Added early_exit declaration | S1, Amos |
+| 2025-12-18 | special/r9lg* d9lg* r9gm* d9gm* | Added missing i declaration | S1 |
+| 2025-12-18 | special/dexint,exint | 10 GOTOs each -> 0, internal subroutines | S1, Amos |
+| 2025-12-19 | special/dbesi,besi | 26 GOTOs each -> 0, state machine + internal subs | S1, Amos/Daniel |
+| 2025-12-19 | special/dbskin,bskin | Removed PURE (calls non-PURE dexint/exint) | Build fix |
+| 2025-12-19 | special/dbesj,besj | 23 GOTOs each -> 0, state machine + internal subs | S1, Amos/Daniel/Weston |
