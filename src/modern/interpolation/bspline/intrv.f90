@@ -63,6 +63,8 @@ PURE SUBROUTINE INTRV(Xt,Lxt,X,Ilo,Ileft,Mflag)
   !   890831  REVISION DATE from Version 3.2
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+!   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
 
   !
   INTEGER, INTENT(IN) :: Lxt
@@ -73,8 +75,16 @@ PURE SUBROUTINE INTRV(Xt,Lxt,X,Ilo,Ileft,Mflag)
   !* FIRST EXECUTABLE STATEMENT  INTRV
   ihi = Ilo + 1
   IF( ihi>=Lxt ) THEN
-    IF( X>=Xt(Lxt) ) GOTO 300
-    IF( Lxt<=1 ) GOTO 100
+    IF( X>=Xt(Lxt) ) THEN
+      Mflag = 1
+      Ileft = Lxt
+      RETURN
+    END IF
+    IF( Lxt<=1 ) THEN
+      Mflag = -1
+      Ileft = 1
+      RETURN
+    END IF
     Ilo = Lxt - 1
     ihi = Lxt
   END IF
@@ -86,7 +96,11 @@ PURE SUBROUTINE INTRV(Xt,Lxt,X,Ilo,Ileft,Mflag)
       Ilo = ihi
       ihi = Ilo + istep
       IF( ihi>=Lxt ) THEN
-        IF( X>=Xt(Lxt) ) GOTO 300
+        IF( X>=Xt(Lxt) ) THEN
+          Mflag = 1
+          Ileft = Lxt
+          RETURN
+        END IF
         ihi = Lxt
         EXIT
       ELSE
@@ -95,7 +109,11 @@ PURE SUBROUTINE INTRV(Xt,Lxt,X,Ilo,Ileft,Mflag)
       END IF
     END DO
   ELSE
-    IF( X>=Xt(Ilo) ) GOTO 200
+    IF( X>=Xt(Ilo) ) THEN
+      Mflag = 0
+      Ileft = Ilo
+      RETURN
+    END IF
     !
     !- ** NOW X < XT(IHI) . FIND LOWER BOUND
     istep = 1
@@ -105,7 +123,9 @@ PURE SUBROUTINE INTRV(Xt,Lxt,X,Ilo,Ileft,Mflag)
       IF( Ilo<=1 ) THEN
         Ilo = 1
         IF( X>=Xt(1) ) EXIT
-        GOTO 100
+        Mflag = -1
+        Ileft = 1
+        RETURN
       ELSE
         IF( X>=Xt(Ilo) ) EXIT
         istep = istep*2
@@ -116,7 +136,11 @@ PURE SUBROUTINE INTRV(Xt,Lxt,X,Ilo,Ileft,Mflag)
     !
     !- ** NOW XT(ILO) <= X < XT(IHI) . NARROW THE INTERVAL
     middle = (Ilo+ihi)/2
-    IF( middle==Ilo ) GOTO 200
+    IF( middle==Ilo ) THEN
+      Mflag = 0
+      Ileft = Ilo
+      RETURN
+    END IF
     !     NOTE. IT IS ASSUMED THAT MIDDLE = ILO IN CASE IHI = ILO+1
     IF( X<Xt(middle) ) THEN
       ihi = middle
@@ -125,13 +149,7 @@ PURE SUBROUTINE INTRV(Xt,Lxt,X,Ilo,Ileft,Mflag)
     END IF
   END DO
   !- ** SET OUTPUT AND RETURN
-  100  Mflag = -1
-  Ileft = 1
-  RETURN
-  200  Mflag = 0
+  Mflag = 0
   Ileft = Ilo
-  RETURN
-  300  Mflag = 1
-  Ileft = Lxt
 
 END SUBROUTINE INTRV
