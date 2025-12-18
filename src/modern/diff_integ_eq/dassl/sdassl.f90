@@ -925,6 +925,10 @@ PURE SUBROUTINE SDASSL(RES,Neq,T,Y,Yprime,Tout,Info,Rtol,Atol,Idid,Rwork,Lrw,&
   !   901030  Added ERROR MESSAGES section and reworked other sections to
   !           be of more uniform format.  (FNF)
   !   910624  Fixed minor bug related to HMAX (six lines after label 525).  (LRP)
+  !   251218  Refactored to eliminate all GOTO statements.
+  !           Replaced labeled error blocks with inline error handling.
+  !           Replaced integration loop (label 100) with DO loop.
+  !           (C. Markwardt, modernisation project)
   USE service, ONLY : eps_sp
   !     Declare arguments.
   INTERFACE
@@ -948,11 +952,11 @@ PURE SUBROUTINE SDASSL(RES,Neq,T,Y,Yprime,Tout,Info,Rtol,Atol,Idid,Rwork,Lrw,&
   REAL(SP), INTENT(INOUT) :: Y(Neq), Yprime(Neq), Rtol(:), Atol(:), Rwork(Lrw)
   !
   !     Declare local variables.
-  !
-  INTEGER :: i, itemp, leniw, lenpd, lenrw, le, lpd, lphi, lwm, lwt, mband, msave, &
-    mxord, ntemp, nzflg
-  REAL(SP) :: atoli, h, hmax, hmin, ho, r, rh, rtoli, tdist, tn, tnext, tstop, uround, ypnorm
-  LOGICAL :: done
+  INTEGER :: i, itemp, leniw, lenpd, lenrw, le, lpd, lphi, lwm, lwt, mband, &
+    msave, mxord, ntemp, nzflg
+  REAL(SP) :: atoli, h, hmax, hmin, ho, r, rh, rtoli, tdist, &
+    tn, tnext, tstop, uround, ypnorm
+  LOGICAL :: done, illegal_input
   !       Auxiliary variables for conversion of values to be included in
   !       error messages.
   CHARACTER(8) :: xern1, xern2
@@ -972,6 +976,8 @@ PURE SUBROUTINE SDASSL(RES,Neq,T,Y,Yprime,Tout,Info,Rtol,Atol,Idid,Rwork,Lrw,&
     LSIGMA = 35, LDELTA = 41
   !
   !* FIRST EXECUTABLE STATEMENT  SDASSL
+  illegal_input = .FALSE.
+  !
   IF( Info(1)==0 ) THEN
     !
     !-----------------------------------------------------------------------
@@ -982,114 +988,121 @@ PURE SUBROUTINE SDASSL(RES,Neq,T,Y,Yprime,Tout,Info,Rtol,Atol,Idid,Rwork,Lrw,&
     !     FIRST CHECK INFO ARRAY TO MAKE SURE ALL ELEMENTS OF INFO
     !     ARE EITHER ZERO OR ONE.
     DO i = 2, 11
-      IF( Info(i)/=0 .AND. Info(i)/=1 ) GOTO 400
+      IF( Info(i)/=0 .AND. Info(i)/=1 ) THEN
+        ERROR STOP 'SDASSL : SOME ELEMENT OF INFO VECTOR IS NOT ZERO OR ONE'
+        illegal_input = .TRUE.
+        EXIT
+      END IF
     END DO
     !
-    IF( Neq<=0 ) THEN
-      !
-      WRITE (xern1,'(I8)') Neq
-      ERROR STOP 'SDASSL : NEQ <= 0'
-      GOTO 1200
-    ELSE
-      !
-      !     CHECK AND COMPUTE MAXIMUM ORDER
-      mxord = 5
-      IF( Info(9)/=0 ) THEN
-        mxord = Iwork(LMXORD)
-        IF( mxord<1 .OR. mxord>5 ) THEN
-          !
-          WRITE (xern1,'(I8)') mxord
-          ERROR STOP 'SDASSL : MAXORD NOT IN RANGE'
-          GOTO 1200
-        END IF
-      END IF
-      Iwork(LMXORD) = mxord
-      !
-      !     COMPUTE MTYPE,LENPD,LENRW.CHECK ML AND MU.
-      IF( Info(6)==0 ) THEN
-        lenpd = Neq**2
-        lenrw = 40 + (Iwork(LMXORD)+4)*Neq + lenpd
-        IF( Info(5)/=0 ) THEN
-          Iwork(LMTYPE) = 1
-        ELSE
-          Iwork(LMTYPE) = 2
-        END IF
-      ELSEIF( Iwork(LML)<0 .OR. Iwork(LML)>=Neq ) THEN
-        !
-        WRITE (xern1,'(I8)') Iwork(LML)
-        ERROR STOP 'SDASSL : ML ILLEGAL.  EITHER < 0 OR > NEQ'
-        GOTO 1200
-      ELSEIF( Iwork(LMU)<0 .OR. Iwork(LMU)>=Neq ) THEN
-        !
-        WRITE (xern1,'(I8)') Iwork(LMU)
-        ERROR STOP 'SDASSL : MU ILLEGAL.  EITHER < 0 OR > NEQ'
-        GOTO 1200
-      ELSE
-        lenpd = (2*Iwork(LML)+Iwork(LMU)+1)*Neq
-        IF( Info(5)/=0 ) THEN
-          Iwork(LMTYPE) = 4
-          lenrw = 40 + (Iwork(LMXORD)+4)*Neq + lenpd
-        ELSE
-          Iwork(LMTYPE) = 5
-          mband = Iwork(LML) + Iwork(LMU) + 1
-          msave = (Neq/mband) + 1
-          lenrw = 40 + (Iwork(LMXORD)+4)*Neq + lenpd + 2*msave
-        END IF
-      END IF
-      !
-      !     CHECK LENGTHS OF RWORK AND IWORK
-      leniw = 20 + Neq
-      Iwork(LNPD) = lenpd
-      IF( Lrw<lenrw ) THEN
-        !
-        WRITE (xern1,'(I8)') lenrw
-        WRITE (xern2,'(I8)') Lrw
-        ERROR STOP 'SDASSL : RWORK LENGTH NEEDED, LENRW EXCEEDS LRW'
-        GOTO 1200
-      ELSEIF( Liw<leniw ) THEN
-        !
-        WRITE (xern1,'(I8)') leniw
-        WRITE (xern2,'(I8)') Liw
-        ERROR STOP 'SDASSL : IWORK LENGTH NEEDED, LENIW EXCEEDS LIW'
-        GOTO 1200
+    IF( .NOT. illegal_input ) THEN
+      IF( Neq<=0 ) THEN
+        WRITE (xern1,'(I8)') Neq
+        ERROR STOP 'SDASSL : NEQ <= 0'
+        illegal_input = .TRUE.
       ELSE
         !
-        !     CHECK TO SEE THAT TOUT IS DIFFERENT FROM T
-        IF( Tout==T ) GOTO 1100
-        !
-        !     CHECK HMAX
-        IF( Info(7)/=0 ) THEN
-          hmax = Rwork(LHMAX)
-          IF( hmax<=0._SP ) THEN
-            !
-            WRITE (xern3,'(1P,E15.6)') hmax
-            ERROR STOP 'SDASSL : HMAX < 0.0'
-            GOTO 1200
+        !     CHECK AND COMPUTE MAXIMUM ORDER
+        mxord = 5
+        IF( Info(9)/=0 ) THEN
+          mxord = Iwork(LMXORD)
+          IF( mxord<1 .OR. mxord>5 ) THEN
+            WRITE (xern1,'(I8)') mxord
+            ERROR STOP 'SDASSL : MAXORD NOT IN RANGE'
+            illegal_input = .TRUE.
           END IF
         END IF
         !
-        !     INITIALIZE COUNTERS
-        Iwork(LNST) = 0
-        Iwork(LNRE) = 0
-        Iwork(LNJE) = 0
-        !
-        Iwork(LNSTL) = 0
-        Idid = 1
+        IF( .NOT. illegal_input ) THEN
+          Iwork(LMXORD) = mxord
+          !
+          !     COMPUTE MTYPE,LENPD,LENRW.CHECK ML AND MU.
+          IF( Info(6)==0 ) THEN
+            lenpd = Neq**2
+            lenrw = 40 + (Iwork(LMXORD)+4)*Neq + lenpd
+            IF( Info(5)/=0 ) THEN
+              Iwork(LMTYPE) = 1
+            ELSE
+              Iwork(LMTYPE) = 2
+            END IF
+          ELSEIF( Iwork(LML)<0 .OR. Iwork(LML)>=Neq ) THEN
+            WRITE (xern1,'(I8)') Iwork(LML)
+            ERROR STOP 'SDASSL : ML ILLEGAL.  EITHER < 0 OR > NEQ'
+            illegal_input = .TRUE.
+          ELSEIF( Iwork(LMU)<0 .OR. Iwork(LMU)>=Neq ) THEN
+            WRITE (xern1,'(I8)') Iwork(LMU)
+            ERROR STOP 'SDASSL : MU ILLEGAL.  EITHER < 0 OR > NEQ'
+            illegal_input = .TRUE.
+          ELSE
+            lenpd = (2*Iwork(LML)+Iwork(LMU)+1)*Neq
+            IF( Info(5)/=0 ) THEN
+              Iwork(LMTYPE) = 4
+              lenrw = 40 + (Iwork(LMXORD)+4)*Neq + lenpd
+            ELSE
+              Iwork(LMTYPE) = 5
+              mband = Iwork(LML) + Iwork(LMU) + 1
+              msave = (Neq/mband) + 1
+              lenrw = 40 + (Iwork(LMXORD)+4)*Neq + lenpd + 2*msave
+            END IF
+          END IF
+          !
+          IF( .NOT. illegal_input ) THEN
+            !     CHECK LENGTHS OF RWORK AND IWORK
+            leniw = 20 + Neq
+            Iwork(LNPD) = lenpd
+            IF( Lrw<lenrw ) THEN
+              WRITE (xern1,'(I8)') lenrw
+              WRITE (xern2,'(I8)') Lrw
+              ERROR STOP 'SDASSL : RWORK LENGTH NEEDED, LENRW EXCEEDS LRW'
+              illegal_input = .TRUE.
+            ELSEIF( Liw<leniw ) THEN
+              WRITE (xern1,'(I8)') leniw
+              WRITE (xern2,'(I8)') Liw
+              ERROR STOP 'SDASSL : IWORK LENGTH NEEDED, LENIW EXCEEDS LIW'
+              illegal_input = .TRUE.
+            ELSEIF( Tout==T ) THEN
+              WRITE (xern3,'(1P,E15.6)') Tout
+              ERROR STOP 'SDASSL : TOUT = T'
+              illegal_input = .TRUE.
+            ELSE
+              !     CHECK HMAX
+              IF( Info(7)/=0 ) THEN
+                hmax = Rwork(LHMAX)
+                IF( hmax<=0._SP ) THEN
+                  WRITE (xern3,'(1P,E15.6)') hmax
+                  ERROR STOP 'SDASSL : HMAX < 0.0'
+                  illegal_input = .TRUE.
+                END IF
+              END IF
+              !
+              IF( .NOT. illegal_input ) THEN
+                !     INITIALIZE COUNTERS
+                Iwork(LNST) = 0
+                Iwork(LNRE) = 0
+                Iwork(LNJE) = 0
+                !
+                Iwork(LNSTL) = 0
+                Idid = 1
+              END IF
+            END IF
+          END IF
+        END IF
       END IF
     END IF
     !
-    !-----------------------------------------------------------------------
-    !     THIS BLOCK IS FOR CONTINUATION CALLS
-    !     ONLY. HERE WE CHECK INFO(1), AND IF THE
-    !     LAST STEP WAS INTERRUPTED WE CHECK WHETHER
-    !     APPROPRIATE ACTION WAS TAKEN.
-    !-----------------------------------------------------------------------
-    !
+  !-----------------------------------------------------------------------
+  !     THIS BLOCK IS FOR CONTINUATION CALLS
+  !     ONLY. HERE WE CHECK INFO(1), AND IF THE
+  !     LAST STEP WAS INTERRUPTED WE CHECK WHETHER
+  !     APPROPRIATE ACTION WAS TAKEN.
+  !-----------------------------------------------------------------------
+  !
   ELSEIF( Info(1)==1 ) THEN
     Iwork(LNSTL) = Iwork(LNST)
+  ELSEIF( Info(1)/=-1 ) THEN
+    ERROR STOP 'SDASSL : SOME ELEMENT OF INFO VECTOR IS NOT ZERO OR ONE'
+    illegal_input = .TRUE.
   ELSE
-    IF( Info(1)/=-1 ) GOTO 400
-    !
     !     IF WE ARE HERE, THE LAST STEP WAS INTERRUPTED
     !     BY AN ERROR CONDITION FROM SDASTP, AND
     !     APPROPRIATE ACTION WAS NOT TAKEN. THIS
@@ -1097,6 +1110,15 @@ PURE SUBROUTINE SDASSL(RES,Neq,T,Y,Yprime,Tout,Info,Rtol,Atol,Idid,Rwork,Lrw,&
     WRITE (xern1,'(I8)') Idid
     ERROR STOP 'SDASSL : THE LAST STEP TERMINATED WITH A NEGATIVE VALUE OF IDID&
       & AND NO APPROPRIATE ACTION WAS TAKEN.  RUN TERMINATED'
+    RETURN
+  END IF
+  !
+  !     Handle illegal input from initial checks
+  IF( illegal_input ) THEN
+    Idid = -33
+    IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+      & RUN TERMINATED. APPARENT INFINITE LOOP'
+    Info(1) = -1
     RETURN
   END IF
   !
@@ -1115,87 +1137,142 @@ PURE SUBROUTINE SDASSL(RES,Neq,T,Y,Yprime,Tout,Info,Rtol,Atol,Idid,Rwork,Lrw,&
     IF( Info(2)==1 ) rtoli = Rtol(i)
     IF( Info(2)==1 ) atoli = Atol(i)
     IF( rtoli>0._SP .OR. atoli>0._SP ) nzflg = 1
-    IF( rtoli<0._SP ) GOTO 500
-    IF( atoli<0._SP ) GOTO 600
+    IF( rtoli<0._SP ) THEN
+      ERROR STOP 'SDASSL : SOME ELEMENT OF RTOL IS < 0'
+      illegal_input = .TRUE.
+      EXIT
+    END IF
+    IF( atoli<0._SP ) THEN
+      ERROR STOP 'SDASSL : SOME ELEMENT OF ATOL IS < 0'
+      illegal_input = .TRUE.
+      EXIT
+    END IF
   END DO
-  IF( nzflg==0 ) THEN
-    !
+  !
+  IF( .NOT. illegal_input .AND. nzflg==0 ) THEN
     ERROR STOP 'SDASSL : ALL ELEMENTS OF RTOL AND ATOL ARE ZERO'
-    GOTO 1200
-  ELSE
+    illegal_input = .TRUE.
+  END IF
+  !
+  IF( illegal_input ) THEN
+    Idid = -33
+    IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+      & RUN TERMINATED. APPARENT INFINITE LOOP'
+    Info(1) = -1
+    RETURN
+  END IF
+  !
+  !     SET UP RWORK STORAGE.IWORK STORAGE IS FIXED
+  !     IN DATA STATEMENT.
+  le = LDELTA + Neq
+  lwt = le + Neq
+  lphi = lwt + Neq
+  lpd = lphi + (Iwork(LMXORD)+1)*Neq
+  lwm = lpd
+  ntemp = NPD + Iwork(LNPD)
+  !
+  IF( Info(1)==1 ) THEN
     !
-    !     SET UP RWORK STORAGE.IWORK STORAGE IS FIXED
-    !     IN DATA STATEMENT.
-    le = LDELTA + Neq
-    lwt = le + Neq
-    lphi = lwt + Neq
-    lpd = lphi + (Iwork(LMXORD)+1)*Neq
-    lwm = lpd
-    ntemp = NPD + Iwork(LNPD)
-    IF( Info(1)==1 ) THEN
-      !
-      !-------------------------------------------------------
-      !     THIS BLOCK IS FOR CONTINUATION CALLS ONLY. ITS
-      !     PURPOSE IS TO CHECK STOP CONDITIONS BEFORE
-      !     TAKING A STEP.
-      !     ADJUST H IF NECESSARY TO MEET HMAX BOUND
-      !-------------------------------------------------------
-      !
-      uround = Rwork(LROUND)
-      done = .FALSE.
-      tn = Rwork(LTN)
-      h = Rwork(LH)
-      IF( Info(7)/=0 ) THEN
-        rh = ABS(h)/Rwork(LHMAX)
-        IF( rh>1._SP ) h = h/rh
+    !-------------------------------------------------------
+    !     THIS BLOCK IS FOR CONTINUATION CALLS ONLY. ITS
+    !     PURPOSE IS TO CHECK STOP CONDITIONS BEFORE
+    !     TAKING A STEP.
+    !     ADJUST H IF NECESSARY TO MEET HMAX BOUND
+    !-------------------------------------------------------
+    !
+    uround = Rwork(LROUND)
+    done = .FALSE.
+    tn = Rwork(LTN)
+    h = Rwork(LH)
+    IF( Info(7)/=0 ) THEN
+      rh = ABS(h)/Rwork(LHMAX)
+      IF( rh>1._SP ) h = h/rh
+    END IF
+    !
+    IF( T==Tout ) THEN
+      WRITE (xern3,'(1P,E15.6)') Tout
+      ERROR STOP 'SDASSL : TOUT = T'
+      Idid = -33
+      IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+        & RUN TERMINATED. APPARENT INFINITE LOOP'
+      Info(1) = -1
+      RETURN
+    END IF
+    !
+    IF( (T-Tout)*h>0._SP ) THEN
+      WRITE (xern3,'(1P,E15.6)') Tout
+      WRITE (xern4,'(1P,E15.6)') T
+      ERROR STOP 'SDASSL : TOUT BEHIND T'
+      Idid = -33
+      IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+        & RUN TERMINATED. APPARENT INFINITE LOOP'
+      Info(1) = -1
+      RETURN
+    END IF
+    !
+    IF( Info(4)==1 ) THEN
+      tstop = Rwork(LTSTOP)
+      IF( (tn-tstop)*h>0._SP ) THEN
+        WRITE (xern3,'(1P,E15.6)') tstop
+        WRITE (xern4,'(1P,E15.6)') T
+        ERROR STOP 'SDASSL : INFO(4)=1 AND TSTOP  BEHIND T'
+        Idid = -33
+        IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+          & RUN TERMINATED. APPARENT INFINITE LOOP'
+        Info(1) = -1
+        RETURN
       END IF
-      IF( T==Tout ) GOTO 1100
-      IF( (T-Tout)*h>0._SP ) GOTO 800
-      IF( Info(4)==1 ) THEN
-        IF( Info(3)==1 ) THEN
-          tstop = Rwork(LTSTOP)
-          IF( (tn-tstop)*h>0._SP ) GOTO 1000
-          IF( (tstop-Tout)*h<0._SP ) GOTO 700
-          IF( (tn-T)*h>0._SP ) THEN
-            IF( (tn-Tout)*h>0._SP ) THEN
-              CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
-              T = Tout
-              Idid = 3
-              done = .TRUE.
-            ELSE
-              CALL SDATRP(tn,tn,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
-              T = tn
-              Idid = 1
-              done = .TRUE.
-            END IF
-            GOTO 20
-          END IF
-        ELSE
-          tstop = Rwork(LTSTOP)
-          IF( (tn-tstop)*h>0._SP ) GOTO 1000
-          IF( (tstop-Tout)*h<0._SP ) GOTO 700
-          IF( (tn-Tout)*h>=0._SP ) THEN
+      IF( (tstop-Tout)*h<0._SP ) THEN
+        WRITE (xern3,'(1P,E15.6)') tstop
+        WRITE (xern4,'(1P,E15.6)') Tout
+        ERROR STOP 'SDASSL : INFO(4) = 1 AND TSTOP BEHIND TOUT'
+        Idid = -33
+        IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+          & RUN TERMINATED. APPARENT INFINITE LOOP'
+        Info(1) = -1
+        RETURN
+      END IF
+      !
+      IF( Info(3)==1 ) THEN
+        IF( (tn-T)*h>0._SP ) THEN
+          IF( (tn-Tout)*h>0._SP ) THEN
             CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
             T = Tout
             Idid = 3
             done = .TRUE.
-            GOTO 20
+          ELSE
+            CALL SDATRP(tn,tn,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
+            T = tn
+            Idid = 1
+            done = .TRUE.
           END IF
         END IF
+      ELSE
+        IF( (tn-Tout)*h>=0._SP ) THEN
+          CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
+          T = Tout
+          Idid = 3
+          done = .TRUE.
+        END IF
+      END IF
+      !
+      IF( .NOT. done ) THEN
         !     CHECK WHETHER WE ARE WITHIN ROUNDOFF OF TSTOP
-        IF( ABS(tn-tstop)>100._SP*uround*(ABS(tn)+ABS(h)) ) THEN
+        IF( ABS(tn-tstop)<=100._SP*uround*(ABS(tn)+ABS(h)) ) THEN
+          CALL SDATRP(tn,tstop,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
+          Idid = 2
+          T = tstop
+          done = .TRUE.
+        ELSE
           tnext = tn + h
           IF( (tnext-tstop)*h>0._SP ) THEN
             h = tstop - tn
             Rwork(LH) = h
           END IF
-        ELSE
-          CALL SDATRP(tn,tstop,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
-          Idid = 2
-          T = tstop
-          done = .TRUE.
         END IF
-      ELSEIF( Info(3)==1 ) THEN
+      END IF
+    ELSE
+      IF( Info(3)==1 ) THEN
         IF( (tn-T)*h>0._SP ) THEN
           IF( (tn-Tout)*h>0._SP ) THEN
             CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
@@ -1215,93 +1292,147 @@ PURE SUBROUTINE SDASSL(RES,Neq,T,Y,Yprime,Tout,Info,Rtol,Atol,Idid,Rwork,Lrw,&
         Idid = 3
         done = .TRUE.
       END IF
-      !
-      20  IF( done ) GOTO 300
+    END IF
+    !
+    IF( done ) THEN
+      Rwork(LTN) = tn
+      Rwork(LH) = h
+      RETURN
+    END IF
+  ELSE
+    !
+    !-----------------------------------------------------------------------
+    !     THIS BLOCK IS EXECUTED ON THE INITIAL CALL
+    !     ONLY. SET THE INITIAL STEP SIZE, AND
+    !     THE ERROR WEIGHT VECTOR, AND PHI.
+    !     COMPUTE INITIAL YPRIME, IF NECESSARY.
+    !-----------------------------------------------------------------------
+    !
+    tn = T
+    Idid = 1
+    !
+    !     SET ERROR WEIGHT VECTOR WT
+    CALL SDAWTS(Neq,Info(2),Rtol,Atol,Y,Rwork(lwt))
+    DO i = 1, Neq
+      IF( Rwork(lwt+i-1)<=0._SP ) THEN
+        ERROR STOP 'SDASSL : SOME ELEMENT OF WT IS <= 0.0'
+        Idid = -33
+        IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+          & RUN TERMINATED. APPARENT INFINITE LOOP'
+        Info(1) = -1
+        RETURN
+      END IF
+    END DO
+    !
+    !     COMPUTE UNIT ROUNDOFF AND HMIN
+    uround = eps_sp
+    Rwork(LROUND) = uround
+    hmin = 4._SP*uround*MAX(ABS(T),ABS(Tout))
+    !
+    !     CHECK INITIAL INTERVAL TO SEE THAT IT IS LONG ENOUGH
+    tdist = ABS(Tout-T)
+    IF( tdist<hmin ) THEN
+      WRITE (xern3,'(1P,E15.6)') Tout
+      WRITE (xern4,'(1P,E15.6)') T
+      ERROR STOP 'SDASSL : TOUT TOO CLOSE TO T TO START INTEGRATION'
+      Idid = -33
+      IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+        & RUN TERMINATED. APPARENT INFINITE LOOP'
+      Info(1) = -1
+      RETURN
+    END IF
+    !
+    !     CHECK HO, IF THIS WAS INPUT
+    IF( Info(8)==0 ) THEN
+      !     COMPUTE INITIAL STEPSIZE, TO BE USED BY EITHER
+      !     SDASTP OR SDAINI, DEPENDING ON INFO(11)
+      ho = 0.001_SP*tdist
+      ypnorm = SDANRM(Neq,Yprime,Rwork(lwt))
+      IF( ypnorm>0.5_SP/ho ) ho = 0.5_SP/ypnorm
+      ho = SIGN(ho,Tout-T)
     ELSE
-      !
-      !-----------------------------------------------------------------------
-      !     THIS BLOCK IS EXECUTED ON THE INITIAL CALL
-      !     ONLY. SET THE INITIAL STEP SIZE, AND
-      !     THE ERROR WEIGHT VECTOR, AND PHI.
-      !     COMPUTE INITIAL YPRIME, IF NECESSARY.
-      !-----------------------------------------------------------------------
-      !
-      tn = T
-      Idid = 1
-      !
-      !     SET ERROR WEIGHT VECTOR WT
-      CALL SDAWTS(Neq,Info(2),Rtol,Atol,Y,Rwork(lwt))
-      DO i = 1, Neq
-        IF( Rwork(lwt+i-1)<=0._SP ) GOTO 900
-      END DO
-      !
-      !     COMPUTE UNIT ROUNDOFF AND HMIN
-      uround = eps_sp
-      Rwork(LROUND) = uround
-      hmin = 4._SP*uround*MAX(ABS(T),ABS(Tout))
-      !
-      !     CHECK INITIAL INTERVAL TO SEE THAT IT IS LONG ENOUGH
-      tdist = ABS(Tout-T)
-      IF( tdist<hmin ) THEN
-        !
+      ho = Rwork(LH)
+      IF( (Tout-T)*ho<0._SP ) THEN
         WRITE (xern3,'(1P,E15.6)') Tout
         WRITE (xern4,'(1P,E15.6)') T
-        ERROR STOP 'SDASSL : TOUT TOO CLOSE TO T TO START INTEGRATION'
-        GOTO 1200
-      ELSE
-        !
-        !     CHECK HO, IF THIS WAS INPUT
-        IF( Info(8)==0 ) THEN
-          !
-          !     COMPUTE INITIAL STEPSIZE, TO BE USED BY EITHER
-          !     SDASTP OR SDAINI, DEPENDING ON INFO(11)
-          ho = 0.001_SP*tdist
-          ypnorm = SDANRM(Neq,Yprime,Rwork(lwt))
-          IF( ypnorm>0.5_SP/ho ) ho = 0.5_SP/ypnorm
-          ho = SIGN(ho,Tout-T)
-        ELSE
-          ho = Rwork(LH)
-          IF( (Tout-T)*ho<0._SP ) GOTO 800
-          IF( ho==0._SP ) THEN
-            !
-            ERROR STOP 'SDASSL : INFO(8)=1 AND H0=0.0'
-            GOTO 1200
-          END IF
-        END IF
-        !     ADJUST HO IF NECESSARY TO MEET HMAX BOUND
-        IF( Info(7)/=0 ) THEN
-          rh = ABS(ho)/Rwork(LHMAX)
-          IF( rh>1._SP ) ho = ho/rh
-        END IF
-        !     COMPUTE TSTOP, IF APPLICABLE
-        IF( Info(4)/=0 ) THEN
-          tstop = Rwork(LTSTOP)
-          IF( (tstop-T)*ho<0._SP ) GOTO 1000
-          IF( (T+ho-tstop)*ho>0._SP ) ho = tstop - T
-          IF( (tstop-Tout)*ho<0._SP ) GOTO 700
-        END IF
-        !
-        !     COMPUTE INITIAL DERIVATIVE, UPDATING TN AND Y, IF APPLICABLE
-        IF( Info(11)/=0 ) THEN
-          CALL SDAINI(tn,Y,Yprime,Neq,RES,JAC,ho,Rwork(lwt:lphi-1),Idid,&
-            Rwork(lphi:lpd-1),Rwork(LDELTA:lwt-1),Rwork(le:lwt-1),Rwork(lwm:),&
-            Iwork,hmin,Rwork(LROUND),Info(10),ntemp)
-          IF( Idid<0 ) GOTO 100
-        END IF
-        !
-        !     LOAD H WITH HO.  STORE H IN RWORK(LH)
-        h = ho
-        Rwork(LH) = h
-        !
-        !     LOAD Y AND H*YPRIME INTO PHI(*,1) AND PHI(*,2)
-        itemp = lphi + Neq
-        DO i = 1, Neq
-          Rwork(lphi+i-1) = Y(i)
-          Rwork(itemp+i-1) = h*Yprime(i)
-          !
-        END DO
+        ERROR STOP 'SDASSL : TOUT BEHIND T'
+        Idid = -33
+        IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+          & RUN TERMINATED. APPARENT INFINITE LOOP'
+        Info(1) = -1
+        RETURN
+      END IF
+      IF( ho==0._SP ) THEN
+        ERROR STOP 'SDASSL : INFO(8)=1 AND H0=0.0'
+        Idid = -33
+        IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+          & RUN TERMINATED. APPARENT INFINITE LOOP'
+        Info(1) = -1
+        RETURN
       END IF
     END IF
+    !
+    !     ADJUST HO IF NECESSARY TO MEET HMAX BOUND
+    IF( Info(7)/=0 ) THEN
+      rh = ABS(ho)/Rwork(LHMAX)
+      IF( rh>1._SP ) ho = ho/rh
+    END IF
+    !
+    !     COMPUTE TSTOP, IF APPLICABLE
+    IF( Info(4)/=0 ) THEN
+      tstop = Rwork(LTSTOP)
+      IF( (tstop-T)*ho<0._SP ) THEN
+        WRITE (xern3,'(1P,E15.6)') tstop
+        WRITE (xern4,'(1P,E15.6)') T
+        ERROR STOP 'SDASSL : INFO(4)=1 AND TSTOP  BEHIND T'
+        Idid = -33
+        IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+          & RUN TERMINATED. APPARENT INFINITE LOOP'
+        Info(1) = -1
+        RETURN
+      END IF
+      IF( (T+ho-tstop)*ho>0._SP ) ho = tstop - T
+      IF( (tstop-Tout)*ho<0._SP ) THEN
+        WRITE (xern3,'(1P,E15.6)') tstop
+        WRITE (xern4,'(1P,E15.6)') Tout
+        ERROR STOP 'SDASSL : INFO(4) = 1 AND TSTOP BEHIND TOUT'
+        Idid = -33
+        IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
+          & RUN TERMINATED. APPARENT INFINITE LOOP'
+        Info(1) = -1
+        RETURN
+      END IF
+    END IF
+    !
+    !     COMPUTE INITIAL DERIVATIVE, UPDATING TN AND Y, IF APPLICABLE
+    IF( Info(11)/=0 ) THEN
+      CALL SDAINI(tn,Y,Yprime,Neq,RES,JAC,ho,Rwork(lwt:lphi-1),Idid,&
+        Rwork(lphi:lpd-1),Rwork(LDELTA:le-1),Rwork(le:lwt-1),Rwork(lwm:),&
+        Iwork,hmin,Rwork(LROUND),Info(10),ntemp)
+      IF( Idid<0 ) THEN
+        !     FAILED TO COMPUTE INITIAL YPRIME
+        WRITE (xern3,'(1P,E15.6)') tn
+        WRITE (xern4,'(1P,E15.6)') ho
+        ERROR STOP 'SDASSL : AT T AND STEPSIZE H THE INITIAL YPRIME COULD NOT&
+          & BE COMPUTED'
+        Info(1) = -1
+        T = tn
+        Rwork(LTN) = tn
+        Rwork(LH) = h
+        RETURN
+      END IF
+    END IF
+    !
+    !     LOAD H WITH HO.  STORE H IN RWORK(LH)
+    h = ho
+    Rwork(LH) = h
+    !
+    !     LOAD Y AND H*YPRIME INTO PHI(*,1) AND PHI(*,2)
+    itemp = lphi + Neq
+    DO i = 1, Neq
+      Rwork(lphi+i-1) = Y(i)
+      Rwork(itemp+i-1) = h*Yprime(i)
+    END DO
   END IF
   !
   !-------------------------------------------------------
@@ -1314,58 +1445,117 @@ PURE SUBROUTINE SDASSL(RES,Neq,T,Y,Yprime,Tout,Info,Rtol,Atol,Idid,Rwork,Lrw,&
   !     COMPUTE MINIMUM STEPSIZE.
   !-------------------------------------------------------
   !
-  !     CHECK FOR FAILURE TO COMPUTE INITIAL YPRIME
-  100 CONTINUE
-  IF( Idid/=-12 ) THEN
+  integration_loop: DO
     !
     !     CHECK FOR TOO MANY STEPS
-    IF( (Iwork(LNST)-Iwork(LNSTL))<500 ) THEN
-      !
-      !     UPDATE WT
-      CALL SDAWTS(Neq,Info(2),Rtol,Atol,Rwork(lphi),Rwork(lwt))
-      DO i = 1, Neq
-        IF( Rwork(i+lwt-1)<=0._SP ) THEN
-          Idid = -3
-          GOTO 200
-        END IF
-      END DO
-      !
-      !     TEST FOR TOO MUCH ACCURACY REQUESTED.
-      r = SDANRM(Neq,Rwork(lphi),Rwork(lwt))*100._SP*uround
-      IF( r<=1._SP ) THEN
-        !
-        !     COMPUTE MINIMUM STEPSIZE
-        hmin = 4._SP*uround*MAX(ABS(tn),ABS(Tout))
-        !
-        !     TEST H VS. HMAX
-        IF( Info(7)/=0 ) THEN
-          rh = ABS(h)/Rwork(LHMAX)
-          IF( rh>1._SP ) h = h/rh
-        END IF
-        !
-        CALL SDASTP(tn,Y,Yprime,Neq,RES,JAC,h,Rwork(lwt:lphi-1),Info(1),Idid,&
-          Rwork(lphi:lpd-1),Rwork(LDELTA:le-1),Rwork(le:lwt-1),Rwork(lwm:),&
-          Iwork,Rwork(LALPHA:LBETA-1),Rwork(LBETA:LGAMMA-1),Rwork(LGAMMA:LPSI-1),&
-          Rwork(LPSI:LSIGMA-1),Rwork(LSIGMA:LDELTA-1),Rwork(LCJ),Rwork(LCJOLD),&
-          Rwork(LHOLD),Rwork(LS),hmin,Rwork(LROUND),Iwork(LPHASE),&
-          Iwork(LJCALC),Iwork(LK),Iwork(LKOLD),Iwork(LNS),Info(10),ntemp)
-        !     MULTIPLY RTOL AND ATOL BY R AND RETURN
-      ELSEIF( Info(2)==1 ) THEN
+    IF( (Iwork(LNST)-Iwork(LNSTL))>=500 ) THEN
+      Idid = -1
+      EXIT integration_loop
+    END IF
+    !
+    !     UPDATE WT
+    CALL SDAWTS(Neq,Info(2),Rtol,Atol,Rwork(lphi),Rwork(lwt))
+    DO i = 1, Neq
+      IF( Rwork(i+lwt-1)<=0._SP ) THEN
+        Idid = -3
+        EXIT integration_loop
+      END IF
+    END DO
+    !
+    !     TEST FOR TOO MUCH ACCURACY REQUESTED.
+    r = SDANRM(Neq,Rwork(lphi),Rwork(lwt))*100._SP*uround
+    IF( r>1._SP ) THEN
+      !     MULTIPLY RTOL AND ATOL BY R AND RETURN
+      IF( Info(2)==1 ) THEN
         DO i = 1, Neq
           Rtol(i) = r*Rtol(i)
           Atol(i) = r*Atol(i)
         END DO
-        Idid = -2
       ELSE
         Rtol(1) = r*Rtol(1)
         Atol(1) = r*Atol(1)
-        Idid = -2
+      END IF
+      Idid = -2
+      EXIT integration_loop
+    END IF
+    !
+    !     COMPUTE MINIMUM STEPSIZE
+    hmin = 4._SP*uround*MAX(ABS(tn),ABS(Tout))
+    !
+    !     TEST H VS. HMAX
+    IF( Info(7)/=0 ) THEN
+      rh = ABS(h)/Rwork(LHMAX)
+      IF( rh>1._SP ) h = h/rh
+    END IF
+    !
+    CALL SDASTP(tn,Y,Yprime,Neq,RES,JAC,h,Rwork(lwt:lphi-1),Info(1),Idid,&
+      Rwork(lphi:lpd-1),Rwork(LDELTA:le-1),Rwork(le:lwt-1),Rwork(lwm:),&
+      Iwork,Rwork(LALPHA:LBETA-1),Rwork(LBETA:LGAMMA-1),Rwork(LGAMMA:LPSI-1),&
+      Rwork(LPSI:LSIGMA-1),Rwork(LSIGMA:LDELTA-1),Rwork(LCJ),Rwork(LCJOLD),&
+      Rwork(LHOLD),Rwork(LS),hmin,Rwork(LROUND),Iwork(LPHASE),&
+      Iwork(LJCALC),Iwork(LK),Iwork(LKOLD),Iwork(LNS),Info(10),ntemp)
+    !
+    IF( Idid<0 ) EXIT integration_loop
+    !
+    !--------------------------------------------------------
+    !     THIS BLOCK HANDLES THE CASE OF A SUCCESSFUL RETURN
+    !     FROM SDASTP (IDID=1).  TEST FOR STOP CONDITIONS.
+    !--------------------------------------------------------
+    !
+    IF( Info(4)/=0 ) THEN
+      IF( Info(3)/=0 ) THEN
+        IF( (tn-Tout)*h>=0._SP ) THEN
+          CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
+          T = Tout
+          Idid = 3
+          EXIT integration_loop
+        ELSEIF( ABS(tn-tstop)<=100._SP*uround*(ABS(tn)+ABS(h)) ) THEN
+          CALL SDATRP(tn,tstop,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
+          Idid = 2
+          T = tstop
+          EXIT integration_loop
+        ELSE
+          T = tn
+          Idid = 1
+          EXIT integration_loop
+        END IF
+      ELSEIF( (tn-Tout)*h<0._SP ) THEN
+        IF( ABS(tn-tstop)<=100._SP*uround*(ABS(tn)+ABS(h)) ) THEN
+          CALL SDATRP(tn,tstop,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
+          Idid = 2
+          T = tstop
+          EXIT integration_loop
+        ELSE
+          tnext = tn + h
+          IF( (tnext-tstop)*h>0._SP ) h = tstop - tn
+          CYCLE integration_loop
+        END IF
+      ELSE
+        CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
+        T = Tout
+        Idid = 3
+        EXIT integration_loop
+      END IF
+    ELSEIF( Info(3)/=0 ) THEN
+      IF( (tn-Tout)*h>=0._SP ) THEN
+        CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
+        Idid = 3
+        T = Tout
+        EXIT integration_loop
+      ELSE
+        T = tn
+        Idid = 1
+        EXIT integration_loop
       END IF
     ELSE
-      Idid = -1
+      IF( (tn-Tout)*h<0._SP ) CYCLE integration_loop
+      CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
+      Idid = 3
+      T = Tout
+      EXIT integration_loop
     END IF
-  END IF
-  200 CONTINUE
+  END DO integration_loop
+  !
   IF( Idid<0 ) THEN
     !
     !-----------------------------------------------------------------------
@@ -1376,68 +1566,54 @@ PURE SUBROUTINE SDASSL(RES,Neq,T,Y,Yprime,Tout,Info,Rtol,Atol,Idid,Rwork,Lrw,&
     itemp = -Idid
     SELECT CASE (itemp)
       CASE (2)
-        !
         !     TOO MUCH ACCURACY FOR MACHINE PRECISION
         WRITE (xern3,'(1P,E15.6)') tn
         ERROR STOP 'SDASSL : AT T TOO MUCH ACCURACY REQUESTED FOR PRECISION OF&
           & MACHINE. RTOL AND ATOL WERE INCREASED TO APPROPRIATE VALUES'
       CASE (3)
-        !
         !     WT(I) <= 0.0 FOR SOME I (NOT AT START OF PROBLEM)
         WRITE (xern3,'(1P,E15.6)') tn
         ERROR STOP 'SDASSL : AT T SOME ELEMENT OF WT HAS BECOME <= 0.0'
       CASE (4,5)
+        ! Not used
       CASE (6)
-        !
         !     ERROR TEST FAILED REPEATEDLY OR WITH H=HMIN
         WRITE (xern3,'(1P,E15.6)') tn
         WRITE (xern4,'(1P,E15.6)') h
         ERROR STOP 'SDASSL : AT T AND STEPSIZE H THE ERROR TEST FAILED&
           & REPEATEDLY OR WITH ABS(H)=HMIN'
       CASE (7)
-        !
         !     CORRECTOR CONVERGENCE FAILED REPEATEDLY OR WITH H=HMIN
         WRITE (xern3,'(1P,E15.6)') tn
         WRITE (xern4,'(1P,E15.6)') h
         ERROR STOP 'SDASSL : AT T AND STEPSIZE H THE CORRECTOR FAILED TO CONVERGE&
           & REPEATEDLY OR WITH ABS(H)=HMIN'
       CASE (8)
-        !
         !     THE ITERATION MATRIX IS SINGULAR
         WRITE (xern3,'(1P,E15.6)') tn
         WRITE (xern4,'(1P,E15.6)') h
         ERROR STOP 'SDASSL : AT T AND STEPSIZE H THE ITERATION MATRIX IS SINGULAR'
       CASE (9)
-        !
         !     CORRECTOR FAILURE PRECEDED BY ERROR TEST FAILURES.
         WRITE (xern3,'(1P,E15.6)') tn
         WRITE (xern4,'(1P,E15.6)') h
         ERROR STOP 'SDASSL : AT T AND STEPSIZE H THE CORRECTOR COULD NOT CONVERGE.&
           & ALSO, THE ERROR TEST FAILED REPEATEDLY.'
       CASE (10)
-        !
         !     CORRECTOR FAILURE BECAUSE IRES = -1
         WRITE (xern3,'(1P,E15.6)') tn
         WRITE (xern4,'(1P,E15.6)') h
         ERROR STOP 'SDASSL : AT T AND STEPSIZE H THE CORRECTOR COULD NOT CONVERGE&
           & BECAUSE IRES WAS EQUAL TO MINUS ONE'
       CASE (11)
-        !
         !     FAILURE BECAUSE IRES = -2
         WRITE (xern3,'(1P,E15.6)') tn
         WRITE (xern4,'(1P,E15.6)') h
         ERROR STOP 'SDASSL : AT T AND STEPSIZE H IRES WAS EQUAL TO MINUS TWO'
       CASE (12)
-        !
-        !     FAILED TO COMPUTE INITIAL YPRIME
-        WRITE (xern3,'(1P,E15.6)') tn
-        WRITE (xern4,'(1P,E15.6)') ho
-        ERROR STOP 'SDASSL : AT T AND STEPSIZE H THE INITIAL YPRIME COULD NOT&
-          & BE COMPUTED'
+        !     FAILED TO COMPUTE INITIAL YPRIME - handled earlier
       CASE DEFAULT
-        !
-        !     THE MAXIMUM NUMBER OF STEPS WAS TAKEN BEFORE
-        !     REACHING TOUT
+        !     THE MAXIMUM NUMBER OF STEPS WAS TAKEN BEFORE REACHING TOUT
         WRITE (xern3,'(1P,E15.6)') tn
         ERROR STOP 'SDASSL : AT CURRENT T 500 STEPS TAKEN ON THIS CALL BEFORE&
           & REACHING TOUT'
@@ -1445,59 +1621,6 @@ PURE SUBROUTINE SDASSL(RES,Neq,T,Y,Yprime,Tout,Info,Rtol,Atol,Idid,Rwork,Lrw,&
     !
     Info(1) = -1
     T = tn
-    Rwork(LTN) = tn
-    Rwork(LH) = h
-    RETURN
-    !
-    !--------------------------------------------------------
-    !     THIS BLOCK HANDLES THE CASE OF A SUCCESSFUL RETURN
-    !     FROM SDASTP (IDID=1).  TEST FOR STOP CONDITIONS.
-    !--------------------------------------------------------
-    !
-  ELSEIF( Info(4)/=0 ) THEN
-    IF( Info(3)/=0 ) THEN
-      IF( (tn-Tout)*h>=0._SP ) THEN
-        CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
-        T = Tout
-        Idid = 3
-      ELSEIF( ABS(tn-tstop)<=100._SP*uround*(ABS(tn)+ABS(h)) ) THEN
-        CALL SDATRP(tn,tstop,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
-        Idid = 2
-        T = tstop
-      ELSE
-        T = tn
-        Idid = 1
-      END IF
-    ELSEIF( (tn-Tout)*h<0._SP ) THEN
-      IF( ABS(tn-tstop)<=100._SP*uround*(ABS(tn)+ABS(h)) ) THEN
-        CALL SDATRP(tn,tstop,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),&
-          Rwork(LPSI))
-        Idid = 2
-        T = tstop
-      ELSE
-        tnext = tn + h
-        IF( (tnext-tstop)*h>0._SP ) h = tstop - tn
-        GOTO 100
-      END IF
-    ELSE
-      CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
-      T = Tout
-      Idid = 3
-    END IF
-  ELSEIF( Info(3)/=0 ) THEN
-    IF( (tn-Tout)*h>=0._SP ) THEN
-      CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
-      Idid = 3
-      T = Tout
-    ELSE
-      T = tn
-      Idid = 1
-    END IF
-  ELSE
-    IF( (tn-Tout)*h<0._SP ) GOTO 100
-    CALL SDATRP(tn,Tout,Y,Yprime,Neq,Iwork(LKOLD),Rwork(lphi),Rwork(LPSI))
-    Idid = 3
-    T = Tout
   END IF
   !
   !--------------------------------------------------------
@@ -1505,52 +1628,7 @@ PURE SUBROUTINE SDASSL(RES,Neq,T,Y,Yprime,Tout,Info,Rtol,Atol,Idid,Rwork,Lrw,&
   !     THIS BLOCK.
   !--------------------------------------------------------
   !
-  300  Rwork(LTN) = tn
+  Rwork(LTN) = tn
   Rwork(LH) = h
-  RETURN
-  !
-  !-----------------------------------------------------------------------
-  !     THIS BLOCK HANDLES ALL ERROR RETURNS DUE
-  !     TO ILLEGAL INPUT, AS DETECTED BEFORE CALLING
-  !     SDASTP. FIRST THE ERROR MESSAGE ROUTINE IS
-  !     CALLED. IF THIS HAPPENS TWICE IN
-  !     SUCCESSION, EXECUTION IS TERMINATED
-  !
-  !-----------------------------------------------------------------------
-  400  ERROR STOP 'SDASSL : SOME ELEMENT OF INFO VECTOR IS NOT ZERO OR ONE'
-  GOTO 1200
-  !
-  500  ERROR STOP 'SDASSL : SOME ELEMENT OF RTOL IS < 0'
-  GOTO 1200
-  !
-  600  ERROR STOP 'SDASSL : SOME ELEMENT OF ATOL IS < 0'
-  GOTO 1200
-  !
-  700  WRITE (xern3,'(1P,E15.6)') tstop
-  WRITE (xern4,'(1P,E15.6)') Tout
-  ERROR STOP 'SDASSL : INFO(4) = 1 AND TSTOP BEHIND TOUT'
-  GOTO 1200
-  !
-  800  WRITE (xern3,'(1P,E15.6)') Tout
-  WRITE (xern4,'(1P,E15.6)') T
-  ERROR STOP 'SDASSL : TOUT BEHIND T'
-  GOTO 1200
-  !
-  900  ERROR STOP 'SDASSL : SOME ELEMENT OF WT IS <= 0.0'
-  GOTO 1200
-  !
-  1000 WRITE (xern3,'(1P,E15.6)') tstop
-  WRITE (xern4,'(1P,E15.6)') T
-  ERROR STOP 'SDASSL : INFO(4)=1 AND TSTOP BEHIND T'
-  GOTO 1200
-  !
-  1100 WRITE (xern3,'(1P,E15.6)') Tout
-  ERROR STOP 'SDASSL : TOUT = T'
-  !
-  1200 Idid = -33
-  IF( Info(1)==-1 ) ERROR STOP 'SDASSL : REPEATED OCCURRENCES OF ILLEGAL INPUT&
-    & RUN TERMINATED. APPARENT INFINITE LOOP'
-  !
-  Info(1) = -1
   !-----------END OF SUBROUTINE SDASSL------------------------------------
 END SUBROUTINE SDASSL
