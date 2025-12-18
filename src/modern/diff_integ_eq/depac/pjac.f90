@@ -24,6 +24,8 @@ SUBROUTINE PJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,F,JAC)
   !   800901  DATE WRITTEN
   !   890531  Changed all specific intrinsics to generic.  (WRB)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
+!   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
   !   900328  Added TYPE section.  (WRB)
   !   910722  Updated AUTHOR section.  (ALS)
   !   920422  Changed DIMENSION statement.  (WRB)
@@ -53,6 +55,7 @@ SUBROUTINE PJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,F,JAC)
   REAL(SP), INTENT(OUT) :: Ftem(n_com)
   !
   INTEGER :: i, i1, i2, ii, j, j1, jj, mba, mband, meb1, meband, ml, ml3, mu
+  LOGICAL :: use_banded
   REAL(SP) :: con, di, fac, hl0, r, r0, srur, yi, yj, yjj
   REAL(SP), ALLOCATABLE :: pd(:,:)
   !-----------------------------------------------------------------------
@@ -90,6 +93,7 @@ SUBROUTINE PJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,F,JAC)
   !* FIRST EXECUTABLE STATEMENT  PJAC
   nje_com = nje_com + 1
   hl0 = h_com*el0_com
+  use_banded = .FALSE.
   SELECT CASE (miter_com)
     CASE (2)
       ! IF MITER = 2, MAKE N CALLS TO F TO APPROXIMATE J. --------------------
@@ -126,7 +130,10 @@ SUBROUTINE PJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,F,JAC)
         di = 0.1_SP*r0 - h_com*(Wm(i+2)-Savf(i))
         Wm(i+2) = 1._SP
         IF( ABS(r0)>=uround_com*Ewt(i) ) THEN
-          IF( ABS(di)==0._SP ) GOTO 100
+          IF( ABS(di)==0._SP ) THEN
+            ier_com = -1
+            RETURN
+          END IF
           Wm(i+2) = 0.1_SP*r0/di
         END IF
       END DO
@@ -147,7 +154,7 @@ SUBROUTINE PJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,F,JAC)
           Wm( 2+(j-1)*meband+i ) = pd(i,j)*con
         END DO
       END DO
-      GOTO 200
+      use_banded = .TRUE.
     CASE (5)
       ! IF MITER = 5, MAKE MBAND CALLS TO F TO APPROXIMATE J. ----------------
       ml = Iwm(1)
@@ -181,7 +188,7 @@ SUBROUTINE PJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,F,JAC)
         END DO
       END DO
       nfe_com = nfe_com + mba
-      GOTO 200
+      use_banded = .TRUE.
     CASE DEFAULT
       ! IF MITER = 1, CALL JAC AND MULTIPLY BY SCALAR. -----------------------
       ALLOCATE( pd(n_com,n_com) )

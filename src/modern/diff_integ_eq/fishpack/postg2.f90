@@ -23,6 +23,8 @@ PURE SUBROUTINE POSTG2(Nperod,N,M,A,Bb,C,Idimq,Q,B,B2,B3,W,W2,W3,D,Tcos,P)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900402  Added TYPE section.  (WRB)
   !   920130  Modified to use merge routine S1MERG rather than deleted routine MERGE.  (WRB)
+!   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
   USE data_handling, ONLY : S1MERG
   !
   INTEGER, INTENT(IN) :: M, N, Nperod, Idimq
@@ -48,8 +50,11 @@ PURE SUBROUTINE POSTG2(Nperod,N,M,A,Bb,C,Idimq,Q,B,B2,B3,W,W2,W3,D,Tcos,P)
   nlast = N
   kr = 1
   lr = 0
-  IF( nr<=3 ) GOTO 200
-  100  jr = 2*i2r
+  !
+  !     REGULAR REDUCTION LOOP
+  !
+  reduction_loop: DO WHILE( nr > 3 )
+    jr = 2*i2r
   nrod = 1
   IF( (nr/2)*2==nr ) nrod = 0
   jstart = 1
@@ -220,12 +225,14 @@ PURE SUBROUTINE POSTG2(Nperod,N,M,A,Bb,C,Idimq,Q,B,B2,B3,W,W2,W3,D,Tcos,P)
   IF( nr>3 ) THEN
     i2r = jr
     nrodpr = nrod
-    GOTO 100
+    CYCLE reduction_loop
   END IF
+  EXIT reduction_loop
+  END DO reduction_loop
   !
   !      BEGIN SOLUTION
   !
-  200  j = 1 + jr
+  j = 1 + jr
   jm1 = j - i2r
   jp1 = j + i2r
   jm2 = nlast - i2r
@@ -466,7 +473,8 @@ PURE SUBROUTINE POSTG2(Nperod,N,M,A,Bb,C,Idimq,Q,B,B2,B3,W,W2,W3,D,Tcos,P)
   !
   !     START BACK SUBSTITUTION.
   !
-  300  j = nlast - jr
+  back_subst: DO
+    j = nlast - jr
   DO i = 1, mr
     B(i) = Q(i,nlast) + Q(i,j)
   END DO
@@ -545,8 +553,9 @@ PURE SUBROUTINE POSTG2(Nperod,N,M,A,Bb,C,Idimq,Q,B,B2,B3,W,W2,W3,D,Tcos,P)
       END DO
       nrod = 1
       IF( nlast+i2r<=N ) nrod = 0
-      IF( nlastp/=nlast ) GOTO 300
+      IF( nlastp/=nlast ) CYCLE back_subst
     END IF
   END DO
+  END DO back_subst
   !
 END SUBROUTINE POSTG2

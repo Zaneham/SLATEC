@@ -29,6 +29,8 @@ SUBROUTINE DDES(DF,Neq,T,Y,Tout,Info,Rtol,Atol,Idid,Ypout,Yp,Yy,Wt,P,Phi,&
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900328  Added TYPE section.  (WRB)
   !   900510  Convert XERRWV calls to XERMSG calls, cvt GOTOs to IF-THEN-ELSE.  (RWC)
+!   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
   !   910722  Updated AUTHOR section.  (ALS)
   USE service, ONLY : eps_dp
   !
@@ -69,6 +71,8 @@ SUBROUTINE DDES(DF,Neq,T,Y,Tout,Info,Rtol,Atol,Idid,Ypout,Yp,Yy,Wt,P,Phi,&
   !.......................................................................
   !
   !* FIRST EXECUTABLE STATEMENT  DDES
+  skip_init = .FALSE.
+  error_exit = .FALSE.
   IF( Info(1)==0 ) THEN
     !
     ! ON THE FIRST CALL, PERFORM INITIALIZATION --
@@ -263,21 +267,23 @@ SUBROUTINE DDES(DF,Neq,T,Y,Tout,Info,Rtol,Atol,Idid,Ypout,Yp,Yy,Wt,P,Phi,&
         RETURN
       END IF
     ELSEIF( Init/=1 ) THEN
-      GOTO 100
+      skip_init = .TRUE.
     END IF
-    !
-    !                         -- SET INDEPENDENT AND DEPENDENT VARIABLES
-    !                                              X AND YY(*) FOR STEPS
-    !                         -- SET SIGN OF INTEGRATION DIRECTION
-    !                         -- INITIALIZE THE STEP SIZE
-    !
-    Init = 2
-    X = T
-    DO l = 1, Neq
-      Yy(l) = Y(l)
-    END DO
-    Delsgn = SIGN(1._DP,Tout-T)
-    H = SIGN(MAX(Fouru*ABS(X),ABS(Tout-X)),Tout-X)
+    IF( .NOT. skip_init ) THEN
+      !
+      !                         -- SET INDEPENDENT AND DEPENDENT VARIABLES
+      !                                              X AND YY(*) FOR STEPS
+      !                         -- SET SIGN OF INTEGRATION DIRECTION
+      !                         -- INITIALIZE THE STEP SIZE
+      !
+      Init = 2
+      X = T
+      DO l = 1, Neq
+        Yy(l) = Y(l)
+      END DO
+      Delsgn = SIGN(1._DP,Tout-T)
+      H = SIGN(MAX(Fouru*ABS(X),ABS(Tout-X)),Tout-X)
+    END IF
   ELSE
     !                       RTOL=ATOL=0 ON INPUT, SO RTOL IS CHANGED TO A
     !                                                SMALL POSITIVE VALUE
@@ -290,7 +296,7 @@ SUBROUTINE DDES(DF,Neq,T,Y,Tout,Info,Rtol,Atol,Idid,Ypout,Yp,Yy,Wt,P,Phi,&
   !   ON EACH CALL SET INFORMATION WHICH DETERMINES THE ALLOWED INTERVAL
   !   OF INTEGRATION BEFORE RETURNING WITH AN ANSWER AT TOUT
   !
-  100  del = Tout - T
+  del = Tout - T
   absdel = ABS(del)
   !
   !.......................................................................
@@ -348,7 +354,11 @@ SUBROUTINE DDES(DF,Neq,T,Y,Tout,Info,Rtol,Atol,Idid,Ypout,Yp,Yy,Wt,P,Phi,&
       DO l = 1, Neq
         IF( Info(2)==1 ) ltol = l
         Wt(l) = Rtol(ltol)*ABS(Yy(l)) + Atol(ltol)
-        IF( Wt(l)<=0._DP ) GOTO 120
+        IF( Wt(l)<=0._DP ) THEN
+          Idid = -3
+          error_exit = .TRUE.
+          EXIT
+        END IF
       END DO
       !
       CALL DSTEPS(DF,Neq,Yy,X,H,Eps,Wt,Start,Hold,Kord,Kold,crash,Phi,P,Yp,&
@@ -379,20 +389,9 @@ SUBROUTINE DDES(DF,Neq,T,Y,Tout,Info,Rtol,Atol,Idid,Ypout,Yp,Yy,Wt,P,Phi,&
             Atol(l) = Eps*Atol(l)
           END DO
         END IF
-        GOTO 200
+        error_exit = .TRUE.
+        EXIT
       END IF
-      !
-      !                       RELATIVE ERROR CRITERION INAPPROPRIATE
-      120  Idid = -3
-      DO l = 1, Neq
-        Y(l) = Yy(l)
-        Ypout(l) = Yp(l)
-      END DO
-      T = X
-      Told = T
-      Info(1) = -1
-      Intout = .FALSE.
-      RETURN
     ELSE
       !
       !                       A SIGNIFICANT AMOUNT OF WORK HAS BEEN EXPENDED
@@ -417,6 +416,20 @@ SUBROUTINE DDES(DF,Neq,T,Y,Tout,Info,Rtol,Atol,Idid,Ypout,Yp,Yy,Wt,P,Phi,&
       RETURN
     END IF
   END DO
+  !
+  IF( error_exit ) THEN
+    ! Error exit - copy state and return
+    DO l = 1, Neq
+      Y(l) = Yy(l)
+      Ypout(l) = Yp(l)
+    END DO
+    T = X
+    Told = T
+    Info(1) = -1
+    Intout = .FALSE.
+    RETURN
+  END IF
+  !
   CALL DINTP(X,Yy,Tout,Y,Ypout,Neq,Kold,Phi,Ivc,Iv,Kgi,Gi,Alpha,G,W,Xold,P)
   Idid = 3
   IF( X==Tout ) THEN
@@ -425,16 +438,5 @@ SUBROUTINE DDES(DF,Neq,T,Y,Tout,Info,Rtol,Atol,Idid,Ypout,Yp,Yy,Wt,P,Phi,&
   END IF
   T = Tout
   Told = T
-  RETURN
-  200 CONTINUE
-  DO l = 1, Neq
-    Y(l) = Yy(l)
-    Ypout(l) = Yp(l)
-  END DO
-  T = X
-  Told = T
-  Info(1) = -1
-  Intout = .FALSE.
   !
-  RETURN
 END SUBROUTINE DDES

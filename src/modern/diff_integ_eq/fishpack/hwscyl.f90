@@ -305,6 +305,8 @@ PURE SUBROUTINE HWSCYL(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   !   890531  REVISION DATE from Version 3.2
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+!   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
 
   INTEGER, INTENT(IN) :: Idimf, M, Mbdcnd, N, Nbdcnd
   INTEGER, INTENT(OUT) :: Ierror
@@ -315,9 +317,11 @@ PURE SUBROUTINE HWSCYL(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   !
   INTEGER :: i, id2, id3, id4, id5, id6, ierr1, ij, istart, j, k, l, mp1, mstart, &
     mstop, munk, np, np1, nsp1, nstart, nstm1, nstop, nunk
+  LOGICAL :: skip_pertrb
   REAL(SP) :: a1, a2, deltar, deltht, dlrby2, dlrsq, dlthsq, r, s, s1, s2
   !* FIRST EXECUTABLE STATEMENT  HWSCYL
   Ierror = 0
+  skip_pertrb = .FALSE.
   IF( A<0. ) Ierror = 1
   IF( A>=B ) Ierror = 2
   IF( Mbdcnd<=0 .OR. Mbdcnd>=7 ) Ierror = 3
@@ -444,7 +448,7 @@ PURE SUBROUTINE HWSCYL(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   l = id5 - mstart + 1
   SELECT CASE (np)
     CASE (1)
-      GOTO 100
+      skip_pertrb = .TRUE.
     CASE (4,5)
       a1 = 2._SP/deltht
       DO i = mstart, mstop
@@ -472,47 +476,54 @@ PURE SUBROUTINE HWSCYL(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   !     ADJUST RIGHT SIDE OF SINGULAR PROBLEMS TO INSURE EXISTENCE OF A
   !     SOLUTION.
   !
-  100  Pertrb = 0._SP
+  Pertrb = 0._SP
   IF( Elmbda<0 ) THEN
+    ! No perturbation needed
   ELSEIF( Elmbda==0 ) THEN
     W(id5+1) = 0.5_SP*(W(id5+2)-dlrby2)
-    SELECT CASE (Mbdcnd)
-      CASE (1,2,4,5)
-        GOTO 200
-      CASE (3)
-      CASE DEFAULT
-        W(id5+1) = 0.5_SP*W(id5+1)
-    END SELECT
-    SELECT CASE (np)
-      CASE (1)
-        a2 = 1._SP
-      CASE (2,3,5)
-        GOTO 200
-      CASE DEFAULT
-        a2 = 2._SP
-    END SELECT
-    k = id5 + munk
-    W(k) = 0.5_SP*(W(k-1)+dlrby2)
-    s = 0._SP
-    DO i = mstart, mstop
-      s1 = 0._SP
-      nsp1 = nstart + 1
-      nstm1 = nstop - 1
-      DO j = nsp1, nstm1
-        s1 = s1 + F(i,j)
-      END DO
-      k = i + l
-      s = s + (a2*s1+F(i,nstart)+F(i,nstop))*W(k)
-    END DO
-    s2 = M*A + (.75_SP+(M-1)*(M+1))*dlrby2
-    IF( Mbdcnd==3 ) s2 = s2 + 0.25_SP*dlrby2
-    s1 = (2._SP+a2*(nunk-2))*s2
-    Pertrb = s/s1
-    DO i = mstart, mstop
-      DO j = nstart, nstop
-        F(i,j) = F(i,j) - Pertrb
-      END DO
-    END DO
+    IF( Mbdcnd==1 .OR. Mbdcnd==2 .OR. Mbdcnd==4 .OR. Mbdcnd==5 ) THEN
+      skip_pertrb = .TRUE.
+    ELSE
+      SELECT CASE (Mbdcnd)
+        CASE (3)
+        CASE DEFAULT
+          W(id5+1) = 0.5_SP*W(id5+1)
+      END SELECT
+    END IF
+    IF( .NOT. skip_pertrb ) THEN
+      SELECT CASE (np)
+        CASE (1)
+          a2 = 1._SP
+        CASE (2,3,5)
+          skip_pertrb = .TRUE.
+        CASE DEFAULT
+          a2 = 2._SP
+      END SELECT
+      IF( .NOT. skip_pertrb ) THEN
+        k = id5 + munk
+        W(k) = 0.5_SP*(W(k-1)+dlrby2)
+        s = 0._SP
+        DO i = mstart, mstop
+          s1 = 0._SP
+          nsp1 = nstart + 1
+          nstm1 = nstop - 1
+          DO j = nsp1, nstm1
+            s1 = s1 + F(i,j)
+          END DO
+          k = i + l
+          s = s + (a2*s1+F(i,nstart)+F(i,nstop))*W(k)
+        END DO
+        s2 = M*A + (.75_SP+(M-1)*(M+1))*dlrby2
+        IF( Mbdcnd==3 ) s2 = s2 + 0.25_SP*dlrby2
+        s1 = (2._SP+a2*(nunk-2))*s2
+        Pertrb = s/s1
+        DO i = mstart, mstop
+          DO j = nstart, nstop
+            F(i,j) = F(i,j) - Pertrb
+          END DO
+        END DO
+      END IF
+    END IF
   ELSE
     Ierror = 11
   END IF
@@ -520,7 +531,10 @@ PURE SUBROUTINE HWSCYL(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   !     MULTIPLY I-TH EQUATION THROUGH BY DELTHT**2 TO PUT EQUATION INTO
   !     CORRECT FORM FOR SUBROUTINE GENBUN.
   !
-  200 CONTINUE
+  !
+  !     MULTIPLY I-TH EQUATION THROUGH BY DELTHT**2 TO PUT EQUATION INTO
+  !     CORRECT FORM FOR SUBROUTINE GENBUN.
+  !
   DO i = mstart, mstop
     k = i - mstart + 1
     W(k) = W(k)*dlthsq

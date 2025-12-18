@@ -25,6 +25,8 @@ SUBROUTINE DPJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,DF,DJAC)
   !   890531  Changed all specific intrinsics to generic.  (WRB)
   !   890911  Removed unnecessary intrinsics.  (WRB)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
+!   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
   !   900328  Added TYPE section.  (WRB)
   !   910722  Updated AUTHOR section.  (ALS)
   !   920422  Changed DIMENSION statement.  (WRB)
@@ -54,6 +56,7 @@ SUBROUTINE DPJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,DF,DJAC)
   REAL(DP), INTENT(OUT) :: Ftem(n_com)
   !
   INTEGER :: i, i1, i2, ii, j, j1, jj, mba, mband, meb1, meband, ml, ml3, mu
+  LOGICAL :: use_banded
   REAL(DP) :: con, di, fac, hl0, r, r0, srur, yi, yj, yjj
   REAL(DP), ALLOCATABLE :: pd(:,:)
   !     ------------------------------------------------------------------
@@ -98,6 +101,7 @@ SUBROUTINE DPJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,DF,DJAC)
   !* FIRST EXECUTABLE STATEMENT  DPJAC
   nje_com = nje_com + 1
   hl0 = h_com*el0_com
+  use_banded = .FALSE.
   SELECT CASE (miter_com)
     CASE (2)
       !                 IF MITER = 2, MAKE N CALLS TO DF TO APPROXIMATE J.
@@ -136,7 +140,10 @@ SUBROUTINE DPJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,DF,DJAC)
         Wm(i+2) = 1._DP
         IF( ABS(r0)>=uround_com*Ewt(i) ) THEN
           !           .........EXIT
-          IF( ABS(di)==0._DP ) GOTO 100
+          IF( ABS(di)==0._DP ) THEN
+            ier_com = -1
+            RETURN
+          END IF
           Wm(i+2) = 0.1_DP*r0/di
         END IF
       END DO
@@ -159,7 +166,7 @@ SUBROUTINE DPJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,DF,DJAC)
           Wm( 2+(j-1)*meband+i ) = pd(i,j)*con
         END DO
       END DO
-      GOTO 200
+      use_banded = .TRUE.
     CASE (5)
       !           IF MITER = 5, MAKE MBAND CALLS TO DF TO APPROXIMATE J.
       !           ----------------
@@ -194,7 +201,7 @@ SUBROUTINE DPJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,DF,DJAC)
         END DO
       END DO
       nfe_com = nfe_com + mba
-      GOTO 200
+      use_banded = .TRUE.
     CASE DEFAULT
       !                 IF MITER = 1, CALL DJAC AND MULTIPLY BY SCALAR.
       !                 -----------------------
@@ -208,31 +215,29 @@ SUBROUTINE DPJAC(Neq,Y,Yh,Nyh,Ewt,Ftem,Savf,Wm,Iwm,DF,DJAC)
         END DO
       END DO
   END SELECT
-  !              ADD IDENTITY MATRIX.
-  !              -------------------------------------------------
-  j = 3
-  DO i = 1, n_com
-    Wm(j) = Wm(j) + 1._DP
-    j = j + (n_com+1)
-  END DO
-  !              DO LU DECOMPOSITION ON P.
-  !              --------------------------------------------
-  CALL DGEFA(Wm(3:n_com**2+2),n_com,n_com,Iwm(21:n_com+20),ier_com)
-  !     .........EXIT
-  RETURN
-  100  ier_com = -1
-  !     ......EXIT
-  RETURN
-  !        ADD IDENTITY MATRIX.
-  !        -------------------------------------------------
-  200  ii = mband + 2
-  DO i = 1, n_com
-    Wm(ii) = Wm(ii) + 1._DP
-    ii = ii + meband
-  END DO
-  !        DO LU DECOMPOSITION OF P.
-  !        --------------------------------------------
-  CALL DGBFA(Wm(3:meband*n_com+2),meband,n_com,ml,mu,Iwm(21:n_com+20),ier_com)
+  !
+  IF( use_banded ) THEN
+    !        ADD IDENTITY MATRIX (BANDED).
+    !        -------------------------------------------------
+    ii = mband + 2
+    DO i = 1, n_com
+      Wm(ii) = Wm(ii) + 1._DP
+      ii = ii + meband
+    END DO
+    !        DO LU DECOMPOSITION OF P (BANDED).
+    !        --------------------------------------------
+    CALL DGBFA(Wm(3:meband*n_com+2),meband,n_com,ml,mu,Iwm(21:n_com+20),ier_com)
+  ELSE
+    !              ADD IDENTITY MATRIX (DENSE).
+    !              -------------------------------------------------
+    j = 3
+    DO i = 1, n_com
+      Wm(j) = Wm(j) + 1._DP
+      j = j + (n_com+1)
+    END DO
+    !              DO LU DECOMPOSITION ON P (DENSE).
+    !              --------------------------------------------
+    CALL DGEFA(Wm(3:n_com**2+2),n_com,n_com,Iwm(21:n_com+20),ier_com)
+  END IF
   !----------------------- END OF SUBROUTINE DPJAC -----------------------
-  RETURN
 END SUBROUTINE DPJAC

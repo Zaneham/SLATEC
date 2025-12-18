@@ -211,6 +211,8 @@ PURE SUBROUTINE SPIGMR(N,R0,Sr,Sz,Jscal,Maxl,Maxlp1,Kmp,Nrsts,Jpre,MATVEC,&
   !   910502  Removed MATVEC and MSOLVE from ROUTINES CALLED list.  (FNF)
   !   910506  Made subsidiary to SGMRES.  (FNF)
   !   920511  Added complete declaration section.  (WRB)
+!   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
   USE blas, ONLY : SAXPY
   USE SSLBLK, ONLY : soln_com
 
@@ -241,6 +243,7 @@ PURE SUBROUTINE SPIGMR(N,R0,Sr,Sz,Jscal,Maxl,Maxlp1,Kmp,Nrsts,Jpre,MATVEC,&
   !     .. Local Scalars ..
   REAL(SP) :: c, dlnrm, prod, r0nrm, rho, s, snormw, tem, solnrm
   INTEGER :: i, i2, info, ip1, iter, itmax, j, k, ll, llp1
+  LOGICAL :: compute_solution
   !     .. Intrinsic Functions ..
   INTRINSIC ABS
   !* FIRST EXECUTABLE STATEMENT  SPIGMR
@@ -253,6 +256,7 @@ PURE SUBROUTINE SPIGMR(N,R0,Sr,Sz,Jscal,Maxl,Maxlp1,Kmp,Nrsts,Jpre,MATVEC,&
   !
   Iflag = 0
   Lgmr = 0
+  compute_solution = .FALSE.
   !         Load ITMAX, the maximum number of iterations.
   itmax = (Nrmax+1)*Maxl
   !   -------------------------------------------------------------------
@@ -340,7 +344,14 @@ PURE SUBROUTINE SPIGMR(N,R0,Sr,Sz,Jscal,Maxl,Maxlp1,Kmp,Nrsts,Jpre,MATVEC,&
     CALL SORTH(V(1,ll+1),V,Hes,N,ll,Maxlp1,Kmp,snormw)
     Hes(ll+1,ll) = snormw
     CALL SHEQR(Hes,Maxlp1,ll,Q,info,ll)
-    IF( info==ll ) GOTO 100
+    IF( info==ll ) THEN
+      ! Breakdown in QR factorization
+      Iflag = 2
+      DO i = 1, N
+        Z(i) = 0
+      END DO
+      RETURN
+    END IF
     !   -------------------------------------------------------------------
     !         Update RHO, the estimate of the norm of the residual R0-A*ZL.
     !         If KMP <  MAXL, then the vectors V(*,1),...,V(*,LL+1) are not
@@ -379,7 +390,10 @@ PURE SUBROUTINE SPIGMR(N,R0,Sr,Sz,Jscal,Maxl,Maxlp1,Kmp,Nrsts,Jpre,MATVEC,&
     iter = Nrsts*Maxl + Lgmr
     IF( Itol==11 .AND. (Jscal==0) .OR. (Jscal==2) ) Wk(1:N) = Xl(1:N) - soln_com(1:N)
     IF( ISSGMR(N,X,Xl,MSOLVE,Itol,Tol,iter,Dl,Wk,Rpar,Ipar,Rhol, &
-      Bnrm,Sz,Jscal,Kmp,Lgmr,Maxl,Maxlp1,V,Q,snormw,prod,r0nrm,Hes,Jpre,solnrm)/=0 ) GOTO 200
+      Bnrm,Sz,Jscal,Kmp,Lgmr,Maxl,Maxlp1,V,Q,snormw,prod,r0nrm,Hes,Jpre,solnrm)/=0 ) THEN
+      compute_solution = .TRUE.
+      EXIT
+    END IF
     IF( ll==Maxl ) EXIT
     !   -------------------------------------------------------------------
     !         Rescale so that the norm of V(1,LL+1) is one.
@@ -400,23 +414,22 @@ PURE SUBROUTINE SPIGMR(N,R0,Sr,Sz,Jscal,Maxl,Maxlp1,Kmp,Nrsts,Jpre,MATVEC,&
     !        the scaled residual vector.
     !
     IF( Nrmax>0 ) CALL SRLCAL(N,Kmp,Maxl,Maxl,V,Q,Dl,snormw,prod,r0nrm)
-    GOTO 200
+    compute_solution = .TRUE.
   END IF
-  100 CONTINUE
-  IFlag = 2
-  !
-  !         Load approximate solution with zero.
-  !
-  DO i = 1, N
-    Z(i) = 0
-  END DO
-  RETURN
+  IF( .NOT. compute_solution ) THEN
+    ! No convergence and no residual reduction
+    Iflag = 2
+    DO i = 1, N
+      Z(i) = 0
+    END DO
+    RETURN
+  END IF
   !   -------------------------------------------------------------------
   !         Compute the approximation ZL to the solution.  Since the
   !         vector Z was used as workspace, and the initial guess
   !         of the linear iteration is zero, Z must be reset to zero.
   !   -------------------------------------------------------------------
-  200  ll = Lgmr
+  ll = Lgmr
   llp1 = ll + 1
   DO k = 1, llp1
     R0(k) = 0
