@@ -59,6 +59,8 @@ PURE SUBROUTINE DPNNZR(I,Xval,Iplace,Sx,Ix,Ircx)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900328  Added TYPE section.  (WRB)
   !   910403  Updated AUTHOR and DESCRIPTION sections.  (WRB)
+!   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
 
   INTEGER, INTENT(IN) :: Ircx, Ix(:)
   INTEGER, INTENT(INOUT) :: I
@@ -66,7 +68,8 @@ PURE SUBROUTINE DPNNZR(I,Xval,Iplace,Sx,Ix,Ircx)
   REAL(DP), INTENT(IN) :: Sx(:)
   REAL(DP), INTENT(INOUT) :: Xval
   INTEGER :: i1, idiff, iend, ii, il, ilast, iopt, ipl, ipploc, istart, j, l, &
-    ll, lmx, lpg, n20046, nerr, np
+    ll, lmx, lpg, nerr, np
+  LOGICAL :: do_orthogonal_scan, found_result
   !* FIRST EXECUTABLE STATEMENT  DPNNZR
   iopt = 1
   !
@@ -118,9 +121,7 @@ PURE SUBROUTINE DPNNZR(I,Xval,Iplace,Sx,Ix,Ircx)
     !
     IF( I/=l ) THEN
       i1 = I + 1
-      ii = i1
-      n20046 = l
-      GOTO 200
+      do_orthogonal_scan = .TRUE.
     ELSE
       I = 0
       Xval = 0._DP
@@ -177,102 +178,121 @@ PURE SUBROUTINE DPNNZR(I,Xval,Iplace,Sx,Ix,Ircx)
       ipl = IDLOC(Iplace,Ix)
     END IF
     np = ABS(Ix(lmx-1))
+    do_orthogonal_scan = .FALSE.
   END IF
-  100  ilast = MIN(iend,np*lpg+ll-2)
   !
-  !     THE VIRTUAL END OF THE DATA FOR THIS PAGE IS ILAST.
-  !
-  il = IDLOC(ilast,Ix)
-  il = MIN(il,lmx-2)
-  !
-  !     THE RELATIVE END OF DATA FOR THIS PAGE IS IL.
-  !     SEARCH FOR A NONZERO VALUE WITH AN INDEX > I ON THE PRESENT
-  !     PAGE.
-  !
-  DO WHILE( .NOT. (ipl>=il .OR. (Ix(ipl)>I .AND. Sx(ipl)/=0._DP)) )
-    ipl = ipl + 1
-  END DO
-  !
-  !     TEST IF WE HAVE FOUND THE NEXT NONZERO.
-  !
-  IF( Ix(ipl)<=I .OR. Sx(ipl)==0._DP .OR. ipl>il ) THEN
+  IF( do_orthogonal_scan ) THEN
     !
-    !     UPDATE TO SCAN THE NEXT PAGE.
-    ipl = ll + 1
-    np = np + 1
-    IF( ilast/=iend ) GOTO 100
+    !     ORTHOGONAL SCAN: search rows i1..l for column j
     !
-    !     NO DATA WAS FOUND. END OF VECTOR ENCOUNTERED.
-    !
-    I = 0
-    Xval = 0._DP
-    il = il + 1
-    IF( il==lmx-1 ) il = il + 2
-    !
-    !     IF A NEW ITEM WOULD BE INSERTED, IPLACE POINTS TO THE PLACE
-    !     TO PUT IT.
-    !
-    Iplace = (np-1)*lpg + il
-    RETURN
-  ELSE
-    I = Ix(ipl)
-    Xval = Sx(ipl)
-    Iplace = (np-1)*lpg + ipl
-    RETURN
-  END IF
-  200 CONTINUE
-  IF( (n20046-ii)<0 ) THEN
-    !
-    !     ORTHOGONAL SCAN FAILED. THE VALUE J WAS NOT A SUBSCRIPT
-    !     IN ANY ROW.
-    !
-    I = 0
-    Xval = 0._DP
-    RETURN
-  ELSE
-    !
-    !     INITIALIZE IPPLOC FOR ORTHOGONAL SCAN.
-    !     LOOK FOR J AS A SUBSCRIPT IN ROWS II, II=I+1,...,L.
-    !
-    IF( ii/=1 ) THEN
-      ipploc = Ix(ii+3) + 1
-    ELSE
-      ipploc = ll + 1
-    END IF
-    iend = Ix(ii+4)
-    !
-    !     SCAN THROUGH SEVERAL PAGES, IF NECESSARY, TO FIND MATRIX ENTRY.
-    !
-    ipl = IDLOC(ipploc,Ix)
-    !
-    !     FIX UP IPPLOC AND IPL TO POINT TO MATRIX DATA.
-    !
-    idiff = lmx - ipl
-    IF( idiff<=1 .AND. Ix(lmx-1)>0 ) THEN
-      ipploc = ipploc + idiff + 1
+    found_result = .FALSE.
+    outer_row_loop: DO ii = i1, l
+      !
+      !     INITIALIZE IPPLOC FOR ORTHOGONAL SCAN.
+      !     LOOK FOR J AS A SUBSCRIPT IN ROWS II, II=I+1,...,L.
+      !
+      IF( ii/=1 ) THEN
+        ipploc = Ix(ii+3) + 1
+      ELSE
+        ipploc = ll + 1
+      END IF
+      iend = Ix(ii+4)
+      !
+      !     SCAN THROUGH SEVERAL PAGES, IF NECESSARY, TO FIND MATRIX ENTRY.
+      !
       ipl = IDLOC(ipploc,Ix)
+      !
+      !     FIX UP IPPLOC AND IPL TO POINT TO MATRIX DATA.
+      !
+      idiff = lmx - ipl
+      IF( idiff<=1 .AND. Ix(lmx-1)>0 ) THEN
+        ipploc = ipploc + idiff + 1
+        ipl = IDLOC(ipploc,Ix)
+      END IF
+      np = ABS(Ix(lmx-1))
+      !
+      inner_page_loop: DO
+        ilast = MIN(iend,np*lpg+ll-2)
+        il = IDLOC(ilast,Ix)
+        il = MIN(il,lmx-2)
+        DO WHILE( .NOT. (ipl>=il .OR. Ix(ipl)>=j) )
+          ipl = ipl + 1
+        END DO
+        !
+        !     TEST IF WE HAVE FOUND THE NEXT NONZERO.
+        !
+        IF( Ix(ipl)/=j .OR. Sx(ipl)==0._DP .OR. ipl>il ) THEN
+          IF( Ix(ipl)>=j ) ilast = iend
+          ipl = ll + 1
+          np = np + 1
+          IF( ilast==iend ) EXIT inner_page_loop
+          CYCLE inner_page_loop
+        ELSE
+          I = ii
+          Xval = Sx(ipl)
+          found_result = .TRUE.
+          EXIT outer_row_loop
+        END IF
+      END DO inner_page_loop
+    END DO outer_row_loop
+    !
+    IF( .NOT. found_result ) THEN
+      !
+      !     ORTHOGONAL SCAN FAILED. THE VALUE J WAS NOT A SUBSCRIPT
+      !     IN ANY ROW.
+      !
+      I = 0
+      Xval = 0._DP
     END IF
-    np = ABS(Ix(lmx-1))
+    RETURN
   END IF
-  300  ilast = MIN(iend,np*lpg+ll-2)
-  il = IDLOC(ilast,Ix)
-  il = MIN(il,lmx-2)
-  DO WHILE( .NOT. (ipl>=il .OR. Ix(ipl)>=j) )
-    ipl = ipl + 1
-  END DO
   !
-  !     TEST IF WE HAVE FOUND THE NEXT NONZERO.
+  !     COLUMN SEARCH: page scanning loop
   !
-  IF( Ix(ipl)/=j .OR. Sx(ipl)==0._DP .OR. ipl>il ) THEN
-    IF( Ix(ipl)>=j ) ilast = iend
-    ipl = ll + 1
-    np = np + 1
-    IF( ilast/=iend ) GOTO 300
-    ii = ii + 1
-    GOTO 200
-  END IF
-  I = ii
-  Xval = Sx(ipl)
+  page_scan: DO
+    ilast = MIN(iend,np*lpg+ll-2)
+    !
+    !     THE VIRTUAL END OF THE DATA FOR THIS PAGE IS ILAST.
+    !
+    il = IDLOC(ilast,Ix)
+    il = MIN(il,lmx-2)
+    !
+    !     THE RELATIVE END OF DATA FOR THIS PAGE IS IL.
+    !     SEARCH FOR A NONZERO VALUE WITH AN INDEX > I ON THE PRESENT
+    !     PAGE.
+    !
+    DO WHILE( .NOT. (ipl>=il .OR. (Ix(ipl)>I .AND. Sx(ipl)/=0._DP)) )
+      ipl = ipl + 1
+    END DO
+    !
+    !     TEST IF WE HAVE FOUND THE NEXT NONZERO.
+    !
+    IF( Ix(ipl)<=I .OR. Sx(ipl)==0._DP .OR. ipl>il ) THEN
+      !
+      !     UPDATE TO SCAN THE NEXT PAGE.
+      ipl = ll + 1
+      np = np + 1
+      IF( ilast==iend ) EXIT page_scan
+      CYCLE page_scan
+    ELSE
+      I = Ix(ipl)
+      Xval = Sx(ipl)
+      Iplace = (np-1)*lpg + ipl
+      RETURN
+    END IF
+  END DO page_scan
+  !
+  !     NO DATA WAS FOUND. END OF VECTOR ENCOUNTERED.
+  !
+  I = 0
+  Xval = 0._DP
+  il = il + 1
+  IF( il==lmx-1 ) il = il + 2
+  !
+  !     IF A NEW ITEM WOULD BE INSERTED, IPLACE POINTS TO THE PLACE
+  !     TO PUT IT.
+  !
+  Iplace = (np-1)*lpg + il
 
   RETURN
 END SUBROUTINE DPNNZR
