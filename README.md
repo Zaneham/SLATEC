@@ -100,7 +100,7 @@ TODO: Add fpm.toml and CMake support
 
 **Prior Modernisation**: [Mehdi Chinoune](https://github.com/MehdiChinoune/SLATEC) kicked off the modernisation back in 2021, converting to free-form, adding intents and KIND parameters, marking pure/elemental procedures, and organising into modules. Massive props for the groundwork.
 
-**Current Work**: Zane Hambly, continuing the GOTO elimination crusade and general cleanup.
+**Current Work**: Me! Continuing the GOTO elimination crusade and general cleanup.
 
 ## The use of generative AI
 
