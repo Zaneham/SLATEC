@@ -102,6 +102,12 @@ TODO: Add fpm.toml and CMake support
 
 **Current Work**: Zane Hambly, continuing the GOTO elimination crusade and general cleanup.
 
+## The use of generative AI
+
+Generative LLM models such as Anthropic's Claude (Opus 4.5 and Sonnet) and my own offline models (Qwen coder with augmented epistemic detection) have been used for running tests and summarising their results. Code and documentation for better or worse is authored by me. 
+
+Apologies for the NZ English throughout :-) 
+
 ## References
 
 - [SLATEC Guide](https://www.netlib.org/slatec/guide)
