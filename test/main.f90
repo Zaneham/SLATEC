@@ -3,6 +3,7 @@ program tester
   use testdrive, only: run_testsuite, new_testsuite, testsuite_type
   use test_bessel_regression, only: collect_bessel_regression_tests
   use test_bessel_reference, only: collect_bessel_reference_tests
+  use test_bessel_portability, only: collect_bessel_portability_tests
   implicit none
   integer :: stat, is
   type(testsuite_type), allocatable :: testsuites(:)
@@ -12,7 +13,8 @@ program tester
 
   testsuites = [ &
     new_testsuite("Bessel Regression (Original vs Modern)", collect_bessel_regression_tests), &
-    new_testsuite("Bessel Reference (vs Papers/A&S)", collect_bessel_reference_tests) &
+    new_testsuite("Bessel Reference (vs Papers/A&S)", collect_bessel_reference_tests), &
+    new_testsuite("Bessel Portability (ULP cross-platform)", collect_bessel_portability_tests) &
   ]
 
   do is = 1, size(testsuites)
