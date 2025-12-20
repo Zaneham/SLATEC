@@ -244,7 +244,9 @@ PURE SUBROUTINE DASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
           Wk(7) = fn**con2
           Wk(5) = rtz*Wk(7)
           Wk(6) = Wk(5)*Wk(5)
-          GOTO 100
+          do_block_100 = .TRUE.
+        ELSE
+          overflow_exit = .TRUE.
         END IF
       ELSE
         !
@@ -257,7 +259,7 @@ PURE SUBROUTINE DASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
         rtz = z32**con2
         Wk(5) = rtz*Wk(7)
         Wk(6) = -Wk(5)*Wk(5)
-        GOTO 100
+        do_block_100 = .TRUE.
       END IF
     ELSE
       !
@@ -292,8 +294,11 @@ PURE SUBROUTINE DASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
       Wk(5) = rtz*Wk(7)
       Wk(6) = -Wk(5)*Wk(5)
       IF( z>0._DP ) THEN
-        IF( Wk(4)>elim ) GOTO 50
-        Wk(6) = -Wk(6)
+        IF( Wk(4)>elim ) THEN
+          overflow_exit = .TRUE.
+        ELSE
+          Wk(6) = -Wk(6)
+        END IF
       END IF
       phi = SQRT(SQRT(sa+sa+sa+sa))
       !
@@ -336,12 +341,15 @@ PURE SUBROUTINE DASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
         IF( ABS(ta)<=tol .AND. ABS(tb)<=relb ) EXIT
       END DO
       bsum = bsum/(fn*Wk(7))
-      GOTO 150
     END IF
     !
-    50  Iflw = 1
-    RETURN
-    100  phi = SQRT((rtz+rtz)*tau)
+    IF (overflow_exit) THEN
+      Iflw = 1
+      RETURN
+    END IF
+    !
+    IF (do_block_100) THEN
+    phi = SQRT((rtz+rtz)*tau)
     tb = 1._DP
     asum = 1._DP
     tfn = tau/fn
@@ -408,8 +416,9 @@ PURE SUBROUTINE DASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
     tb = Wk(5)
     IF( Wk(1)>0._DP ) tb = -tb
     bsum = bsum/tb
+    END IF
     !
-    150  CALL FUNJY(Wk(6),Wk(5),Wk(4),fi,dfi)
+    CALL FUNJY(Wk(6),Wk(5),Wk(4),fi,dfi)
     ta = 1._DP/tol
     tb = tiny_dp*ta*1.E+3_DP
     IF( ABS(fi)<=tb ) THEN
