@@ -31,3 +31,6 @@ Thumbs.db
 
 # Original source (cloned for reference)
 mehdi-slatec/
+
+# Internal tracking
+.goto-status.md
