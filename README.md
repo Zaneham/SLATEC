@@ -103,7 +103,7 @@ fpm test
 
 The original SLATEC library is **public domain** software, developed by the United States Government. Works created by US Government employees within the scope of their employment are not subject to domestic copyright protection under 17 U.S.C. § 105.
 
-<<<<<<< HEAD
+
 **PCHIP Reference**: [Jacob Williams](https://github.com/jacobwilliams/PCHIP) created a clean modern Fortran PCHIP implementation in 2019. His control flow patterns (using `do`/`exit` with logical flags instead of GOTOs) informed our approach to modernising the PCHIP routines whilst preserving algorithmic correctness.
 
 **Current Work**: Zane Hambly, continuing the GOTO elimination crusade and general cleanup.
