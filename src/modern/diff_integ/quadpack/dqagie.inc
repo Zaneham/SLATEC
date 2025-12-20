@@ -282,8 +282,11 @@ PURE SUBROUTINE DQAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
   errbnd = MAX(Epsabs,Epsrel*dres)
   IF( Abserr<=100._DP*epmach*defabs .AND. Abserr>errbnd ) Ier = 2
   IF( Limit==1 ) Ier = 1
-  IF( Ier/=0 .OR. (Abserr<=errbnd .AND. Abserr/=resabs) .OR. Abserr==0._DP )&
-    GOTO 300
+  IF( Ier/=0 .OR. (Abserr<=errbnd .AND. Abserr/=resabs) .OR. Abserr==0._DP ) THEN
+    skip_to_end = .TRUE.
+  END IF
+  !
+  IF (.NOT. skip_to_end) THEN
   !
   !           INITIALIZATION
   !           --------------
@@ -382,7 +385,10 @@ PURE SUBROUTINE DQAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
     !           WITH NRMAX-TH LARGEST ERROR ESTIMATE (TO BE BISECTED NEXT).
     !
     CALL DQPSRT(Limit,Last,maxerr,errmax,Elist,Iord,nrmax)
-    IF( errsum<=errbnd ) GOTO 200
+    IF( errsum<=errbnd ) THEN
+      compute_sum = .TRUE.
+      EXIT
+    END IF
     IF( Ier/=0 ) EXIT
     IF( Last==2 ) THEN
       small = 0.375_DP
@@ -413,7 +419,7 @@ PURE SUBROUTINE DQAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
         DO k = id, jupbnd
           maxerr = Iord(nrmax)
           errmax = Elist(maxerr)
-          IF( ABS(Blist(maxerr)-Alist(maxerr))>small ) GOTO 100
+          IF( ABS(Blist(maxerr)-Alist(maxerr))>small ) CYCLE
           nrmax = nrmax + 1
         END DO
       END IF
@@ -445,41 +451,49 @@ PURE SUBROUTINE DQAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
       small = small*0.5_DP
       erlarg = errsum
     END IF
-    100 CONTINUE
   END DO
+  END IF  ! End of IF (.NOT. skip_to_end)
   !
   !           SET FINAL RESULT AND ERROR ESTIMATE.
   !           ------------------------------------
   !
-  IF( Abserr/=oflow ) THEN
-    IF( (Ier+ierro)/=0 ) THEN
-      IF( ierro==3 ) Abserr = Abserr + correc
-      IF( Ier==0 ) Ier = 3
-      IF( Result==0._DP .OR. area==0._DP ) THEN
-        IF( Abserr>errsum ) GOTO 200
-        IF( area==0._DP ) GOTO 300
-      ELSEIF( Abserr/ABS(Result)>errsum/ABS(area) ) THEN
-        GOTO 200
+  IF (.NOT. skip_to_end) THEN
+    IF( Abserr/=oflow ) THEN
+      IF( (Ier+ierro)/=0 ) THEN
+        IF( ierro==3 ) Abserr = Abserr + correc
+        IF( Ier==0 ) Ier = 3
+        IF( Result==0._DP .OR. area==0._DP ) THEN
+          IF( Abserr>errsum ) compute_sum = .TRUE.
+          IF( area==0._DP ) skip_to_end = .TRUE.
+        ELSEIF( Abserr/ABS(Result)>errsum/ABS(area) ) THEN
+          compute_sum = .TRUE.
+        END IF
       END IF
+      !
+      !           TEST ON DIVERGENCE
+      !
+      IF (.NOT. compute_sum .AND. .NOT. skip_to_end) THEN
+        IF( ksgn/=(-1) .OR. MAX(ABS(Result),ABS(area))>defabs*0.1D-01 ) THEN
+          IF( 0.1D-01>(Result/area) .OR. (Result/area)>0.1D+03 .OR. &
+            errsum>ABS(area) ) Ier = 6
+        END IF
+      END IF
+    ELSE
+      compute_sum = .TRUE.
     END IF
-    !
-    !           TEST ON DIVERGENCE
-    !
-    IF( ksgn/=(-1) .OR. MAX(ABS(Result),ABS(area))>defabs*0.1D-01 ) THEN
-      IF( 0.1D-01>(Result/area) .OR. (Result/area)>0.1D+03 .OR. &
-        errsum>ABS(area) ) Ier = 6
-    END IF
-    GOTO 300
   END IF
   !
   !           COMPUTE GLOBAL INTEGRAL SUM.
   !
-  200  Result = 0._DP
-  DO k = 1, Last
-    Result = Result + Rlist(k)
-  END DO
-  Abserr = errsum
-  300  Neval = 30*Last - 15
+  IF (compute_sum) THEN
+    Result = 0._DP
+    DO k = 1, Last
+      Result = Result + Rlist(k)
+    END DO
+    Abserr = errsum
+  END IF
+  !
+  Neval = 30*Last - 15
   IF( Inf==2 ) Neval = 2*Neval
   IF( Ier>2 ) Ier = Ier - 1
   !

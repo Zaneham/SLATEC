@@ -282,8 +282,11 @@ PURE SUBROUTINE QAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
   errbnd = MAX(Epsabs,Epsrel*dres)
   IF( Abserr<=100._SP*epmach*defabs .AND. Abserr>errbnd ) Ier = 2
   IF( Limit==1 ) Ier = 1
-  IF( Ier/=0 .OR. (Abserr<=errbnd .AND. Abserr/=resabs) .OR. Abserr==0._SP )&
-    GOTO 300
+  IF( Ier/=0 .OR. (Abserr<=errbnd .AND. Abserr/=resabs) .OR. Abserr==0._SP ) THEN
+    skip_to_end = .TRUE.
+  END IF
+  !
+  IF (.NOT. skip_to_end) THEN
   !
   !           INITIALIZATION
   !           --------------
@@ -385,7 +388,10 @@ PURE SUBROUTINE QAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
     !           BISECTED NEXT).
     !
     CALL QPSRT(Limit,Last,maxerr,errmax,Elist,Iord,nrmax)
-    IF( errsum<=errbnd ) GOTO 200
+    IF( errsum<=errbnd ) THEN
+      compute_sum = .TRUE.
+      EXIT
+    END IF
     IF( Ier/=0 ) EXIT
     IF( Last==2 ) THEN
       small = 0.375_SP
@@ -417,7 +423,7 @@ PURE SUBROUTINE QAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
         DO k = id, jupbnd
           maxerr = Iord(nrmax)
           errmax = Elist(maxerr)
-          IF( ABS(Blist(maxerr)-Alist(maxerr))>small ) GOTO 100
+          IF( ABS(Blist(maxerr)-Alist(maxerr))>small ) CYCLE
           nrmax = nrmax + 1
         END DO
       END IF
@@ -449,7 +455,6 @@ PURE SUBROUTINE QAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
       small = small*0.5_SP
       erlarg = errsum
     END IF
-    100 CONTINUE
   END DO
   !
   !           SET FINAL RESULT AND ERROR ESTIMATE.
