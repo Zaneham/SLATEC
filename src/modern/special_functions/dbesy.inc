@@ -22,7 +22,7 @@ PURE SUBROUTINE DBESY(X,Fnu,N,Y)
   !         recursion relation for a sequence of non-negative order Bessel
   !         functions Y_{FNU+I-1}(X), I=1,N for real X > 0.0E0 and
   !         non-negative orders FNU.  If FNU < NULIM, orders FNU and
-  !         FNU+1 are obtained from DDBESYNU which computes by a power
+  !         FNU+1 are obtained from DBSYNU which computes by a power
   !         series for X <= 2, the K Bessel function of an imaginary
   !         argument for 2 < X <= 20 and the asymptotic expansion for
   !         X > 20.
@@ -59,7 +59,7 @@ PURE SUBROUTINE DBESY(X,Fnu,N,Y)
   !                 Bessel function of the second kind, Journal of
   !                 Computational Physics 21, (1976), pp. 343-350.
   !***
-  ! **Routines called:**  DASYJY, DBESY0, DBESY1, DDBESYNU, I1MACH, R1MACH,
+  ! **Routines called:**  DASYJY, DBESY0, DBESY1, DBSYNU, I1MACH, R1MACH,
   !                    XERMSG, DYAIRY
 
   !* REVISION HISTORY  (YYMMDD)
@@ -129,7 +129,7 @@ PURE SUBROUTINE DBESY(X,Fnu,N,Y)
         tm = trx
         do_forward_recur = .TRUE.
       ELSE
-        CALL DDBESYNU(X,Fnu,nd,Y)
+        CALL DBSYNU(X,Fnu,nd,Y)
         RETURN
       END IF
     ELSE
@@ -150,7 +150,7 @@ PURE SUBROUTINE DBESY(X,Fnu,N,Y)
         IF( dnu/=0._DP ) THEN
           nb = 2
           IF( nud==0 .AND. nd==1 ) nb = 1
-          CALL DDBESYNU(X,dnu,nb,w)
+          CALL DBSYNU(X,dnu,nb,w)
           s1 = w(1)
           IF( nb==1 ) skip_to_y1_assign = .TRUE.
           IF( .NOT. skip_to_y1_assign ) s2 = w(2)

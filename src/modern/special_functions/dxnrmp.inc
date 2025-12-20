@@ -137,9 +137,9 @@ SUBROUTINE DXNRMP(Nu,Mu1,Mu2,Sarg,Mode,Spn,Ipn,Isig,Ierror)
   !   2024xx  Modernized: eliminated GOTOs using structured control flow
 
   INTEGER :: Nu, Mu1, Mu2, Mode, Ipn(Mu2-Mu1+1), Isig, Ierror
-  REAL(SP) :: Sarg, Spn(Mu2-Mu1+1)
+  REAL(DP) :: Sarg, Spn(Mu2-Mu1+1)
   INTEGER :: i, ip, ip1, ip2, j, k, mu
-  REAL(SP) :: c1, c2, p, p1, p2, p3, s, sx, t, tx, x, rk
+  REAL(DP) :: c1, c2, p, p1, p2, p3, s, sx, t, tx, x, rk
   !
   ! Control flow flags
   LOGICAL :: do_special_case, do_cleanup

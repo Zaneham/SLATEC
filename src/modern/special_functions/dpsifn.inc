@@ -152,7 +152,7 @@ PURE SUBROUTINE DPSIFN(X,N,Kode,M,Ans,Nz,Ierr)
   nx = MIN(-min_exp_dp,max_exp_dp)
   r1m5 = log10_radix_dp
   r1m4 = eps_dp*0.5_DP
-  wdtol = MAX(r1m4,0.5D-18_DP)
+  wdtol = MAX(r1m4,0.5E-18_DP)
   !-----------------------------------------------------------------------
   !     ELIM = APPROXIMATE EXPONENTIAL OVER AND UNDERFLOW LIMIT
   !-----------------------------------------------------------------------

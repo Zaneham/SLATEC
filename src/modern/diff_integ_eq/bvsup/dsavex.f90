@@ -1,0 +1,5 @@
+MODULE DSAVEX
+  USE service, ONLY : DP
+  IMPLICIT NONE
+  REAL(DP) :: xsave_com, term_com
+END MODULE DSAVEX

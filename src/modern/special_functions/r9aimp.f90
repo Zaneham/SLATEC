@@ -1,0 +1,136 @@
+!** R9AIMP
+ELEMENTAL SUBROUTINE R9AIMP(X,Ampl,Theta)
+  !> Evaluate the Airy modulus and phase.
+  !***
+  ! **Library:**   SLATEC (FNLIB)
+  !***
+  ! **Category:**  C10D
+  !***
+  ! **Type:**      SINGLE PRECISION (R9AIMP-S, D9AIMP-D)
+  !***
+  ! **Keywords:**  AIRY FUNCTION, FNLIB, MODULUS, PHASE, SPECIAL FUNCTIONS
+  !***
+  ! **Author:**  Fullerton, W., (LANL)
+  !***
+  ! **Description:**
+  !
+  ! Evaluate the Airy modulus and phase for X <= -1.0
+  !
+  ! Series for AM21       on the interval -1.25000D-01 to  0.
+  !                                        with weighted error   2.89E-17
+  !                                         log weighted error  16.54
+  !                               significant figures required  14.15
+  !                                    decimal places required  17.34
+  !
+  ! Series for ATH1       on the interval -1.25000D-01 to  0.
+  !                                        with weighted error   2.53E-17
+  !                                         log weighted error  16.60
+  !                               significant figures required  15.15
+  !                                    decimal places required  17.38
+  !
+  ! Series for AM22       on the interval -1.00000D+00 to -1.25000D-01
+  !                                        with weighted error   2.99E-17
+  !                                         log weighted error  16.52
+  !                               significant figures required  14.57
+  !                                    decimal places required  17.28
+  !
+  ! Series for ATH2       on the interval -1.00000D+00 to -1.25000D-01
+  !                                        with weighted error   2.57E-17
+  !                                         log weighted error  16.59
+  !                               significant figures required  15.07
+  !                                    decimal places required  17.34
+  !
+  !***
+  ! **References:**  (NONE)
+  !***
+  ! **Routines called:**  CSEVL, INITS, R1MACH, XERMSG
+
+  !* REVISION HISTORY  (YYMMDD)
+  !   770701  DATE WRITTEN
+  !   890206  REVISION DATE from Version 3.2
+  !   891214  Prologue converted to Version 4.0 format.  (BAB)
+  !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
+  !   900720  Routine changed from user-callable to subsidiary.  (WRB)
+  USE service, ONLY : eps_2_sp
+  !
+  REAL(SP), INTENT(IN) :: X
+  REAL(SP), INTENT(OUT) :: Ampl, Theta
+  !
+  REAL(SP) :: sqrtx, z
+  INTEGER, PARAMETER :: nam21 = 10, nath1 = 9, nam22 = 12, nath2 = 12
+  REAL(SP), PARAMETER :: xsml = -1._SP/eps_2_sp**0.3333_SP
+  REAL(SP), PARAMETER :: am21cs(40) = [ .0065809191761485_SP, .0023675984685722_SP, &
+    .0001324741670371_SP, .0000157600904043_SP, .0000027529702663_SP, &
+    .0000006102679017_SP, .0000001595088468_SP, .0000000471033947_SP, &
+    .0000000152933871_SP, .0000000053590722_SP, .0000000020000910_SP, &
+    .0000000007872292_SP, .0000000003243103_SP, .0000000001390106_SP, &
+    .0000000000617011_SP, .0000000000282491_SP, .0000000000132979_SP, &
+    .0000000000064188_SP, .0000000000031697_SP, .0000000000015981_SP, &
+    .0000000000008213_SP, .0000000000004296_SP, .0000000000002284_SP, &
+    .0000000000001232_SP, .0000000000000675_SP, .0000000000000374_SP, &
+    .0000000000000210_SP, .0000000000000119_SP, .0000000000000068_SP, &
+    .0000000000000039_SP, .0000000000000023_SP, .0000000000000013_SP, &
+    .0000000000000008_SP, .0000000000000005_SP, .0000000000000003_SP, &
+    .0000000000000001_SP, .0000000000000001_SP, .0000000000000000_SP, &
+    .0000000000000000_SP, .0000000000000000_SP ]
+  REAL(SP), PARAMETER :: ath1cs(36) = [ -.07125837815669365_SP, -.00590471979831451_SP, &
+    -.00012114544069499_SP, -.00000988608542270_SP, -.00000138084097352_SP, &
+    -.00000026142640172_SP, -.00000006050432589_SP, -.00000001618436223_SP, &
+    -.00000000483464911_SP, -.00000000157655272_SP, -.00000000055231518_SP, &
+    -.00000000020545441_SP, -.00000000008043412_SP, -.00000000003291252_SP, &
+    -.00000000001399875_SP, -.00000000000616151_SP, -.00000000000279614_SP, &
+    -.00000000000130428_SP, -.00000000000062373_SP, -.00000000000030512_SP, &
+    -.00000000000015239_SP, -.00000000000007758_SP, -.00000000000004020_SP, &
+    -.00000000000002117_SP, -.00000000000001132_SP, -.00000000000000614_SP, &
+    -.00000000000000337_SP, -.00000000000000188_SP, -.00000000000000105_SP, &
+    -.00000000000000060_SP, -.00000000000000034_SP, -.00000000000000020_SP, &
+    -.00000000000000011_SP, -.00000000000000007_SP, -.00000000000000004_SP, &
+    -.00000000000000002_SP ]
+  REAL(SP), PARAMETER :: am22cs(33) = [ -.01562844480625341_SP, .00778336445239681_SP, &
+    .00086705777047718_SP, .00015696627315611_SP, .00003563962571432_SP, &
+    .00000924598335425_SP, .00000262110161850_SP, .00000079188221651_SP, &
+    .00000025104152792_SP, .00000008265223206_SP, .00000002805711662_SP, &
+    .00000000976821090_SP, .00000000347407923_SP, .00000000125828132_SP, &
+    .00000000046298826_SP, .00000000017272825_SP, .00000000006523192_SP, &
+    .00000000002490471_SP, .00000000000960156_SP, .00000000000373448_SP, &
+    .00000000000146417_SP, .00000000000057826_SP, .00000000000022991_SP, &
+    .00000000000009197_SP, .00000000000003700_SP, .00000000000001496_SP, &
+    .00000000000000608_SP, .00000000000000248_SP, .00000000000000101_SP, &
+    .00000000000000041_SP, .00000000000000017_SP, .00000000000000007_SP, &
+    .00000000000000002_SP ]
+  REAL(SP), PARAMETER :: ath2cs(32) = [ .00440527345871877_SP,-.03042919452318455_SP, &
+    -.00138565328377179_SP,-.00018044439089549_SP,-.00003380847108327_SP, &
+    -.00000767818353522_SP,-.00000196783944371_SP,-.00000054837271158_SP, &
+    -.00000016254615505_SP,-.00000005053049981_SP,-.00000001631580701_SP, &
+    -.00000000543420411_SP,-.00000000185739855_SP,-.00000000064895120_SP, &
+    -.00000000023105948_SP,-.00000000008363282_SP,-.00000000003071196_SP, &
+    -.00000000001142367_SP,-.00000000000429811_SP,-.00000000000163389_SP, &
+    -.00000000000062693_SP,-.00000000000024260_SP,-.00000000000009461_SP, &
+    -.00000000000003716_SP,-.00000000000001469_SP,-.00000000000000584_SP, &
+    -.00000000000000233_SP,-.00000000000000093_SP,-.00000000000000037_SP, &
+    -.00000000000000015_SP,-.00000000000000006_SP,-.00000000000000002_SP ]
+  REAL(SP), PARAMETER ::  pi4 = 0.78539816339744831_SP
+  !* FIRST EXECUTABLE STATEMENT  R9AIMP
+  ! nam21 = INITS(am21cs,eta)
+  ! nath1 = INITS(ath1cs,eta)
+  ! nam22 = INITS(am22cs,eta)
+  ! nath2 = INITS(ath2cs,eta)
+  !
+  IF( X>(-1._SP) ) THEN
+    ERROR STOP 'R9AIMP : X MUST BE <= -1.0'
+  ELSEIF( X>=(-2._SP) ) THEN
+    z = (16._SP/X**3+9._SP)/7._SP
+    Ampl = 0.3125_SP + CSEVL(z,am22cs(1:nam22))
+    Theta = -0.625_SP + CSEVL(z,ath2cs(1:nath2))
+  ELSE
+    z = 1._SP
+    IF( X>xsml ) z = 16._SP/X**3 + 1._SP
+    Ampl = 0.3125_SP + CSEVL(z,am21cs(1:nam21))
+    Theta = -0.625_SP + CSEVL(z,ath1cs(1:nath1))
+  END IF
+  !
+  sqrtx = SQRT(-X)
+  Ampl = SQRT(Ampl/sqrtx)
+  Theta = pi4 - X*sqrtx*Theta
+  !
+END SUBROUTINE R9AIMP
