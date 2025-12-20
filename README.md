@@ -100,19 +100,24 @@ TODO: Add fpm.toml and CMake support
 
 **Prior Modernisation**: [Mehdi Chinoune](https://github.com/MehdiChinoune/SLATEC) kicked off the modernisation back in 2021, converting to free-form, adding intents and KIND parameters, marking pure/elemental procedures, and organising into modules. Massive props for the groundwork.
 
-**Current Work**: Me! Continuing the GOTO elimination crusade and general cleanup.
+**PCHIP Reference**: [Jacob Williams](https://github.com/jacobwilliams/PCHIP) created a clean modern Fortran PCHIP implementation in 2019. His control flow patterns (using `do`/`exit` with logical flags instead of GOTOs) informed our approach to modernising the PCHIP routines whilst preserving algorithmic correctness.
+
+**Current Work**: Zane Hambly, continuing the GOTO elimination crusade and general cleanup.
 
 ## The use of generative AI
 
-Generative LLM models such as Anthropic's Claude (Opus 4.5 and Sonnet) and my own offline models (Qwen coder with augmented epistemic detection) have been used for running tests and summarising their results. Code and documentation for better or worse is authored by me. 
+Generative LLM models such as Anthropic's Claude (Opus 4.5 and Sonnet) and my own offline models (Qwen coder with augmented epistemic detection) have been used for running tests and summarising their results. Code and documentation for better or worse is authored by me.
 
-Apologies for the NZ English throughout :-) 
+Apologies for the NZ English throughout :-)
 
 ## References
 
 - [SLATEC Guide](https://www.netlib.org/slatec/guide)
 - [SLATEC Table of Contents](https://www.netlib.org/slatec/toc)
 - [John Burkardt's SLATEC page](https://people.math.sc.edu/Burkardt/f_src/slatec/slatec.html)
+- [Jacob Williams Modern PCHIP](https://github.com/jacobwilliams/PCHIP)
+- Fritsch, F.N. and Carlson, R.E., "Monotone Piecewise Cubic Interpolation", SIAM J. Numer. Anal. 17(2), 1980, pp. 238-246
+- Fritsch, F.N., "PCHIP Package", UCRL-87285, Lawrence Livermore National Laboratory, 1982
 
 ## Contributing
 

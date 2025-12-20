@@ -71,7 +71,7 @@ MODULE service
     log10_radix_dp = LOG10( REAL( RADIX(1._DP), DP ) )
   !
 CONTAINS
-  include"ivout.f90"
-  include"svout.f90"
-  include"dvout.f90"
+  include"ivout.inc"
+  include"svout.inc"
+  include"dvout.inc"
 END MODULE service
