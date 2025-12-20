@@ -160,7 +160,7 @@ Several components incorporate modernisation patterns and code from Jacob Willia
 ### Current Development
 
 **Zane Hambly** — Ongoing GOTO elimination, control flow modernisation, and test suite development.
->>>>>>> 74d4afa (Update README with formal acknowledgements)
+
 
 ## The use of generative AI
 
