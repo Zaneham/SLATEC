@@ -153,33 +153,50 @@ PURE SUBROUTINE DEXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
     tx = X + 0.5_DP
     ix = INT( tx )
     kn = N + M - 1
-    IF( kn<=ix ) THEN
-      icase = 1
-      ks = kn
-      ml = M - 1
-      mu = -1
-      ind = M
-      IF( kn>1 ) GOTO 200
-    ELSE
-      IF( N<ix .AND. ix<kn ) GOTO 100
-      IF( N>=ix ) THEN
-        icase = 2
-        ind = 1
-        ks = N
-        mu = M - 1
-        IF( N>1 ) GOTO 200
-        IF( kn/=1 ) THEN
-          ix = 2
-          GOTO 100
-        END IF
+    ! Determine icase, ks, ml, mu, ind parameters based on kn, N, ix
+    ! Control flow modernized: replaced GOTOs with logical flags
+    go_via_100 = .FALSE.
+    main_compute: BLOCK
+      IF( kn<=ix ) THEN
+        icase = 1
+        ks = kn
+        ml = M - 1
+        mu = -1
+        ind = M
+        IF( kn>1 ) EXIT main_compute
       ELSE
-        Ierr = 2
-        RETURN
+        IF( N<ix .AND. ix<kn ) THEN
+          go_via_100 = .TRUE.
+          EXIT main_compute
+        END IF
+        IF( N>=ix ) THEN
+          icase = 2
+          ind = 1
+          ks = N
+          mu = M - 1
+          IF( N>1 ) EXIT main_compute
+          IF( kn/=1 ) THEN
+            ix = 2
+            go_via_100 = .TRUE.
+            EXIT main_compute
+          END IF
+        ELSE
+          Ierr = 2
+          RETURN
+        END IF
       END IF
+      ks = 2
+      icase = 3
+    END BLOCK main_compute
+    !
+    ! Label 100 equivalent: set parameters for intermediate case
+    IF( go_via_100 ) THEN
+      icase = 1
+      ks = ix
+      ml = ix - N
+      ind = ml + 1
+      mu = kn - ix
     END IF
-    ks = 2
-    icase = 3
-    GOTO 200
   ELSEIF( X==0._DP .AND. N>1 ) THEN
     DO i = 1, M
       En(i) = 1._DP/(N+i-2)
@@ -252,12 +269,8 @@ PURE SUBROUTINE DEXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
     En(1) = (emx-s)/X
     RETURN
   END IF
-  100  icase = 1
-  ks = ix
-  ml = ix - N
-  ind = ml + 1
-  mu = kn - ix
-  200  ik = ks/2
+  ! Label 200 equivalent: main computation
+  ik = ks/2
   ah = ik
   jset = 1 + ks - (ik+ik)
   !-----------------------------------------------------------------------
