@@ -23,10 +23,11 @@ PURE SUBROUTINE ZUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
   ! **See also:**  ZBESK
   !***
   ! **Routines called:**  D1MACH, ZABS, ZAIRY, ZS1S2, ZUCHK, ZUNHJ
-
-  !* REVISION HISTORY  (YYMMDD)
+  !
+  ! REVISION HISTORY  (YYMMDD)
   !   830501  DATE WRITTEN
   !   910415  Prologue converted to Version 4.0 format.  (BAB)
+  !   2024xx  Modernized: eliminated 17 GOTOs using structured control flow
   USE service, ONLY : tiny_dp, huge_dp
   !
   INTEGER, INTENT(IN) :: Kode, Mr, N
@@ -48,6 +49,9 @@ PURE SUBROUTINE ZUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
     aic = 1.26551212348464539_DP
   COMPLEX(DP), PARAMETER :: cip(4) = [ (1._DP,0._DP), (0._DP,-1._DP), &
     (-1._DP,0._DP), (0._DP,1._DP) ]
+  ! Control flow flags
+  logical :: underflow_occurred, exit_main_loop, do_forward_recur
+  logical :: skip_param_reuse, do_backward_recur
   !* FIRST EXECUTABLE STATEMENT  ZUNK2
   kdflg = 1
   Nz = 0
@@ -92,7 +96,9 @@ PURE SUBROUTINE ZUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
   !     CONJUGATION SINCE THE K FUNCTION IS REAL ON THE POSITIVE REAL AXIS
   !-----------------------------------------------------------------------
   j = 2
-  DO i = 1, N
+  exit_main_loop = .false.
+  
+  main_loop: DO i = 1, N
     !-----------------------------------------------------------------------
     !     J FLIP FLOPS BETWEEN 1 AND 2 IN J = 3 - J
     !-----------------------------------------------------------------------
@@ -109,6 +115,8 @@ PURE SUBROUTINE ZUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
     !     TEST FOR UNDERFLOW AND OVERFLOW
     !-----------------------------------------------------------------------
     rs1 = REAL(s1,DP)
+    underflow_occurred = .false.
+    
     IF( ABS(rs1)<=Elim ) THEN
       IF( kdflg==1 ) kflag = 2
       IF( ABS(rs1)>=Alim ) THEN
@@ -118,41 +126,62 @@ PURE SUBROUTINE ZUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
         aphi = ABS(phi(j))
         aarg = ABS(arg(j))
         rs1 = rs1 + LOG(aphi) - 0.25_DP*LOG(aarg) - aic
-        IF( ABS(rs1)>Elim ) GOTO 50
-        IF( kdflg==1 ) kflag = 1
-        IF( rs1>=0._DP ) THEN
-          IF( kdflg==1 ) kflag = 3
+        IF( ABS(rs1)>Elim ) underflow_occurred = .true.
+        IF( .not. underflow_occurred ) THEN
+          IF( kdflg==1 ) kflag = 1
+          IF( rs1>=0._DP ) THEN
+            IF( kdflg==1 ) kflag = 3
+          END IF
         END IF
       END IF
-      !-----------------------------------------------------------------------
-      !  SCALE S1 TO KEEP INTERMEDIATE ARITHMETIC ON SCALE NEAR EXPONENT EXTREMES
-      !-----------------------------------------------------------------------
-      c2 = arg(j)*cr2
-      CALL ZAIRY(c2,0,2,ai,nai,idum)
-      CALL ZAIRY(c2,1,2,dai,ndai,idum)
-      s2 = cs*phi(j)*(ai*asum(j)+cr2*dai*bsum(j))
-      c2r = REAL(s1,DP)
-      c2i = AIMAG(s1)
-      c2m = EXP(c2r)*REAL(css(kflag),DP)
-      s1 = CMPLX(c2m,0._DP,DP)*CMPLX(COS(c2i),SIN(c2i),DP)
-      s2 = s2*s1
-      IF( kflag==1 ) THEN
-        CALL ZUCHK(s2,nw,bry(1),Tol)
-        IF( nw/=0 ) GOTO 50
+      
+      IF( .not. underflow_occurred ) THEN
+        !-----------------------------------------------------------------------
+        !  SCALE S1 TO KEEP INTERMEDIATE ARITHMETIC ON SCALE NEAR EXPONENT EXTREMES
+        !-----------------------------------------------------------------------
+        c2 = arg(j)*cr2
+        CALL ZAIRY(c2,0,2,ai,nai,idum)
+        CALL ZAIRY(c2,1,2,dai,ndai,idum)
+        s2 = cs*phi(j)*(ai*asum(j)+cr2*dai*bsum(j))
+        c2r = REAL(s1,DP)
+        c2i = AIMAG(s1)
+        c2m = EXP(c2r)*REAL(css(kflag),DP)
+        s1 = CMPLX(c2m,0._DP,DP)*CMPLX(COS(c2i),SIN(c2i),DP)
+        s2 = s2*s1
+        IF( kflag==1 ) THEN
+          CALL ZUCHK(s2,nw,bry(1),Tol)
+          IF( nw/=0 ) underflow_occurred = .true.
+        END IF
+        
+        IF( .not. underflow_occurred ) THEN
+          IF( yy<=0._DP ) s2 = CONJG(s2)
+          cy(kdflg) = s2
+          Y(i) = s2*csr(kflag)
+          cs = -ci*cs
+          IF( kdflg==2 ) THEN
+            exit_main_loop = .true.
+            EXIT main_loop
+          END IF
+          kdflg = 2
+          CYCLE main_loop
+        END IF
       END IF
-      IF( yy<=0._DP ) s2 = CONJG(s2)
-      cy(kdflg) = s2
-      Y(i) = s2*csr(kflag)
-      cs = -ci*cs
-      IF( kdflg==2 ) GOTO 100
-      kdflg = 2
-      CYCLE
+    ELSE
+      underflow_occurred = .true.
     END IF
-    50  IF( rs1>0._DP ) GOTO 600
+    
+    ! Handle underflow (was label 50)
+    IF( rs1>0._DP ) THEN
+      Nz = -1
+      RETURN
+    END IF
     !-----------------------------------------------------------------------
     !     FOR X<0.0, THE I FUNCTION TO BE ADDED WILL OVERFLOW
     !-----------------------------------------------------------------------
-    IF( x<0._DP ) GOTO 600
+    IF( x<0._DP ) THEN
+      Nz = -1
+      RETURN
+    END IF
     kdflg = 1
     Y(i) = (0._DP,0._DP)
     cs = -ci*cs
@@ -163,78 +192,100 @@ PURE SUBROUTINE ZUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
         Nz = Nz + 1
       END IF
     END IF
-  END DO
-  i = N
-  100  rz = CMPLX(2._DP,0._DP,DP)/zr
+  END DO main_loop
+  
+  IF( .not. exit_main_loop ) i = N
+  
+  ! Label 100 equivalent - setup for forward recurrence
+  rz = CMPLX(2._DP,0._DP,DP)/zr
   ck = CMPLX(fn,0._DP,DP)*rz
   ib = i + 1
-  IF( N<ib ) GOTO 300
-  !-----------------------------------------------------------------------
-  !  TEST LAST MEMBER FOR UNDERFLOW AND OVERFLOW, SET SEQUENCE TO ZERO ON UNDERFLOW
-  !-----------------------------------------------------------------------
-  fn = Fnu + (N-1)
-  ipard = 1
-  IF( Mr/=0 ) ipard = 0
-  CALL ZUNHJ(zn,fn,ipard,Tol,phid,argd,zeta1d,zeta2d,asumd,bsumd)
-  IF( Kode==1 ) THEN
-    s1 = zeta1d - zeta2d
-  ELSE
-    cfn = CMPLX(fn,0._DP,DP)
-    s1 = zeta1d - cfn*(cfn/(zb+zeta2d))
-  END IF
-  rs1 = REAL(s1)
-  IF( ABS(rs1)<=Elim ) THEN
-    IF( ABS(rs1)<Alim ) GOTO 200
+  do_forward_recur = (N >= ib)
+
+  IF( do_forward_recur ) THEN
     !-----------------------------------------------------------------------
-    !     REFINE ESTIMATE AND TEST
+    !  TEST LAST MEMBER FOR UNDERFLOW AND OVERFLOW, SET SEQUENCE TO ZERO ON UNDERFLOW
     !-----------------------------------------------------------------------
-    aphi = ABS(phid)
-    aarg = ABS(argd)
-    rs1 = rs1 + LOG(aphi) - 0.25_DP*LOG(aarg) - aic
-    IF( ABS(rs1)<Elim ) GOTO 200
-  END IF
-  IF( rs1>0._DP ) GOTO 600
-  !-----------------------------------------------------------------------
-  !     FOR X<0.0, THE I FUNCTION TO BE ADDED WILL OVERFLOW
-  !-----------------------------------------------------------------------
-  IF( x<0._DP ) GOTO 600
-  Nz = N
-  DO i = 1, N
-    Y(i) = (0._DP,0._DP)
-  END DO
-  RETURN
-  !-----------------------------------------------------------------------
-  !     SCALED FORWARD RECURRENCE FOR REMAINDER OF THE SEQUENCE
-  !-----------------------------------------------------------------------
-  200  s1 = cy(1)
-  s2 = cy(2)
-  c1 = csr(kflag)
-  ascle = bry(kflag)
-  DO i = ib, N
-    c2 = s2
-    s2 = ck*s2 + s1
-    s1 = c2
-    ck = ck + rz
-    c2 = s2*c1
-    Y(i) = c2
-    IF( kflag<3 ) THEN
-      c2r = REAL(c2,DP)
-      c2i = AIMAG(c2)
-      c2r = ABS(c2r)
-      c2i = ABS(c2i)
-      c2m = MAX(c2r,c2i)
-      IF( c2m>ascle ) THEN
-        kflag = kflag + 1
-        ascle = bry(kflag)
-        s1 = s1*c1
-        s2 = c2
-        s1 = s1*css(kflag)
-        s2 = s2*css(kflag)
-        c1 = csr(kflag)
+    fn = Fnu + (N-1)
+    ipard = 1
+    IF( Mr/=0 ) ipard = 0
+    CALL ZUNHJ(zn,fn,ipard,Tol,phid,argd,zeta1d,zeta2d,asumd,bsumd)
+    IF( Kode==1 ) THEN
+      s1 = zeta1d - zeta2d
+    ELSE
+      cfn = CMPLX(fn,0._DP,DP)
+      s1 = zeta1d - cfn*(cfn/(zb+zeta2d))
+    END IF
+    rs1 = REAL(s1)
+    do_forward_recur = .false.  ! Assume we will not do forward recurrence
+
+    IF( ABS(rs1)<=Elim ) THEN
+      IF( ABS(rs1)<Alim ) THEN
+        do_forward_recur = .true.
+      ELSE
+        !-----------------------------------------------------------------------
+        !     REFINE ESTIMATE AND TEST
+        !-----------------------------------------------------------------------
+        aphi = ABS(phid)
+        aarg = ABS(argd)
+        rs1 = rs1 + LOG(aphi) - 0.25_DP*LOG(aarg) - aic
+        IF( ABS(rs1)<Elim ) do_forward_recur = .true.
       END IF
     END IF
-  END DO
-  300 CONTINUE
+
+    IF( .not. do_forward_recur ) THEN
+      IF( rs1>0._DP ) THEN
+        Nz = -1
+        RETURN
+      END IF
+      !-----------------------------------------------------------------------
+      !     FOR X<0.0, THE I FUNCTION TO BE ADDED WILL OVERFLOW
+      !-----------------------------------------------------------------------
+      IF( x<0._DP ) THEN
+        Nz = -1
+        RETURN
+      END IF
+      Nz = N
+      DO i = 1, N
+        Y(i) = (0._DP,0._DP)
+      END DO
+      RETURN
+    END IF
+
+    !-----------------------------------------------------------------------
+    !     SCALED FORWARD RECURRENCE FOR REMAINDER OF THE SEQUENCE (was label 200)
+    !-----------------------------------------------------------------------
+    s1 = cy(1)
+    s2 = cy(2)
+    c1 = csr(kflag)
+    ascle = bry(kflag)
+    DO i = ib, N
+      c2 = s2
+      s2 = ck*s2 + s1
+      s1 = c2
+      ck = ck + rz
+      c2 = s2*c1
+      Y(i) = c2
+      IF( kflag<3 ) THEN
+        c2r = REAL(c2,DP)
+        c2i = AIMAG(c2)
+        c2r = ABS(c2r)
+        c2i = ABS(c2i)
+        c2m = MAX(c2r,c2i)
+        IF( c2m>ascle ) THEN
+          kflag = kflag + 1
+          ascle = bry(kflag)
+          s1 = s1*c1
+          s2 = c2
+          s1 = s1*css(kflag)
+          s2 = s2*css(kflag)
+          c1 = csr(kflag)
+        END IF
+      END IF
+    END DO
+  END IF
+
+  ! Label 300 equivalent - Analytic continuation section
   IF( Mr==0 ) RETURN
   !-----------------------------------------------------------------------
   !     ANALYTIC CONTINUATION FOR RE(Z)<0.0E0
@@ -269,27 +320,35 @@ PURE SUBROUTINE ZUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
   ib = ib - 1
   ic = ib - 1
   iuf = 0
-  DO k = 1, N
+  do_backward_recur = .false.
+
+  cont_loop: DO k = 1, N
     !-----------------------------------------------------------------------
     !     LOGIC TO SORT OUT CASES WHOSE PARAMETERS WERE SET FOR THE K
     !     FUNCTION ABOVE
     !-----------------------------------------------------------------------
     fn = Fnu + (kk-1)
+    skip_param_reuse = .false.
     IF( N>2 ) THEN
-      IF( (kk==N) .AND. (ib<N) ) GOTO 350
-      IF( (kk/=ib) .AND. (kk/=ic) ) THEN
+      IF( (kk==N) .AND. (ib<N) ) THEN
+        skip_param_reuse = .true.
+      ELSE IF( (kk/=ib) .AND. (kk/=ic) ) THEN
         CALL ZUNHJ(zn,fn,0,Tol,phid,argd,zeta1d,zeta2d,asumd,bsumd)
-        GOTO 350
+        skip_param_reuse = .true.
       END IF
     END IF
-    phid = phi(j)
-    argd = arg(j)
-    zeta1d = zeta1(j)
-    zeta2d = zeta2(j)
-    asumd = asum(j)
-    bsumd = bsum(j)
-    j = 3 - j
-    350 CONTINUE
+
+    IF( .not. skip_param_reuse ) THEN
+      phid = phi(j)
+      argd = arg(j)
+      zeta1d = zeta1(j)
+      zeta2d = zeta2(j)
+      asumd = asum(j)
+      bsumd = bsum(j)
+      j = 3 - j
+    END IF
+
+    ! Label 350 equivalent - compute s1 and test
     IF( Kode==1 ) THEN
       s1 = -zeta1d + zeta2d
     ELSE
@@ -300,34 +359,55 @@ PURE SUBROUTINE ZUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
     !     TEST FOR UNDERFLOW AND OVERFLOW
     !-----------------------------------------------------------------------
     rs1 = REAL(s1,DP)
-    IF( ABS(rs1)>Elim ) GOTO 450
-    IF( kdflg==1 ) iflag = 2
-    IF( ABS(rs1)>=Alim ) THEN
-      !-----------------------------------------------------------------------
-      !     REFINE  TEST AND SCALE
-      !-----------------------------------------------------------------------
-      aphi = ABS(phid)
-      aarg = ABS(argd)
-      rs1 = rs1 + LOG(aphi) - 0.25_DP*LOG(aarg) - aic
-      IF( ABS(rs1)>Elim ) GOTO 450
-      IF( kdflg==1 ) iflag = 1
-      IF( rs1>=0._DP ) THEN
-        IF( kdflg==1 ) iflag = 3
+    underflow_occurred = .false.
+
+    IF( ABS(rs1)<=Elim ) THEN
+      IF( kdflg==1 ) iflag = 2
+      IF( ABS(rs1)>=Alim ) THEN
+        !-----------------------------------------------------------------------
+        !     REFINE  TEST AND SCALE
+        !-----------------------------------------------------------------------
+        aphi = ABS(phid)
+        aarg = ABS(argd)
+        rs1 = rs1 + LOG(aphi) - 0.25_DP*LOG(aarg) - aic
+        IF( ABS(rs1)>Elim ) underflow_occurred = .true.
+        IF( .not. underflow_occurred ) THEN
+          IF( kdflg==1 ) iflag = 1
+          IF( rs1>=0._DP ) THEN
+            IF( kdflg==1 ) iflag = 3
+          END IF
+        END IF
       END IF
+
+      IF( .not. underflow_occurred ) THEN
+        CALL ZAIRY(argd,0,2,ai,nai,idum)
+        CALL ZAIRY(argd,1,2,dai,ndai,idum)
+        s2 = cs*phid*(ai*asumd+dai*bsumd)
+        c2r = REAL(s1,DP)
+        c2i = AIMAG(s1)
+        c2m = EXP(c2r)*REAL(css(iflag),DP)
+        s1 = CMPLX(c2m,0._DP,DP)*CMPLX(COS(c2i),SIN(c2i),DP)
+        s2 = s2*s1
+        IF( iflag==1 ) THEN
+          CALL ZUCHK(s2,nw,bry(1),Tol)
+          IF( nw/=0 ) s2 = CMPLX(0._DP,0._DP,DP)
+        END IF
+      END IF
+    ELSE
+      underflow_occurred = .true.
     END IF
-    CALL ZAIRY(argd,0,2,ai,nai,idum)
-    CALL ZAIRY(argd,1,2,dai,ndai,idum)
-    s2 = cs*phid*(ai*asumd+dai*bsumd)
-    c2r = REAL(s1,DP)
-    c2i = AIMAG(s1)
-    c2m = EXP(c2r)*REAL(css(iflag),DP)
-    s1 = CMPLX(c2m,0._DP,DP)*CMPLX(COS(c2i),SIN(c2i),DP)
-    s2 = s2*s1
-    IF( iflag==1 ) THEN
-      CALL ZUCHK(s2,nw,bry(1),Tol)
-      IF( nw/=0 ) s2 = CMPLX(0._DP,0._DP,DP)
+
+    ! Handle underflow case (was label 450)
+    IF( underflow_occurred ) THEN
+      IF( rs1>0._DP ) THEN
+        Nz = -1
+        RETURN
+      END IF
+      s2 = (0._DP,0._DP)
     END IF
-    400  IF( yy<=0._DP ) s2 = CONJG(s2)
+
+    ! Label 400 equivalent - store result and combine I and K functions
+    IF( yy<=0._DP ) s2 = CONJG(s2)
     cy(kdflg) = s2
     c2 = s2
     s2 = s2*csr(iflag)
@@ -344,19 +424,20 @@ PURE SUBROUTINE ZUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
     cspn = -cspn
     cs = -cs*ci
     IF( c2/=(0._DP,0._DP) ) THEN
-      IF( kdflg==2 ) GOTO 500
+      IF( kdflg==2 ) THEN
+        do_backward_recur = .true.
+        EXIT cont_loop
+      END IF
       kdflg = 2
-      CYCLE
     ELSE
       kdflg = 1
-      CYCLE
     END IF
-    450  IF( rs1>0._DP ) GOTO 600
-    s2 = (0._DP,0._DP)
-    GOTO 400
-  END DO
-  k = N
-  500  il = N - k
+  END DO cont_loop
+
+  IF( .not. do_backward_recur ) k = N
+
+  ! Label 500 equivalent - backward recurrence
+  il = N - k
   IF( il==0 ) RETURN
   !-----------------------------------------------------------------------
   !     RECUR BACKWARD FOR REMAINDER OF I SEQUENCE AND ADD IN THE
@@ -400,7 +481,5 @@ PURE SUBROUTINE ZUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
       END IF
     END IF
   END DO
-  RETURN
-  600  Nz = -1
   !
 END SUBROUTINE ZUNK2

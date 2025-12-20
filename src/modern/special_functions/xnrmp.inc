@@ -134,11 +134,16 @@ SUBROUTINE XNRMP(Nu,Mu1,Mu2,Sarg,Mode,Spn,Ipn,Isig,Ierror)
   !           section.  (WRB)
   !           CALLs to XERROR changed to CALLs to XERMSG.  (WRB)
   !   920127  Revised PURPOSE section of prologue.  (DWL)
+  !   2024xx  Modernized: eliminated GOTOs using structured control flow
 
   INTEGER :: Nu, Mu1, Mu2, Mode, Ipn(Mu2-Mu1+1), Isig, Ierror
   REAL(SP) :: Sarg, Spn(Mu2-Mu1+1)
   INTEGER :: i, ip, ip1, ip2, j, k, mu
   REAL(SP) :: c1, c2, p, p1, p2, p3, s, sx, t, tx, x, rk
+  !
+  ! Control flow flags
+  LOGICAL :: do_special_case, do_cleanup
+  !
   ! CALL XSET TO INITIALIZE EXTENDED-RANGE ARITHMETIC (SEE XSET
   ! LISTING FOR DETAILS)
   !* FIRST EXECUTABLE STATEMENT  XNRMP
@@ -148,26 +153,76 @@ SUBROUTINE XNRMP(Nu,Mu1,Mu2,Sarg,Mode,Spn,Ipn,Isig,Ierror)
   !
   !        TEST FOR PROPER INPUT VALUES.
   !
-  IF( Nu<0 ) GOTO 300
-  IF( Mu1<0 ) GOTO 300
-  IF( Mu1>Mu2 ) GOTO 300
-  IF( Nu==0 ) GOTO 200
-  IF( Mode<1 .OR. Mode>2 ) GOTO 300
-  IF( Mode==2 ) THEN
-    IF( ABS(Sarg)>4._SP*ATAN(1._SP) ) GOTO 400
-    IF( Sarg==0._SP ) GOTO 200
-    x = COS(Sarg)
-    sx = ABS(SIN(Sarg))
-    tx = x/sx
-    Isig = INT( LOG10(2._SP*Nu*(5._SP+ABS(Sarg*tx))) )
-  ELSE
-    IF( ABS(Sarg)>1._SP ) GOTO 400
-    IF( ABS(Sarg)==1._SP ) GOTO 200
-    x = Sarg
-    sx = SQRT((1._SP+ABS(x))*((0.5_SP-ABS(x))+0.5_SP))
-    tx = x/sx
-    Isig = INT( LOG10(2._SP*Nu*(5._SP+tx**2)) )
+  IF( Nu<0 .OR. Mu1<0 .OR. Mu1>Mu2 ) THEN
+    ERROR STOP 'XNRMP : NU, MU1, MU2 or MODE not valid'
+    Ierror = 112
+    RETURN
   END IF
+
+  ! Initialize flags
+  do_special_case = .FALSE.
+  do_cleanup = .FALSE.
+
+  IF( Nu==0 ) THEN
+    do_special_case = .TRUE.
+  ELSEIF( Mode<1 .OR. Mode>2 ) THEN
+    ERROR STOP 'XNRMP : NU, MU1, MU2 or MODE not valid'
+    Ierror = 112
+    RETURN
+  ELSEIF( Mode==2 ) THEN
+    IF( ABS(Sarg)>4._SP*ATAN(1._SP) ) THEN
+      ERROR STOP 'XNRMP : SARG out of range'
+      Ierror = 113
+      RETURN
+    END IF
+    IF( Sarg==0._SP ) THEN
+      do_special_case = .TRUE.
+    ELSE
+      x = COS(Sarg)
+      sx = ABS(SIN(Sarg))
+      tx = x/sx
+      Isig = INT( LOG10(2._SP*Nu*(5._SP+ABS(Sarg*tx))) )
+    END IF
+  ELSE
+    ! Mode == 1
+    IF( ABS(Sarg)>1._SP ) THEN
+      ERROR STOP 'XNRMP : SARG out of range'
+      Ierror = 113
+      RETURN
+    END IF
+    IF( ABS(Sarg)==1._SP ) THEN
+      do_special_case = .TRUE.
+    ELSE
+      x = Sarg
+      sx = SQRT((1._SP+ABS(x))*((0.5_SP-ABS(x))+0.5_SP))
+      tx = x/sx
+      Isig = INT( LOG10(2._SP*Nu*(5._SP+tx**2)) )
+    END IF
+  END IF
+
+  IF( do_special_case ) THEN
+    !
+    !        SPECIAL CASE WHEN X=-1 OR +1, OR NU=0.
+    !
+    k = Mu2 - Mu1 + 1
+    DO i = 1, k
+      Spn(i) = 0._SP
+      Ipn(i) = 0
+    END DO
+    Isig = 0
+    IF( Mu1<=0 ) THEN
+      Isig = 1
+      Spn(1) = SQRT(Nu+0.5_SP)
+      Ipn(1) = 0
+      IF( MOD(Nu,2)/=0 ) THEN
+        IF( Mode/=1 .OR. Sarg/=1._SP ) THEN
+          IF( Mode/=2 ) Spn(1) = -Spn(1)
+        END IF
+      END IF
+    END IF
+    RETURN
+  END IF
+
   !
   !        BEGIN CALCULATION
   !
@@ -215,69 +270,47 @@ SUBROUTINE XNRMP(Nu,Mu1,Mu2,Sarg,Mode,Spn,Ipn,Isig,Ierror)
     Spn(i) = p2
     Ipn(i) = ip2
     i = i - 1
-    IF( i==0 ) GOTO 500
-  END IF
-  !
-  !        RECURRENCE PROCESS
-  !
-  100  p = mu*t
-  c1 = 1._SP/SQRT((1._SP-p+t)*(1._SP+p))
-  c2 = s*p*c1*p2
-  c1 = -SQRT((1._SP+p+t)*(1._SP-p))*c1*p1
-  CALL XADD(c2,ip2,c1,ip1,p,ip,Ierror)
-  IF( Ierror/=0 ) RETURN
-  mu = mu - 1
-  IF( mu<=Mu2 ) THEN
-    !
-    !        STORE IN ARRAY SPN FOR RETURN TO CALLING ROUTINE.
-    !
-    Spn(i) = p
-    Ipn(i) = ip
-    i = i - 1
-    IF( i==0 ) GOTO 500
-  END IF
-  p1 = p2
-  ip1 = ip2
-  p2 = p
-  ip2 = ip
-  IF( mu>Mu1 ) GOTO 100
-  GOTO 500
-  !
-  !        SPECIAL CASE WHEN X=-1 OR +1, OR NU=0.
-  !
-  200  k = Mu2 - Mu1 + 1
-  DO i = 1, k
-    Spn(i) = 0._SP
-    Ipn(i) = 0
-  END DO
-  Isig = 0
-  IF( Mu1<=0 ) THEN
-    Isig = 1
-    Spn(1) = SQRT(Nu+0.5_SP)
-    Ipn(1) = 0
-    IF( MOD(Nu,2)/=0 ) THEN
-      IF( Mode/=1 .OR. Sarg/=1._SP ) THEN
-        IF( Mode/=2 ) Spn(1) = -Spn(1)
-      END IF
+    IF( i==0 ) THEN
+      do_cleanup = .TRUE.
     END IF
   END IF
-  RETURN
+
   !
-  !          ERROR PRINTOUTS AND TERMINATION.
+  !        RECURRENCE PROCESS (was label 100)
   !
-  300 ERROR STOP 'XNRMP : NU, MU1, MU2 or MODE not valid'
-  Ierror = 112
-  RETURN
-  400 ERROR STOP 'XNRMP : SARG out of range'
-  Ierror = 113
-  RETURN
+  IF( .NOT. do_cleanup ) THEN
+    recurrence_loop: DO WHILE( mu>Mu1 )
+      p = mu*t
+      c1 = 1._SP/SQRT((1._SP-p+t)*(1._SP+p))
+      c2 = s*p*c1*p2
+      c1 = -SQRT((1._SP+p+t)*(1._SP-p))*c1*p1
+      CALL XADD(c2,ip2,c1,ip1,p,ip,Ierror)
+      IF( Ierror/=0 ) RETURN
+      mu = mu - 1
+      IF( mu<=Mu2 ) THEN
+        !
+        !        STORE IN ARRAY SPN FOR RETURN TO CALLING ROUTINE.
+        !
+        Spn(i) = p
+        Ipn(i) = ip
+        i = i - 1
+        IF( i==0 ) EXIT recurrence_loop
+      END IF
+      p1 = p2
+      ip1 = ip2
+      p2 = p
+      ip2 = ip
+    END DO recurrence_loop
+  END IF
+
   !
-  !        RETURN TO CALLING PROGRAM
+  !        RETURN TO CALLING PROGRAM (was label 500)
   !
-  500  k = Mu2 - Mu1 + 1
+  k = Mu2 - Mu1 + 1
   DO i = 1, k
     CALL XRED(Spn(i),Ipn(i),Ierror)
     IF( Ierror/=0 ) RETURN
   END DO
   RETURN
+
 END SUBROUTINE XNRMP

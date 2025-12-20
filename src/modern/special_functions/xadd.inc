@@ -43,11 +43,15 @@ SUBROUTINE XADD(X,Ix,Y,Iy,Z,Iz,Ierror)
   !           Corrected order of sections in prologue and added TYPE
   !           section.  (WRB)
   !   920127  Revised PURPOSE section of prologue.  (DWL)
+  !   2024xx  Modernized: eliminated 11 GOTOs using structured control flow
   USE XBLK ,ONLY: radixx_com, radixl_com, rad2l_com, l_com
   INTEGER :: Ierror, Ix, Iy, Iz
   REAL(SP) :: X, Y, Z
   INTEGER :: i, i1, i2, is, j
   REAL(SP) :: s, t
+  !
+  ! Control flow flags (replace GOTOs)
+  LOGICAL :: do_label_300, do_label_400, return_s_is
   !
   !
   !   THE CONDITIONS IMPOSED ON L AND KMAX BY THIS SUBROUTINE
@@ -118,18 +122,145 @@ SUBROUTINE XADD(X,Ix,Y,Iy,Z,Iz,Ierror)
     !
     i1 = ABS(i)/l_com
     i2 = MOD(ABS(i),l_com)
+
+    ! Initialize control flow flags
+    do_label_300 = .FALSE.
+    do_label_400 = .FALSE.
+    return_s_is = .FALSE.
+
     IF( ABS(t)>=radixl_com ) THEN
       j = i1 - 2
-      IF( j<0 ) GOTO 200
-      t = t*radixx_com**(-i2)/rad2l_com
-      GOTO 300
-    ELSE
-      IF( ABS(t)>=1._SP ) GOTO 200
-      IF( radixl_com*ABS(t)<1._SP ) THEN
-        j = i1 + 1
-        t = t*radixx_com**(l_com-i2)
-        GOTO 300
+      IF( j>=0 ) THEN
+        t = t*radixx_com**(-i2)/rad2l_com
+        do_label_300 = .TRUE.
       END IF
+    ELSEIF( ABS(t)>=1._SP ) THEN
+      ! Was: GOTO 200
+      j = i1 - 1
+      IF( j>=0 ) THEN
+        t = t*radixx_com**(-i2)/radixl_com
+        do_label_300 = .TRUE.
+      END IF
+    ELSEIF( radixl_com*ABS(t)<1._SP ) THEN
+      j = i1 + 1
+      t = t*radixx_com**(l_com-i2)
+      do_label_300 = .TRUE.
+    END IF
+
+    ! Was label 200 path (j<0 cases fall through to label 100)
+    IF( .NOT. do_label_300 ) THEN
+      j = i1 - 1
+      IF( j>=0 ) THEN
+        t = t*radixx_com**(-i2)/radixl_com
+        do_label_300 = .TRUE.
+      ELSE
+        ! Was label 100
+        j = i1
+        t = t*radixx_com**(-i2)
+        do_label_300 = .TRUE.
+      END IF
+    END IF
+
+    !
+    !  AT THIS POINT, SOME OR ALL OF THE DIFFERENCE IN THE
+    ! AUXILIARY INDICES HAS BEEN USED TO EFFECT A LEFT SHIFT
+    ! OF T.  THE SHIFTED VALUE OF T SATISFIES
+    !
+    !       RADIX**(-2*L) <= ABS(T) <= 1.0
+    !
+    ! AND, IF J=0, NO FURTHER SHIFTING REMAINS TO BE DONE.
+    !
+    ! Was label 300
+    IF( do_label_300 ) THEN
+      IF( j/=0 ) THEN
+        IF( ABS(s)<radixl_com .AND. j<=3 ) THEN
+          IF( ABS(s)>=1._SP ) THEN
+            SELECT CASE (j)
+              CASE (1)
+                s = s*radixl_com
+                do_label_400 = .TRUE.
+              CASE (2,3)
+                return_s_is = .TRUE.  ! Was: GOTO 350
+              CASE DEFAULT
+            END SELECT
+          END IF
+          IF( .NOT. do_label_400 .AND. .NOT. return_s_is ) THEN
+            IF( radixl_com*ABS(s)>=1._SP ) THEN
+              SELECT CASE (j)
+                CASE (1)
+                  s = s*radixl_com
+                  do_label_400 = .TRUE.
+                CASE (2)
+                  s = s*radixl_com
+                  s = s*radixl_com
+                  do_label_400 = .TRUE.
+                CASE (3)
+                  return_s_is = .TRUE.  ! Was: GOTO 350
+                CASE DEFAULT
+                  ! Fall through to label 320
+              END SELECT
+            END IF
+          END IF
+          IF( .NOT. do_label_400 .AND. .NOT. return_s_is ) THEN
+            ! Was label 320
+            SELECT CASE (j)
+              CASE (1)
+                s = s*radixl_com
+                do_label_400 = .TRUE.
+              CASE (2)
+                s = s*radixl_com
+                s = s*radixl_com
+                do_label_400 = .TRUE.
+              CASE (3)
+                s = s*radixl_com
+                s = s*radixl_com
+                s = s*radixl_com
+                do_label_400 = .TRUE.
+              CASE DEFAULT
+                return_s_is = .TRUE.  ! Was: GOTO 350
+            END SELECT
+          END IF
+        ELSE
+          return_s_is = .TRUE.  ! Was: GOTO 350
+        END IF
+      ELSE
+        do_label_400 = .TRUE.
+      END IF
+
+      ! Was label 350 - early return
+      IF( return_s_is ) THEN
+        Z = s
+        Iz = is
+        CALL XADJ(Z,Iz,Ierror)
+        RETURN
+      END IF
+    END IF
+
+    !
+    !   AT THIS POINT, THE REMAINING DIFFERENCE IN THE
+    ! AUXILIARY INDICES HAS BEEN USED TO EFFECT A RIGHT SHIFT
+    ! OF S.  IF THE SHIFTED VALUE OF S WOULD HAVE EXCEEDED
+    ! RADIX**L, THEN (S,IS) IS RETURNED AS THE VALUE OF THE
+    ! SUM.
+    !
+    ! Was label 400
+    IF( do_label_400 ) THEN
+      IF( ABS(s)>1._SP .AND. ABS(t)>1._SP ) THEN
+        s = s/radixl_com
+        t = t/radixl_com
+        Z = s + t
+        Iz = is - j*l_com + l_com
+      ELSEIF( ABS(s)<1._SP .AND. ABS(t)<1._SP ) THEN
+        s = s*radixl_com
+        t = t*radixl_com
+        Z = s + t
+        Iz = is - j*l_com - l_com
+      ELSE
+        Z = s + t
+        Iz = is - j*l_com
+      END IF
+      CALL XADJ(Z,Iz,Ierror)
+      RETURN
     END IF
   ELSE
     Z = X
@@ -137,90 +268,4 @@ SUBROUTINE XADD(X,Ix,Y,Iy,Z,Iz,Ierror)
     CALL XADJ(Z,Iz,Ierror)
     RETURN
   END IF
-  100  j = i1
-  t = t*radixx_com**(-i2)
-  GOTO 300
-  200  j = i1 - 1
-  IF( j<0 ) GOTO 100
-  t = t*radixx_com**(-i2)/radixl_com
-  !
-  !  AT THIS POINT, SOME OR ALL OF THE DIFFERENCE IN THE
-  ! AUXILIARY INDICES HAS BEEN USED TO EFFECT A LEFT SHIFT
-  ! OF T.  THE SHIFTED VALUE OF T SATISFIES
-  !
-  !       RADIX**(-2*L) <= ABS(T) <= 1.0
-  !
-  ! AND, IF J=0, NO FURTHER SHIFTING REMAINS TO BE DONE.
-  !
-  300 CONTINUE
-  IF( j/=0 ) THEN
-    IF( ABS(s)<radixl_com .AND. j<=3 ) THEN
-      IF( ABS(s)>=1._SP ) THEN
-        SELECT CASE (j)
-          CASE (1)
-            s = s*radixl_com
-            GOTO 400
-          CASE (2,3)
-            GOTO 350
-          CASE DEFAULT
-        END SELECT
-      END IF
-      IF( radixl_com*ABS(s)>=1._SP ) THEN
-        SELECT CASE (j)
-          CASE (1)
-            s = s*radixl_com
-          CASE (2)
-            s = s*radixl_com
-            s = s*radixl_com
-          CASE (3)
-            GOTO 350
-          CASE DEFAULT
-            GOTO 320
-        END SELECT
-        GOTO 400
-      END IF
-      320 CONTINUE
-      SELECT CASE (j)
-        CASE (1)
-          s = s*radixl_com
-          GOTO 400
-        CASE (2)
-        CASE (3)
-          s = s*radixl_com
-        CASE DEFAULT
-          GOTO 350
-      END SELECT
-      s = s*radixl_com
-      s = s*radixl_com
-      GOTO 400
-    END IF
-    350  Z = s
-    Iz = is
-    CALL XADJ(Z,Iz,Ierror)
-    RETURN
-  END IF
-  !
-  !   AT THIS POINT, THE REMAINING DIFFERENCE IN THE
-  ! AUXILIARY INDICES HAS BEEN USED TO EFFECT A RIGHT SHIFT
-  ! OF S.  IF THE SHIFTED VALUE OF S WOULD HAVE EXCEEDED
-  ! RADIX**L, THEN (S,IS) IS RETURNED AS THE VALUE OF THE
-  ! SUM.
-  !
-  400 CONTINUE
-  IF( ABS(s)>1._SP .AND. ABS(t)>1._SP ) THEN
-    s = s/radixl_com
-    t = t/radixl_com
-    Z = s + t
-    Iz = is - j*l_com + l_com
-  ELSEIF( ABS(s)<1._SP .AND. ABS(t)<1._SP ) THEN
-    s = s*radixl_com
-    t = t*radixl_com
-    Z = s + t
-    Iz = is - j*l_com - l_com
-  ELSE
-    Z = s + t
-    Iz = is - j*l_com
-  END IF
-  CALL XADJ(Z,Iz,Ierror)
-  RETURN
 END SUBROUTINE XADD
