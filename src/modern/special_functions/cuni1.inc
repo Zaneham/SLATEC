@@ -27,6 +27,7 @@ PURE SUBROUTINE CUNI1(Z,Fnu,Kode,N,Y,Nz,Nlast,Fnul,Tol,Elim,Alim)
   !* REVISION HISTORY  (YYMMDD)
   !   830501  DATE WRITTEN
   !   910415  Prologue converted to Version 4.0 format.  (BAB)
+  !   202412  Eliminated GOTOs using DO loops and logical flags.  (modernization)
   USE service, ONLY : tiny_sp, huge_sp
   !
   INTEGER, INTENT(IN) :: Kode, N
@@ -38,9 +39,11 @@ PURE SUBROUTINE CUNI1(Z,Fnu,Kode,N,Y,Nz,Nlast,Fnul,Tol,Elim,Alim)
   INTEGER :: i, iflag, init, k, m, nd, nn, nuf, nw
   COMPLEX(SP) :: cfn, crsc, cscl, csr(3), css(3), cwrk(16), c1, c2, &
     phi, rz, summ, s1, s2, zeta1, zeta2, cy(2)
+  LOGICAL :: do_underflow
   REAL(SP) :: aphi, ascle, bry(3), c2i, c2m, c2r, fn, rs1, yy
   !* FIRST EXECUTABLE STATEMENT  CUNI1
   Nz = 0
+  do_underflow = .FALSE.
   nd = N
   Nlast = 0
   !-----------------------------------------------------------------------
@@ -71,15 +74,20 @@ PURE SUBROUTINE CUNI1(Z,Fnu,Kode,N,Y,Nz,Nlast,Fnul,Tol,Elim,Alim)
   END IF
   rs1 = REAL(s1,SP)
   IF( ABS(rs1)>Elim ) THEN
-    IF( rs1>0._SP ) GOTO 400
+    IF( rs1>0._SP ) THEN
+      Nz = -1
+      RETURN
+    END IF
     Nz = N
     DO i = 1, N
       Y(i) = (0._SP,0._SP)
     END DO
     RETURN
   END IF
-  100  nn = MIN(2,nd)
-  DO i = 1, nn
+  main_loop: DO
+    do_underflow = .FALSE.
+    nn = MIN(2,nd)
+    inner_loop: DO i = 1, nn
     fn = Fnu + (nd-i)
     init = 0
     CALL CUNIK(Z,fn,1,0,Tol,init,phi,zeta1,zeta2,summ,cwrk)
@@ -94,7 +102,10 @@ PURE SUBROUTINE CUNI1(Z,Fnu,Kode,N,Y,Nz,Nlast,Fnul,Tol,Elim,Alim)
     !     TEST FOR UNDERFLOW AND OVERFLOW
     !-----------------------------------------------------------------------
     rs1 = REAL(s1,SP)
-    IF( ABS(rs1)>Elim ) GOTO 300
+    IF( ABS(rs1)>Elim ) THEN
+      do_underflow = .TRUE.
+      EXIT inner_loop
+    END IF
     IF( i==1 ) iflag = 2
     IF( ABS(rs1)>=Alim ) THEN
       !-----------------------------------------------------------------------
@@ -102,7 +113,10 @@ PURE SUBROUTINE CUNI1(Z,Fnu,Kode,N,Y,Nz,Nlast,Fnul,Tol,Elim,Alim)
       !-----------------------------------------------------------------------
       aphi = ABS(phi)
       rs1 = rs1 + LOG(aphi)
-      IF( ABS(rs1)>Elim ) GOTO 300
+    IF( ABS(rs1)>Elim ) THEN
+      do_underflow = .TRUE.
+      EXIT inner_loop
+    END IF
       IF( i==1 ) iflag = 1
       IF( rs1>=0._SP ) THEN
         IF( i==1 ) iflag = 3
@@ -119,12 +133,16 @@ PURE SUBROUTINE CUNI1(Z,Fnu,Kode,N,Y,Nz,Nlast,Fnul,Tol,Elim,Alim)
     s2 = s2*s1
     IF( iflag==1 ) THEN
       CALL CUCHK(s2,nw,bry(1),Tol)
-      IF( nw/=0 ) GOTO 300
+      IF( nw/=0 ) THEN
+        do_underflow = .TRUE.
+        EXIT inner_loop
+      END IF
     END IF
     m = nd - i + 1
     cy(i) = s2
     Y(m) = s2*csr(iflag)
-  END DO
+    END DO inner_loop
+    IF( do_underflow ) EXIT main_loop
   IF( nd>2 ) THEN
     rz = CMPLX(2._SP,0._SP,SP)/Z
     bry(2) = 1._SP/bry(1)
@@ -161,28 +179,30 @@ PURE SUBROUTINE CUNI1(Z,Fnu,Kode,N,Y,Nz,Nlast,Fnul,Tol,Elim,Alim)
       END IF
     END DO
   END IF
-  200  RETURN
+    EXIT main_loop  ! Normal completion
+  END DO main_loop
+  !
+  IF( .NOT. do_underflow ) RETURN
   !-----------------------------------------------------------------------
   !     SET UNDERFLOW AND UPDATE PARAMETERS
   !-----------------------------------------------------------------------
-  300 CONTINUE
   IF( rs1<=0._SP ) THEN
     Y(nd) = (0._SP,0._SP)
     Nz = Nz + 1
     nd = nd - 1
-    IF( nd==0 ) GOTO 200
+    IF( nd==0 ) RETURN
     CALL CUOIK(Z,Fnu,Kode,1,nd,Y,nuf,Tol,Elim,Alim)
     IF( nuf>=0 ) THEN
       nd = nd - nuf
       Nz = Nz + nuf
-      IF( nd==0 ) GOTO 200
+      IF( nd==0 ) RETURN
       fn = Fnu + (nd-1)
-      IF( fn>=Fnul ) GOTO 100
+      IF( fn>=Fnul ) CYCLE main_loop
       Nlast = nd
       RETURN
     END IF
   END IF
-  400  Nz = -1
+  Nz = -1
   !
   RETURN
 END SUBROUTINE CUNI1

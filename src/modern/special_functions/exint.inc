@@ -108,8 +108,12 @@ PURE SUBROUTINE EXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
   REAL(SP) :: a(99), aa, aams, ah, ak, at, b(99), bk, bt, cc, cnorm, ct, em, emx, &
     etol, fnm, fx, pt, p1, p2, s, tx, xcut, xlim, xtol, y(2), yt, y1, y2
   INTEGER :: i, ic, icase, ict, ik, ind, ix, i1m, jset, k, kk, kn, ks, ml, mu, nd, nm
+  LOGICAL :: go_via_100, skip_50, do_300, do_400
   !* FIRST EXECUTABLE STATEMENT  EXINT
   Ierr = 0
+  skip_50 = .FALSE.
+  do_300 = .FALSE.
+  do_400 = .FALSE.
   Nz = 0
   etol = MAX(eps_sp,0.5E-18_SP)
   IF( X<0._SP ) Ierr = 1
@@ -237,18 +241,24 @@ PURE SUBROUTINE EXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
           ak = ak + 1._SP
           CYCLE
         ELSEIF( i>=2 ) THEN
-          IF( nd-2>i .OR. i>nd-1 ) GOTO 50
+          IF( nd-2>i .OR. i>nd-1 ) THEN
+            skip_50 = .TRUE.
+            EXIT
+          END IF
           ak = ak + 1._SP
           CYCLE
         END IF
       END IF
       ak = ak + 1._SP
     END DO
-    IF( ic/=1 ) THEN
-      Ierr = 2
-      RETURN
+    IF( .NOT. skip_50 ) THEN
+      IF( ic/=1 ) THEN
+        Ierr = 2
+        RETURN
+      END IF
     END IF
-    50  IF( nd==1 ) s = s + (-LOG(X)+PSIXN(1))
+    ! Label 50 equivalent
+    IF( nd==1 ) s = s + (-LOG(X)+PSIXN(1))
     IF( Kode==2 ) s = s*EXP(X)
     En(1) = s
     emx = 1._SP
@@ -256,13 +266,18 @@ PURE SUBROUTINE EXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
       En(ind) = s
       aa = ks
       IF( Kode==1 ) emx = EXP(-X)
-      IF( icase==1 ) GOTO 300
-      IF( icase==2 ) GOTO 400
+      do_300 = (icase==1)
+      do_400 = (icase==1 .OR. icase==2)
     END IF
-    IF( icase==2 ) RETURN
+    IF( do_300 .OR. do_400 ) THEN
+      ! Continue to recursion section below
+    ELSEIF( icase==2 ) THEN
+      RETURN
+    ELSE
     IF( Kode==1 ) emx = EXP(-X)
-    En(1) = (emx-s)/X
-    RETURN
+      En(1) = (emx-s)/X
+      RETURN
+    END IF
   END IF
   ! Label 200 equivalent: main computation
   ik = ks/2
@@ -338,32 +353,41 @@ PURE SUBROUTINE EXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
         En(ind) = emx*y(jset)
         IF( M==1 ) RETURN
         aa = ks
-        IF( icase==1 ) GOTO 300
-        IF( icase==2 ) GOTO 400
+        do_300 = (icase==1)
+        do_400 = (icase==1 .OR. icase==2)
       END IF
+      IF( do_300 .OR. do_400 ) THEN
+        ! Continue to recursion section below
+      ELSE
+        !-----------------------------------------------------------------------
+        !     RECURSION SECTION  N*E(N+1,X) + X*E(N,X)=EMX
       !-----------------------------------------------------------------------
-      !     RECURSION SECTION  N*E(N+1,X) + X*E(N,X)=EMX
-      !-----------------------------------------------------------------------
-      En(1) = emx*(1._SP-y(1))/X
-      RETURN
+        En(1) = emx*(1._SP-y(1))/X
+        RETURN
+      END IF
     END IF
   END DO
   Ierr = 2
   RETURN
-  300  k = ind - 1
-  DO i = 1, ml
+  ! Recursion sections
+  IF( do_300 ) THEN
+    k = ind - 1
+    DO i = 1, ml
     aa = aa - 1._SP
     En(k) = (emx-aa*En(k+1))/X
     k = k - 1
-  END DO
-  IF( mu<=0 ) RETURN
-  aa = ks
-  400  k = ind
+    END DO
+    IF( mu<=0 ) RETURN
+    aa = ks
+  END IF
+  IF( do_400 ) THEN
+    k = ind
   DO i = 1, mu
     En(k+1) = (emx-X*En(k))/aa
     aa = aa + 1._SP
-    k = k + 1
-  END DO
+      k = k + 1
+    END DO
+  END IF
 
   RETURN
 END SUBROUTINE EXINT
