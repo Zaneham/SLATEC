@@ -18,7 +18,7 @@ PURE SUBROUTINE PSIFN(X,N,Kode,M,Ans,Nz,Ierr)
   !         The following definitions are used in PSIFN:
   !
   !      Definition 1
-  !         PSI(X) = d/dx (ln(GAMMA(X))), the first derivative of
+  !         PSI(X) = d/dx (ln(GAMMA(X)), the first derivative of
   !                  the LOG GAMMA function.
   !      Definition 2
   !                     K   K
@@ -111,7 +111,6 @@ PURE SUBROUTINE PSIFN(X,N,Kode,M,Ans,Nz,Ierr)
   !   890531  REVISION DATE from Version 3.2
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
-  !   2024xx  Modernized: eliminated GOTOs using structured control flow
   USE service, ONLY : log10_radix_sp, eps_sp, digits_sp, max_exp_sp, min_exp_sp
   !
   INTEGER, INTENT(IN) :: Kode, M, N
@@ -124,10 +123,6 @@ PURE SUBROUTINE PSIFN(X,N,Kode,M,Ans,Nz,Ierr)
     slope, t, ta, tk, tol, tols, trm(22), trmr(100), tss, tst, tt, t1, t2, wdtol, &
     xdmln, xdmy, xinc, xln, xm, xmin, xq, yint
   INTEGER, PARAMETER :: nmax = 100
-  !
-  ! Control flow flags (replace GOTOs)
-  LOGICAL :: do_n0_recursion, do_final_handling
-  !
   !-----------------------------------------------------------------------
   !             BERNOULLI NUMBERS
   !-----------------------------------------------------------------------
@@ -158,136 +153,171 @@ PURE SUBROUTINE PSIFN(X,N,Kode,M,Ans,Nz,Ierr)
   !-----------------------------------------------------------------------
   elim = 2.302_SP*(nx*r1m5-3._SP)
   xln = LOG(X)
-
-  ! Initialize exit flags
-  do_n0_recursion = .FALSE.
-  do_final_handling = .FALSE.
-
-  ! Main computation loop (was label 100 with backward GOTO)
-  main_loop: DO
-    nn = N + mm - 1
-    fn = nn
-    fnp = fn + 1._SP
-    t = fnp*xln
-    !-----------------------------------------------------------------------
-    !     OVERFLOW AND UNDERFLOW TEST FOR SMALL AND LARGE X
-    !-----------------------------------------------------------------------
-    IF( ABS(t)<=elim ) THEN
-      IF( X<wdtol ) THEN
-        !-----------------------------------------------------------------------
-        !     SMALL X<UNIT ROUND OFF
-        !-----------------------------------------------------------------------
-        Ans(1) = X**(-N-1)
-        IF( mm/=1 ) THEN
-          k = 1
-          DO i = 2, mm
-            Ans(k+1) = Ans(k)/X
-            k = k + 1
+  100  nn = N + mm - 1
+  fn = nn
+  fnp = fn + 1._SP
+  t = fnp*xln
+  !-----------------------------------------------------------------------
+  !     OVERFLOW AND UNDERFLOW TEST FOR SMALL AND LARGE X
+  !-----------------------------------------------------------------------
+  IF( ABS(t)<=elim ) THEN
+    IF( X<wdtol ) THEN
+      !-----------------------------------------------------------------------
+      !     SMALL X<UNIT ROUND OFF
+      !-----------------------------------------------------------------------
+      Ans(1) = X**(-N-1)
+      IF( mm/=1 ) THEN
+        k = 1
+        DO i = 2, mm
+          Ans(k+1) = Ans(k)/X
+          k = k + 1
+        END DO
+      END IF
+      IF( N/=0 ) RETURN
+      IF( Kode==2 ) Ans(1) = Ans(1) + xln
+      RETURN
+    ELSE
+      !-----------------------------------------------------------------------
+      !     COMPUTE XMIN AND THE NUMBER OF TERMS OF THE SERIES, FLN+1
+      !-----------------------------------------------------------------------
+      rln = r1m5*digits_sp
+      rln = MIN(rln,18.06E0_SP)
+      fln = MAX(rln,3._SP) - 3._SP
+      yint = 3.50_SP + 0.40_SP*fln
+      slope = 0.21_SP + fln*(0.0006038_SP*fln+0.008677E0_SP)
+      xm = yint + slope*fn
+      mx = INT(xm) + 1
+      xmin = mx
+      IF( N/=0 ) THEN
+        xm = -2.302_SP*rln - MIN(0._SP,xln)
+        fns = N
+        arg = xm/fns
+        arg = MIN(0._SP,arg)
+        eps = EXP(arg)
+        xm = 1._SP - eps
+        IF( ABS(arg)<1.0E-3 ) xm = -arg
+        fln = X*xm/eps
+        xm = xmin - X
+        IF( xm>7._SP .AND. fln<15._SP ) THEN
+          !-----------------------------------------------------------------------
+          !     COMPUTE BY SERIES (X+K)**(-(N+1)), K=0,1,2,...
+          !-----------------------------------------------------------------------
+          nn = INT(fln) + 1
+          np = N + 1
+          t1 = (fns+1._SP)*xln
+          t = EXP(-t1)
+          s = t
+          den = X
+          DO i = 1, nn
+            den = den + 1._SP
+            trm(i) = den**(-np)
+            s = s + trm(i)
           END DO
-        END IF
-        IF( N/=0 ) RETURN
-        IF( Kode==2 ) Ans(1) = Ans(1) + xln
-        RETURN
-      ELSE
-        !-----------------------------------------------------------------------
-        !     COMPUTE XMIN AND THE NUMBER OF TERMS OF THE SERIES, FLN+1
-        !-----------------------------------------------------------------------
-        rln = r1m5*digits_sp
-        rln = MIN(rln,18.06E0_SP)
-        fln = MAX(rln,3._SP) - 3._SP
-        yint = 3.50_SP + 0.40_SP*fln
-        slope = 0.21_SP + fln*(0.0006038_SP*fln+0.008677E0_SP)
-        xm = yint + slope*fn
-        mx = INT(xm) + 1
-        xmin = mx
-        IF( N/=0 ) THEN
-          xm = -2.302_SP*rln - MIN(0._SP,xln)
-          fns = N
-          arg = xm/fns
-          arg = MIN(0._SP,arg)
-          eps = EXP(arg)
-          xm = 1._SP - eps
-          IF( ABS(arg)<1.0E-3 ) xm = -arg
-          fln = X*xm/eps
-          xm = xmin - X
-          IF( xm>7._SP .AND. fln<15._SP ) THEN
-            !-----------------------------------------------------------------------
-            !     COMPUTE BY SERIES (X+K)**(-(N+1)), K=0,1,2,...
-            !-----------------------------------------------------------------------
-            nn = INT(fln) + 1
-            np = N + 1
-            t1 = (fns+1._SP)*xln
-            t = EXP(-t1)
+          Ans(1) = s
+          IF( N==0 ) THEN
+            IF( Kode==2 ) Ans(1) = s + xln
+          END IF
+          IF( mm==1 ) RETURN
+          !-----------------------------------------------------------------------
+          !     GENERATE HIGHER DERIVATIVES, J>N
+          !-----------------------------------------------------------------------
+          tol = wdtol/5._SP
+          DO j = 2, mm
+            t = t/X
             s = t
+            tols = t*tol
             den = X
             DO i = 1, nn
               den = den + 1._SP
-              trm(i) = den**(-np)
+              trm(i) = trm(i)/den
               s = s + trm(i)
+              IF( trm(i)<tols ) EXIT
             END DO
-            Ans(1) = s
-            IF( N==0 ) THEN
-              IF( Kode==2 ) Ans(1) = s + xln
-            END IF
-            IF( mm==1 ) RETURN
-            !-----------------------------------------------------------------------
-            !     GENERATE HIGHER DERIVATIVES, J>N
-            !-----------------------------------------------------------------------
-            tol = wdtol/5._SP
-            DO j = 2, mm
-              t = t/X
-              s = t
-              tols = t*tol
-              den = X
-              DO i = 1, nn
-                den = den + 1._SP
-                trm(i) = trm(i)/den
-                s = s + trm(i)
-                IF( trm(i)<tols ) EXIT
-              END DO
-              Ans(j) = s
-            END DO
-            RETURN
-          END IF
+            Ans(j) = s
+          END DO
+          RETURN
         END IF
-        xdmy = X
-        xdmln = xln
-        xinc = 0._SP
-        IF( X<xmin ) THEN
-          nx = INT(X)
-          xinc = xmin - nx
-          xdmy = X + xinc
-          xdmln = LOG(xdmy)
-        END IF
+      END IF
+      xdmy = X
+      xdmln = xln
+      xinc = 0._SP
+      IF( X<xmin ) THEN
+        nx = INT(X)
+        xinc = xmin - nx
+        xdmy = X + xinc
+        xdmln = LOG(xdmy)
+      END IF
+      !-----------------------------------------------------------------------
+      !     GENERATE W(N+MM-1,X) BY THE ASYMPTOTIC EXPANSION
+      !-----------------------------------------------------------------------
+      t = fn*xdmln
+      t1 = xdmln + xdmln
+      t2 = t + xdmln
+      tk = MAX(ABS(t),ABS(t1),ABS(t2))
+      IF( tk>elim ) GOTO 200
+      tss = EXP(-t)
+      tt = 0.5_SP/xdmy
+      t1 = tt
+      tst = wdtol*tt
+      IF( nn/=0 ) t1 = tt + 1._SP/fn
+      rxsq = 1._SP/(xdmy*xdmy)
+      ta = 0.5_SP*rxsq
+      t = fnp*ta
+      s = t*b(3)
+      IF( ABS(s)>=tst ) THEN
+        tk = 2._SP
+        DO k = 4, 22
+          t = t*((tk+fn+1._SP)/(tk+1._SP))*((tk+fn)/(tk+2._SP))*rxsq
+          trm(k) = t*b(k)
+          IF( ABS(trm(k))<tst ) EXIT
+          s = s + trm(k)
+          tk = tk + 2._SP
+        END DO
+      END IF
+      s = (s+t1)*tss
+      IF( xinc/=0._SP ) THEN
         !-----------------------------------------------------------------------
-        !     GENERATE W(N+MM-1,X) BY THE ASYMPTOTIC EXPANSION
+        !     BACKWARD RECUR FROM XDMY TO X
         !-----------------------------------------------------------------------
-        t = fn*xdmln
-        t1 = xdmln + xdmln
-        t2 = t + xdmln
-        tk = MAX(ABS(t),ABS(t1),ABS(t2))
-        IF( tk>elim ) THEN
-          ! Was GOTO 200 - underflow handling
-          Nz = Nz + 1
-          Ans(mm) = 0._SP
-          mm = mm - 1
-          IF( mm==0 ) RETURN
-          CYCLE main_loop
+        nx = INT(xinc)
+        np = nn + 1
+        IF( nx>nmax ) THEN
+          Ierr = 3
+          Nz = 0
+          RETURN
+        ELSE
+          IF( nn==0 ) GOTO 120
+          xm = xinc - 1._SP
+          fx = X + xm
+          !-----------------------------------------------------------------------
+          !     THIS LOOP SHOULD NOT BE CHANGED. FX IS ACCURATE WHEN X IS SMALL
+          !-----------------------------------------------------------------------
+          DO i = 1, nx
+            trmr(i) = fx**(-np)
+            s = s + trmr(i)
+            xm = xm - 1._SP
+            fx = X + xm
+          END DO
         END IF
-        tss = EXP(-t)
-        tt = 0.5_SP/xdmy
+      END IF
+      Ans(mm) = s
+      IF( fn==0._SP ) GOTO 150
+      !-----------------------------------------------------------------------
+      !     GENERATE LOWER DERIVATIVES, J<N+MM-1
+      !-----------------------------------------------------------------------
+      IF( mm==1 ) RETURN
+      DO j = 2, mm
+        fnp = fn
+        fn = fn - 1._SP
+        tss = tss*xdmy
         t1 = tt
-        tst = wdtol*tt
-        IF( nn/=0 ) t1 = tt + 1._SP/fn
-        rxsq = 1._SP/(xdmy*xdmy)
-        ta = 0.5_SP*rxsq
+        IF( fn/=0._SP ) t1 = tt + 1._SP/fn
         t = fnp*ta
         s = t*b(3)
         IF( ABS(s)>=tst ) THEN
-          tk = 2._SP
+          tk = 3._SP + fnp
           DO k = 4, 22
-            t = t*((tk+fn+1._SP)/(tk+1._SP))*((tk+fn)/(tk+2._SP))*rxsq
-            trm(k) = t*b(k)
+            trm(k) = trm(k)*fnp/tk
             IF( ABS(trm(k))<tst ) EXIT
             s = s + trm(k)
             tk = tk + 2._SP
@@ -295,120 +325,49 @@ PURE SUBROUTINE PSIFN(X,N,Kode,M,Ans,Nz,Ierr)
         END IF
         s = (s+t1)*tss
         IF( xinc/=0._SP ) THEN
-          !-----------------------------------------------------------------------
-          !     BACKWARD RECUR FROM XDMY TO X
-          !-----------------------------------------------------------------------
-          nx = INT(xinc)
-          np = nn + 1
-          IF( nx>nmax ) THEN
-            Ierr = 3
-            Nz = 0
-            RETURN
-          ELSE
-            IF( nn==0 ) THEN
-              ! Was GOTO 120
-              do_n0_recursion = .TRUE.
-              EXIT main_loop
-            END IF
-            xm = xinc - 1._SP
+          IF( fn==0._SP ) GOTO 120
+          xm = xinc - 1._SP
+          fx = X + xm
+          DO i = 1, nx
+            trmr(i) = trmr(i)*fx
+            s = s + trmr(i)
+            xm = xm - 1._SP
             fx = X + xm
-            !-----------------------------------------------------------------------
-            !     THIS LOOP SHOULD NOT BE CHANGED. FX IS ACCURATE WHEN X IS SMALL
-            !-----------------------------------------------------------------------
-            DO i = 1, nx
-              trmr(i) = fx**(-np)
-              s = s + trmr(i)
-              xm = xm - 1._SP
-              fx = X + xm
-            END DO
-          END IF
+          END DO
         END IF
-        Ans(mm) = s
-        IF( fn==0._SP ) THEN
-          ! Was GOTO 150
-          do_final_handling = .TRUE.
-          EXIT main_loop
-        END IF
-        !-----------------------------------------------------------------------
-        !     GENERATE LOWER DERIVATIVES, J<N+MM-1
-        !-----------------------------------------------------------------------
-        IF( mm==1 ) RETURN
-        DO j = 2, mm
-          fnp = fn
-          fn = fn - 1._SP
-          tss = tss*xdmy
-          t1 = tt
-          IF( fn/=0._SP ) t1 = tt + 1._SP/fn
-          t = fnp*ta
-          s = t*b(3)
-          IF( ABS(s)>=tst ) THEN
-            tk = 3._SP + fnp
-            DO k = 4, 22
-              trm(k) = trm(k)*fnp/tk
-              IF( ABS(trm(k))<tst ) EXIT
-              s = s + trm(k)
-              tk = tk + 2._SP
-            END DO
-          END IF
-          s = (s+t1)*tss
-          IF( xinc/=0._SP ) THEN
-            IF( fn==0._SP ) THEN
-              ! Was GOTO 120
-              do_n0_recursion = .TRUE.
-              EXIT main_loop
-            END IF
-            xm = xinc - 1._SP
-            fx = X + xm
-            DO i = 1, nx
-              trmr(i) = trmr(i)*fx
-              s = s + trmr(i)
-              xm = xm - 1._SP
-              fx = X + xm
-            END DO
-          END IF
-          mx = mm - j + 1
-          Ans(mx) = s
-          IF( fn==0._SP ) THEN
-            ! Was GOTO 150
-            do_final_handling = .TRUE.
-            EXIT main_loop
-          END IF
-        END DO
-        RETURN
-      END IF
-    ELSEIF( t<=0._SP ) THEN
-      Nz = 0
-      Ierr = 2
+        mx = mm - j + 1
+        Ans(mx) = s
+        IF( fn==0._SP ) GOTO 150
+      END DO
+      RETURN
+      !-----------------------------------------------------------------------
+      !     RECURSION FOR N = 0
+      !-----------------------------------------------------------------------
+      120 CONTINUE
+      DO i = 1, nx
+        s = s + 1._SP/(X+nx-i)
+      END DO
+    END IF
+    150 CONTINUE
+    IF( Kode==2 ) THEN
+      IF( xdmy==X ) RETURN
+      xq = xdmy/X
+      Ans(1) = s - LOG(xq)
       RETURN
     ELSE
-      ! t > elim: underflow (was fall-through to label 200)
-      Nz = Nz + 1
-      Ans(mm) = 0._SP
-      mm = mm - 1
-      IF( mm==0 ) RETURN
-      CYCLE main_loop
+      Ans(1) = s - xdmln
+      RETURN
     END IF
-  END DO main_loop
-
-  !-----------------------------------------------------------------------
-  !     POST-LOOP EXIT HANDLING (was labels 120 and 150)
-  !-----------------------------------------------------------------------
-  IF( do_n0_recursion ) THEN
-    ! Was label 120: RECURSION FOR N = 0
-    DO i = 1, nx
-      s = s + 1._SP/(X+nx-i)
-    END DO
-    ! Falls through to 150
+  ELSEIF( t<=0._SP ) THEN
+    Nz = 0
+    Ierr = 2
+    RETURN
   END IF
-
-  ! Was label 150: Final handling
-  IF( Kode==2 ) THEN
-    IF( xdmy==X ) RETURN
-    xq = xdmy/X
-    Ans(1) = s - LOG(xq)
-  ELSE
-    Ans(1) = s - xdmln
-  END IF
+  200  Nz = Nz + 1
+  Ans(mm) = 0._SP
+  mm = mm - 1
+  IF( mm==0 ) RETURN
+  GOTO 100
   RETURN
 
 END SUBROUTINE PSIFN

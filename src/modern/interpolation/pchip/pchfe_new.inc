@@ -1,0 +1,2 @@
+\!** PCHFE
+PURE SUBROUTINE PCHFE(N,X,F,D,Incfd,Skip,Ne,Xe,Fe,Ierr)
