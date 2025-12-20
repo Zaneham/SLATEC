@@ -88,6 +88,7 @@ PURE SUBROUTINE DBSKNU(X,Fnu,Kode,N,Y,Nz)
   !   910408  Updated the AUTHOR and REFERENCES sections.  (WRB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
 !   251218  Eliminated GOTOs per MODERNISATION_GUIDE.md S1. (ZH)
+!   251220  Fixed series_done bug: skip coef/asymp/Miller after series (ZH)
 !           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
   USE service, ONLY : log10_radix_dp, eps_2_dp, min_exp_dp
   !
@@ -97,7 +98,7 @@ PURE SUBROUTINE DBSKNU(X,Fnu,Kode,N,Y,Nz)
   REAL(DP), INTENT(OUT) :: Y(N)
   !
   INTEGER :: i, iflag, inu, j, k, kk, koded, nn
-  LOGICAL :: skip_forward_recursion, underflow_exit
+  LOGICAL :: skip_forward_recursion, underflow_exit, series_done
   REAL(DP) :: a(160), ak, a1, a2, b(160), bk, ck, coef, cx, dk, dnu, dnu2, elim, &
     etest, ex, f, fc, fhs, fk, fks, flrx, fmu, g1, g2, p, pt, p1, p2, q, &
     rx, s, smu, sqk, st, s1, s2, tm, tol, t1, t2
@@ -124,6 +125,7 @@ PURE SUBROUTINE DBSKNU(X,Fnu,Kode,N,Y,Nz)
     iflag = 0
     skip_forward_recursion = .FALSE.
     underflow_exit = .FALSE.
+    series_done = .FALSE.
     koded = Kode
     rx = 2._DP/X
     inu = INT(Fnu+0.5_DP)
@@ -196,7 +198,8 @@ PURE SUBROUTINE DBSKNU(X,Fnu,Kode,N,Y,Nz)
             s1 = s1*f
             s2 = s2*f
           END IF
-          ! Falls through to forward recursion
+          ! Series done - skip coef/asymptotic/Miller, go to forward recursion
+          series_done = .TRUE.
         ELSE
           IF( X>=tol ) THEN
             cx = X*X*0.25_DP
@@ -220,6 +223,10 @@ PURE SUBROUTINE DBSKNU(X,Fnu,Kode,N,Y,Nz)
         END IF
       END IF
     END IF
+    !
+    ! Compute coef/asymptotic/Miller only if series was not used
+    !
+    IF( .NOT. series_done ) THEN
     DO
       coef = rthpi/SQRT(X)
       IF( koded==2 ) EXIT
@@ -320,6 +327,7 @@ PURE SUBROUTINE DBSKNU(X,Fnu,Kode,N,Y,Nz)
           EXIT
         END IF
       END DO
+    END IF
     END IF
     !
     !     FORWARD RECURSION ON THE THREE TERM RECURSION RELATION
