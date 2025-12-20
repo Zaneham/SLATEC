@@ -112,7 +112,7 @@ Modernised code in this repository is released under the same public domain term
 
 ## Acknowledgements
 
-This project builds upon the work of many contributors. We gratefully acknowledge:
+This project builds upon the work of many contributors. I gratefully acknowledge:
 
 ### Original SLATEC Library
 
