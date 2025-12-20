@@ -82,6 +82,7 @@ PURE SUBROUTINE ASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
     fn, fn2, phi, rcz, rden, relb, rfn2, rtz, rzden, sa, sb, suma, &
     sumb, s1, ta, tau, tb, tfn, tol, t2, upol(10), xx, z, z32
   REAL(SP), PARAMETER :: tols = -6.90775527898214_SP
+  LOGICAL :: do_block_100, overflow_exit
   REAL(SP), PARAMETER :: con1 = 6.66666666666667E-01_SP, con2 = 3.33333333333333E-01_SP, &
     con548 = 1.04166666666667E-01_SP
   REAL(SP), PARAMETER :: ar(8) = [ 8.35503472222222E-02_SP, 1.28226574556327E-01_SP, &

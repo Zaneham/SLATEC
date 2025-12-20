@@ -83,6 +83,7 @@ PURE SUBROUTINE DASYJY(FUNJY,X,Fnu,Flgjy,In,Y,Wk,Iflw)
     fn, fn2, phi, rcz, rden, relb, rfn2, rtz, rzden, sa, sb, suma, &
     sumb, s1, ta, tau, tb, tfn, tol, t2, upol(10), xx, z, z32
   REAL(DP), PARAMETER :: tols = -6.90775527898214_DP
+  LOGICAL :: do_block_100, overflow_exit
   REAL(DP), PARAMETER :: con1 = 6.66666666666667E-01_DP, con2 = 3.33333333333333E-01_DP, &
     con548 = 1.04166666666667E-01_DP
   REAL(DP), PARAMETER :: ar(8) = [ 8.35503472222222E-02_DP, 1.28226574556327E-01_DP, &
