@@ -116,6 +116,9 @@ PURE SUBROUTINE DEXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
   REAL(DP), PARAMETER :: xcut = 2._DP
   !* FIRST EXECUTABLE STATEMENT  DEXINT
   Ierr = 0
+  skip_50 = .FALSE.
+  do_300 = .FALSE.
+  do_400 = .FALSE.
   Nz = 0
   etol = MAX(eps_dp,0.5E-18_DP)
   IF( X<0._DP ) Ierr = 1
@@ -242,18 +245,24 @@ PURE SUBROUTINE DEXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
           ak = ak + 1._DP
           CYCLE
         ELSEIF( i>=2 ) THEN
-          IF( nd-2>i .OR. i>nd-1 ) GOTO 50
+          IF( nd-2>i .OR. i>nd-1 ) THEN
+            skip_50 = .TRUE.
+            EXIT
+          END IF
           ak = ak + 1._DP
           CYCLE
         END IF
       END IF
       ak = ak + 1._DP
     END DO
-    IF( ic/=1 ) THEN
-      Ierr = 2
-      RETURN
+    IF( .NOT. skip_50 ) THEN
+      IF( ic/=1 ) THEN
+        Ierr = 2
+        RETURN
+      END IF
     END IF
-    50  IF( nd==1 ) s = s + (-LOG(X)+DPSIXN(1))
+    ! Label 50 equivalent
+    IF( nd==1 ) s = s + (-LOG(X)+DPSIXN(1))
     IF( Kode==2 ) s = s*EXP(X)
     En(1) = s
     emx = 1._DP
@@ -261,13 +270,18 @@ PURE SUBROUTINE DEXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
       En(ind) = s
       aa = ks
       IF( Kode==1 ) emx = EXP(-X)
-      IF( icase==1 ) GOTO 300
-      IF( icase==2 ) GOTO 400
+      do_300 = (icase==1)
+      do_400 = (icase==1 .OR. icase==2)
     END IF
-    IF( icase==2 ) RETURN
+    IF( do_300 .OR. do_400 ) THEN
+      ! Continue to recursion section below
+    ELSEIF( icase==2 ) THEN
+      RETURN
+    ELSE
     IF( Kode==1 ) emx = EXP(-X)
-    En(1) = (emx-s)/X
-    RETURN
+      En(1) = (emx-s)/X
+      RETURN
+    END IF
   END IF
   ! Label 200 equivalent: main computation
   ik = ks/2
@@ -343,11 +357,14 @@ PURE SUBROUTINE DEXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
         En(ind) = emx*y(jset)
         IF( M==1 ) RETURN
         aa = ks
-        IF( icase==1 ) GOTO 300
-        IF( icase==2 ) GOTO 400
+        do_300 = (icase==1)
+        do_400 = (icase==1 .OR. icase==2)
       END IF
-      !-----------------------------------------------------------------------
-      !     RECURSION SECTION  N*E(N+1,X) + X*E(N,X)=EMX
+      IF( do_300 .OR. do_400 ) THEN
+        ! Continue to recursion section below
+      ELSE
+        !-----------------------------------------------------------------------
+        !     RECURSION SECTION  N*E(N+1,X) + X*E(N,X)=EMX
       !-----------------------------------------------------------------------
       En(1) = emx*(1._SP-y(1))/X
       RETURN
@@ -355,20 +372,25 @@ PURE SUBROUTINE DEXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
   END DO
   Ierr = 2
   RETURN
-  300  k = ind - 1
-  DO i = 1, ml
+  ! Recursion sections
+  IF( do_300 ) THEN
+    k = ind - 1
+    DO i = 1, ml
     aa = aa - 1._DP
     En(k) = (emx-aa*En(k+1))/X
     k = k - 1
-  END DO
-  IF( mu<=0 ) RETURN
-  aa = ks
-  400  k = ind
+    END DO
+    IF( mu<=0 ) RETURN
+    aa = ks
+  END IF
+  IF( do_400 ) THEN
+    k = ind
   DO i = 1, mu
     En(k+1) = (emx-X*En(k))/aa
     aa = aa + 1._DP
-    k = k + 1
-  END DO
+      k = k + 1
+    END DO
+  END IF
 
   RETURN
 END SUBROUTINE DEXINT
