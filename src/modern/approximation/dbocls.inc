@@ -527,6 +527,16 @@ SUBROUTINE DBOCLS(W,Mdw,Mcon,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnormc,Rnorm,Mode,Rw,I
   !   900510  Convert XERRWV calls to XERMSG calls.  (RWC)
   !   910819  Added variable M for MOUT+MCON in reference to DBOLS.  (WRB)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   202412  Eliminated GOTOs using inline error returns.  (modernization)
+  !
+  ! MODERNIZATION NOTES:
+  ! --------------------
+  ! Original code used 'GOTO 100' for all error conditions, jumping to a
+  ! common cleanup section. This version replaces each GOTO with inline:
+  !   IF( Mode>=0 ) Mode = -nerr
+  !   igo = 0
+  !   RETURN
+  ! This eliminates the labeled section while preserving behavior.
 
   !     REVISED 850604-0900
   !     REVISED YYMMDD-HHMM
@@ -593,24 +603,27 @@ SUBROUTINE DBOCLS(W,Mdw,Mcon,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnormc,Rnorm,Mode,Rw,I
     IF( Mdw<=0 ) THEN
       WRITE (xern1,'(I8)') Mdw
       ERROR STOP 'DBOCLS : MDW MUST BE POSITIVE.'
-      !     DO(RETURN TO USER PROGRAM UNIT)
-      GOTO 100
+      IF( Mode>=0 ) Mode = -nerr
+      igo = 0
+      RETURN
     END IF
     !
     !     SEE THAT NUMBER OF CONSTRAINTS IS NONNEGATIVE.
     IF( Mcon<0 ) THEN
       WRITE (xern1,'(I8)') Mcon
       ERROR STOP 'DBOCLS : MCON MUST BE NON-NEGATIVE'
-      !     DO(RETURN TO USER PROGRAM UNIT)
-      GOTO 100
+      IF( Mode>=0 ) Mode = -nerr
+      igo = 0
+      RETURN
     END IF
     !
     !     SEE THAT NUMBER OF UNKNOWNS IS POSITIVE.
     IF( Ncols<=0 ) THEN
       WRITE (xern1,'(I8)') Ncols
       ERROR STOP 'DBOCLS : NCOLS THE NO. OF VARIABLES, MUST BE POSITIVE.'
-      !     DO(RETURN TO USER PROGRAM UNIT)
-      GOTO 100
+      IF( Mode>=0 ) Mode = -nerr
+      igo = 0
+      RETURN
     END IF
     !
     !     SEE THAT CONSTRAINT INDICATORS ARE ALL WELL-DEFINED.
@@ -619,8 +632,9 @@ SUBROUTINE DBOCLS(W,Mdw,Mcon,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnormc,Rnorm,Mode,Rw,I
         WRITE (xern1,'(I8)') j
         WRITE (xern2,'(I8)') Ind(j)
         ERROR STOP 'DBOCLS : IND(J) MUST BE 1-4.'
-        !     DO(RETURN TO USER PROGRAM UNIT)
-        GOTO 100
+        IF( Mode>=0 ) Mode = -nerr
+        igo = 0
+        RETURN
       END IF
     END DO
     !
@@ -632,8 +646,9 @@ SUBROUTINE DBOCLS(W,Mdw,Mcon,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnormc,Rnorm,Mode,Rw,I
           WRITE (xern3,'(1PE15.6)') Bl(j)
           WRITE (xern4,'(1PE15.6)') Bu(j)
           ERROR STOP 'DBOCLS : BOUND BL(J) IS > BU(J)'
-          !     DO(RETURN TO USER PROGRAM UNIT)
-          GOTO 100
+          IF( Mode>=0 ) Mode = -nerr
+          igo = 0
+          RETURN
         END IF
       END IF
     END DO
@@ -788,8 +803,9 @@ SUBROUTINE DBOCLS(W,Mdw,Mcon,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnormc,Rnorm,Mode,Rw,I
           IF( iscale<1 .OR. iscale>3 ) THEN
             WRITE (xern1,'(I8)') iscale
             ERROR STOP 'DBOCLS : ISCALE OPTION MUST BE 1-3'
-            !     DO(RETURN TO USER PROGRAM UNIT)
-            GOTO 100
+            IF( Mode>=0 ) Mode = -nerr
+            igo = 0
+            RETURN
           END IF
         END IF
         !     CYCLE FOREVER
@@ -804,8 +820,9 @@ SUBROUTINE DBOCLS(W,Mdw,Mcon,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnormc,Rnorm,Mode,Rw,I
             WRITE (xern1,'(I8)') Iopt(lp+2)
             ERROR STOP 'DBOCLS : OFFSET PAST X(NCOLS) FOR USER-PROVIDED COLUMN &
               &SCALING MUST BE POSITIVE.'
-            !     DO(RETURN TO USER PROGRAM UNIT)
-            GOTO 100
+            IF( Mode>=0 ) Mode = -nerr
+            igo = 0
+            RETURN
           END IF
           Rw(1:Ncols) = X(Ncols+Iopt(lp+2):2*Ncols+Iopt(lp+2)-1)
           lenx = lenx + Ncols
@@ -814,8 +831,9 @@ SUBROUTINE DBOCLS(W,Mdw,Mcon,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnormc,Rnorm,Mode,Rw,I
               WRITE (xern1,'(I8)') j
               WRITE (xern3,'(1PE15.6)') Rw(j)
               ERROR STOP 'DBOCLS : EACH PROVIDED COLUMN SCALE FACTOR MUST BE POSITIVE.'
-              !     DO(RETURN TO USER PROGRAM UNIT)
-              GOTO 100
+              IF( Mode>=0 ) Mode = -nerr
+              igo = 0
+              RETURN
             END IF
           END DO
         END IF
@@ -863,8 +881,9 @@ SUBROUTINE DBOCLS(W,Mdw,Mcon,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnormc,Rnorm,Mode,Rw,I
       ELSE
         WRITE (xern1,'(I8)') jp
         ERROR STOP 'DBOCLS : OPTION NUMBER IS NOT DEFINED.'
-        !     DO(RETURN TO USER PROGRAM UNIT)
-        GOTO 100
+        IF( Mode>=0 ) Mode = -nerr
+        igo = 0
+        RETURN
       END IF
     END DO
     !     END FOREVER
@@ -885,51 +904,58 @@ SUBROUTINE DBOCLS(W,Mdw,Mcon,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnormc,Rnorm,Mode,Rw,I
         WRITE (xern2,'(I8)') mdwl
         ERROR STOP 'DBOCLS : THE ROW DIMENSION OF W(,) MUST BE >= THE NUMBER OF &
           &EFFECTIVE ROWS'
-        !     DO(RETURN TO USER PROGRAM UNIT)
-        GOTO 100
+        IF( Mode>=0 ) Mode = -nerr
+        igo = 0
+        RETURN
       END IF
       IF( lndw<Ncols+Mcon+1 ) THEN
         WRITE (xern1,'(I8)') lndw
         WRITE (xern2,'(I8)') Ncols + Mcon + 1
         ERROR STOP 'DBOCLS : THE COLUMN DIMENSION OF W(,)  MUST BE >= NCOLS+MCON+1'
-        !     DO(RETURN TO USER PROGRAM UNIT)
-        GOTO 100
+        IF( Mode>=0 ) Mode = -nerr
+        igo = 0
+        RETURN
       END IF
       IF( llb<Ncols+Mcon ) THEN
         WRITE (xern1,'(I8)') llb
         WRITE (xern2,'(I8)') Ncols + Mcon
         ERROR STOP 'DBOCLS : THE DIMENSIONS OF THE ARRAYS BS(), BU(), AND IND() &
           &MUST BE >= NCOLS+MCON'
-        !     DO(RETURN TO USER PROGRAM UNIT)
-        GOTO 100
+        IF( Mode>=0 ) Mode = -nerr
+        igo = 0
+        RETURN
       END IF
       IF( llx<lenx ) THEN
         WRITE (xern1,'(I8)') llx
         WRITE (xern2,'(I8)') lenx
         ERROR STOP 'DBOCLS : THE DIMENSION OF X() MUST BE >= THE REQUIRED LENGTH'
-        !     DO(RETURN TO USER PROGRAM UNIT)
-        GOTO 100
+        IF( Mode>=0 ) Mode = -nerr
+        igo = 0
+        RETURN
       END IF
       IF( llrw<6*Ncols+5*Mcon ) THEN
         WRITE (xern1,'(I8)') llrw
         WRITE (xern2,'(I8)') 6*Ncols + 5*Mcon
         ERROR STOP 'DBOCLS : THE DIMENSION OF RW() MUST BE >= 6*NCOLS+5*MCON'
-        !     DO(RETURN TO USER PROGRAM UNIT)
-        GOTO 100
+        IF( Mode>=0 ) Mode = -nerr
+        igo = 0
+        RETURN
       END IF
       IF( lliw<2*Ncols+2*Mcon ) THEN
         WRITE (xern1,'(I8)') lliw
         WRITE (xern2,'(I8)') 2*Ncols + 2*Mcon
         ERROR STOP 'DBOCLS : THE DIMENSION OF IW() MUST BE >= 2*NCOLS+2*MCON'
-        !     DO(RETURN TO USER PROGRAM UNIT)
-        GOTO 100
+        IF( Mode>=0 ) Mode = -nerr
+        igo = 0
+        RETURN
       END IF
       IF( liopt<lp+17 ) THEN
         WRITE (xern1,'(I8)') liopt
         WRITE (xern2,'(I8)') lp + 17
         ERROR STOP 'DBOCLS : THE DIMENSION OF IOPT() MUST BE >= THE REQUIRED LEN'
-        !     DO(RETURN TO USER PROGRAM UNIT)
-        GOTO 100
+        IF( Mode>=0 ) Mode = -nerr
+        igo = 0
+        RETURN
       END IF
       !     END PROCEDURE
     END IF
@@ -947,8 +973,9 @@ SUBROUTINE DBOCLS(W,Mdw,Mcon,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnormc,Rnorm,Mode,Rw,I
       WRITE (xern1,'(I8)') mnew
       WRITE (xern2,'(I8)') Mdw - Mcon
       ERROR STOP 'DBOCLS : NO. OF ROWS MUST BE >= 0 .AND. <= MDW-MCON'
-      !    (RETURN TO USER PROGRAM UNIT)
-      GOTO 100
+      IF( Mode>=0 ) Mode = -nerr
+      igo = 0
+      RETURN
     END IF
   END IF
   !
@@ -1101,7 +1128,6 @@ SUBROUTINE DBOCLS(W,Mdw,Mcon,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnormc,Rnorm,Mode,Rw,I
   Rnorm = Rnorm/wt
   !     END PROCEDURE
   !     PROCEDURE(RETURN TO USER PROGRAM UNIT)
-  100 CONTINUE
   IF( Mode>=0 ) Mode = -nerr
   igo = 0
   !     END PROGRAM

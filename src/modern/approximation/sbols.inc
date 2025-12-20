@@ -412,6 +412,16 @@ SUBROUTINE SBOLS(W,Mdw,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Iw)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900510  Convert XERRWV calls to XERMSG calls.  (RWC)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   202412  Eliminated GOTOs using inline error returns.  (modernization)
+  !
+  ! MODERNIZATION NOTES:
+  ! --------------------
+  ! Original code used 'GOTO 100' for all error conditions, jumping to a
+  ! common cleanup section. This version replaces each GOTO with inline:
+  !   IF( Mode>=0 ) Mode = -nerr
+  !   igo = 0
+  !   RETURN
+  ! The labeled error section is removed entirely.
 
   !
   !     SOLVE LINEAR LEAST SQUARES SYSTEM WITH BOUNDS ON
@@ -456,16 +466,18 @@ SUBROUTINE SBOLS(W,Mdw,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Iw)
     IF( Mdw<=0 ) THEN
       WRITE (xern1,'(I8)') Mdw
       ERROR STOP 'SBOLS : MDW MUST BE POSITIVE.'
-      !     DO(RETURN TO USER PROGRAM UNIT)
-      GOTO 100
+      IF( Mode>=0 ) Mode = -nerr
+      igo = 0
+      RETURN
     END IF
     !
     !     SEE THAT NUMBER OF UNKNOWNS IS POSITIVE.
     IF( Ncols<=0 ) THEN
       WRITE (xern1,'(I8)') Ncols
       ERROR STOP 'SBOLS : NCOLS THE NO. OF VARIABLES MUST BE POSITIVE.'
-      !     DO(RETURN TO USER PROGRAM UNIT)
-      GOTO 100
+      IF( Mode>=0 ) Mode = -nerr
+      igo = 0
+      RETURN
     END IF
     !
     !     SEE THAT CONSTRAINT INDICATORS ARE ALL WELL-DEFINED.
@@ -474,8 +486,9 @@ SUBROUTINE SBOLS(W,Mdw,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Iw)
         WRITE (xern1,'(I8)') j
         WRITE (xern2,'(I8)') Ind(j)
         ERROR STOP 'SBOLS : IND(J) MUST BE 1-4.'
-        !     DO(RETURN TO USER PROGRAM UNIT)
-        GOTO 100
+        IF( Mode>=0 ) Mode = -nerr
+        igo = 0
+        RETURN
       END IF
     END DO
     !
@@ -487,8 +500,9 @@ SUBROUTINE SBOLS(W,Mdw,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Iw)
           WRITE (xern3,'(1PE15.6)') Bl(j)
           WRITE (xern4,'(1PE15.6)') Bu(j)
           ERROR STOP 'SBOLS : BOUND BL(J) = IS > BU(J)'
-          !     DO(RETURN TO USER PROGRAM UNIT)
-          GOTO 100
+          IF( Mode>=0 ) Mode = -nerr
+          igo = 0
+          RETURN
         END IF
       END IF
     END DO
@@ -521,50 +535,58 @@ SUBROUTINE SBOLS(W,Mdw,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Iw)
             WRITE (xern1,'(I8)') lmdw
             WRITE (xern2,'(I8)') Mrows
             ERROR STOP 'SBOLS : THE ROW DIMENSION OF W(,) MUST BE >= THE NUMBER OF ROWS'
-            GOTO 100
+            IF( Mode>=0 ) Mode = -nerr
+            igo = 0
+            RETURN
           END IF
           IF( lndw<Ncols+1 ) THEN
             WRITE (xern1,'(I8)') lndw
             WRITE (xern2,'(I8)') Ncols + 1
             ERROR STOP 'SBOLS : THE COLUMN DIMENSION OF W(,) MUST BE >= NCOLS+1'
-            !     DO(RETURN TO USER PROGRAM UNIT)
-            GOTO 100
+            IF( Mode>=0 ) Mode = -nerr
+            igo = 0
+            RETURN
           END IF
           IF( llb<Ncols ) THEN
             WRITE (xern1,'(I8)') llb
             WRITE (xern2,'(I8)') Ncols
             ERROR STOP 'SBOLS : THE DIMENSIONS OF THE ARRAYS BL(), BU(), AND IND() &
               &MUST BE >= NCOLS'
-            !     DO(RETURN TO USER PROGRAM UNIT)
-            GOTO 100
+            IF( Mode>=0 ) Mode = -nerr
+            igo = 0
+            RETURN
           END IF
           IF( llx<lenx ) THEN
             WRITE (xern1,'(I8)') llx
             WRITE (xern2,'(I8)') lenx
             ERROR STOP 'SBOLS : THE DIMENSION OF X() MUST BE >= THE REQUIRED LENGTH'
-            !     DO(RETURN TO USER PROGRAM UNIT)
-            GOTO 100
+            IF( Mode>=0 ) Mode = -nerr
+            igo = 0
+            RETURN
           END IF
           IF( llrw<5*Ncols ) THEN
             WRITE (xern1,'(I8)') llrw
             WRITE (xern2,'(I8)') 5*Ncols
             ERROR STOP 'SBOLS : THE DIMENSION OF RW() MUST BE >= 5*NCOLS'
-            !     DO(RETURN TO USER PROGRAM UNIT)
-            GOTO 100
+            IF( Mode>=0 ) Mode = -nerr
+            igo = 0
+            RETURN
           END IF
           IF( lliw<2*Ncols ) THEN
             WRITE (xern1,'(I8)') lliw
             WRITE (xern2,'(I8)') 2*Ncols
             ERROR STOP 'SBOLS : THE DIMENSION OF IW() MUST BE >= 2*NCOLS'
-            !     DO(RETURN TO USER PROGRAM UNIT)
-            GOTO 100
+            IF( Mode>=0 ) Mode = -nerr
+            igo = 0
+            RETURN
           END IF
           IF( liopt<lp+1 ) THEN
             WRITE (xern1,'(I8)') liopt
             WRITE (xern2,'(I8)') lp + 1
             ERROR STOP 'SBOLS : THE DIMENSION OF IOPT() MUST BE >= THE REQD. LEN'
-            !     DO(RETURN TO USER PROGRAM UNIT)
-            GOTO 100
+            IF( Mode>=0 ) Mode = -nerr
+            igo = 0
+            RETURN
           END IF
           !     END PROCEDURE
         END IF
@@ -640,8 +662,9 @@ SUBROUTINE SBOLS(W,Mdw,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Iw)
           IF( iscale<1 .OR. iscale>3 ) THEN
             WRITE (xern1,'(I8)') iscale
             ERROR STOP 'SBOLS : ISCALE OPTION MUST BE 1-3'
-            !     DO(RETURN TO USER PROGRAM UNIT)
-            GOTO 100
+            IF( Mode>=0 ) Mode = -nerr
+            igo = 0
+            RETURN
           END IF
         END IF
         !     CYCLE FOREVER
@@ -656,8 +679,9 @@ SUBROUTINE SBOLS(W,Mdw,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Iw)
             WRITE (xern1,'(I8)') Iopt(lp+2)
             ERROR STOP 'SBOLS : OFFSET PAST X(NCOLS)  FOR USER-PROVIDED COLUMN &
               &SCALING MUST BE POSITIVE.'
-            !     DO(RETURN TO USER PROGRAM UNIT)
-            GOTO 100
+            IF( Mode>=0 ) Mode = -nerr
+            igo = 0
+            RETURN
           END IF
           Rw(1:Ncols) = X(Ncols+Iopt(lp+2):2*Ncols+Iopt(lp+2)-1)
           lenx = lenx + Ncols
@@ -666,8 +690,9 @@ SUBROUTINE SBOLS(W,Mdw,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Iw)
               WRITE (xern1,'(I8)') j
               WRITE (xern3,'(1PE15.6)') Rw(j)
               ERROR STOP 'SBOLS : EACH PROVIDED COLUMN SCALE FACTOR MUST BE POSITIVE.'
-              !     DO(RETURN TO USER PROGRAM UNIT)
-              GOTO 100
+              IF( Mode>=0 ) Mode = -nerr
+              igo = 0
+              RETURN
             END IF
           END DO
         END IF
@@ -695,8 +720,9 @@ SUBROUTINE SBOLS(W,Mdw,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Iw)
       ELSE
         WRITE (xern1,'(I8)') jp
         ERROR STOP 'SBOLS : THE OPTION NUMBER IS NOT DEFINED.'
-        !     DO(RETURN TO USER PROGRAM UNIT)
-        GOTO 100
+        IF( Mode>=0 ) Mode = -nerr
+        igo = 0
+        RETURN
       END IF
     END DO
   END IF
@@ -714,8 +740,9 @@ SUBROUTINE SBOLS(W,Mdw,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Iw)
       WRITE (xern1,'(I8)') mnew
       WRITE (xern2,'(I8)') Mdw
       ERROR STOP 'SBOLS : NO. OF ROWS MUST BE >= 0 .AND. <= MDW'
-      !     DO(RETURN TO USER PROGRAM UNIT)
-      GOTO 100
+      IF( Mode>=0 ) Mode = -nerr
+      igo = 0
+      RETURN
     END IF
     DO j = 1, MIN(Ncols+1,mnew)
       DO i = mnew, MAX(Mrows,j) + 1, -1
@@ -792,9 +819,4 @@ SUBROUTINE SBOLS(W,Mdw,Mrows,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Iw)
     igo = 0
   END IF
   RETURN
-  !     PROCEDURE(RETURN TO USER PROGRAM UNIT)
-  100 CONTINUE
-  IF( Mode>=0 ) Mode = -nerr
-  igo = 0
-  !     END PROCEDURE
 END SUBROUTINE SBOLS
