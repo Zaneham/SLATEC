@@ -490,7 +490,10 @@ PURE SUBROUTINE DQAGPE(F,A,B,Npts2,Points,Epsabs,Epsrel,Limit,Result,Abserr,&
     !
     CALL DQPSRT(Limit,Last,maxerr,errmax,Elist,Iord,nrmax)
     !- **JUMP OUT OF DO-LOOP
-    IF( errsum<=errbnd ) GOTO 200
+    IF( errsum<=errbnd ) THEN
+      compute_sum = .TRUE.
+      EXIT
+    END IF
     !- **JUMP OUT OF DO-LOOP
     IF( Ier/=0 ) EXIT
     IF( .NOT. (noext) ) THEN
@@ -518,7 +521,7 @@ PURE SUBROUTINE DQAGPE(F,A,B,Npts2,Points,Epsabs,Epsrel,Limit,Result,Abserr,&
           maxerr = Iord(nrmax)
           errmax = Elist(maxerr)
           !- **JUMP OUT OF DO-LOOP
-          IF( Level(maxerr)+1<=levmax ) GOTO 100
+          IF( Level(maxerr)+1<=levmax ) CYCLE
           nrmax = nrmax + 1
         END DO
       END IF
@@ -553,7 +556,6 @@ PURE SUBROUTINE DQAGPE(F,A,B,Npts2,Points,Epsabs,Epsrel,Limit,Result,Abserr,&
       levmax = levmax + 1
       erlarg = errsum
     END IF
-    100 CONTINUE
   END DO
   !
   !           SET THE FINAL RESULT.
