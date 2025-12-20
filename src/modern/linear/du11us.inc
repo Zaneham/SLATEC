@@ -28,6 +28,7 @@ PURE SUBROUTINE DU11US(A,Mda,M,N,Ub,Db,Mode,Np,Krank,Ksure,H,W,Eb,Ir,Ic)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900328  Added TYPE section.  (WRB)
+  !   2024xx  Eliminated GOTOs using structured control flow.  (ZH)
   USE blas, ONLY : DAXPY, DSWAP
 
   INTEGER, INTENT(IN) :: Mda, Mode, N, Np, M
@@ -38,6 +39,7 @@ PURE SUBROUTINE DU11US(A,Mda,M,N,Ub,Db,Mode,Np,Krank,Ksure,H,W,Eb,Ir,Ic)
   INTEGER :: mmk, nn, i, ii, im1, imin, is, j, jm1, jmax, jp1, kk, km1, kmi, kp1, &
     kz, l, lm1
   REAL(DP) :: bb, r2, rmin, summ, t, temp, tn, tt
+  LOGICAL :: do_row_pivot, do_matrix_reduction
 
   !
   !        INITIALIZATION
@@ -51,10 +53,6 @@ PURE SUBROUTINE DU11US(A,Mda,M,N,Ub,Db,Mode,Np,Krank,Ksure,H,W,Eb,Ir,Ic)
   DO i = 1, M
     Ir(i) = i
   END DO
-  !
-  !        DETERMINE REL AND ABS ERROR VECTORS
-  !
-  !
   !
   !        CALCULATE ROW LENGTH
   !
@@ -76,9 +74,6 @@ PURE SUBROUTINE DU11US(A,Mda,M,N,Ub,Db,Mode,Np,Krank,Ksure,H,W,Eb,Ir,Ic)
   i = 1
   DO
     IF( Eb(i)>=H(i) ) THEN
-      !
-      !          MATRIX REDUCTION
-      !
       kk = Krank
       Krank = Krank - 1
       IF( Mode==0 ) RETURN
@@ -91,7 +86,6 @@ PURE SUBROUTINE DU11US(A,Mda,M,N,Ub,Db,Mode,Np,Krank,Ksure,H,W,Eb,Ir,Ic)
         CALL ISWAP(1,Ir(i),1,Ir(kk),1)
         CALL DSWAP(N,A(i,1),Mda,A(kk,1),Mda)
       ELSE
-        ! 'DU11US : FIRST NP ROWS ARE LINEARLY DEPENDENT'
         Krank = i - 1
         RETURN
       END IF
@@ -101,8 +95,6 @@ PURE SUBROUTINE DU11US(A,Mda,M,N,Ub,Db,Mode,Np,Krank,Ksure,H,W,Eb,Ir,Ic)
     END IF
   END DO
   !
-  !           TEST FOR ZERO RANK
-  !
   IF( Krank<=0 ) THEN
     Krank = 0
     Ksure = 0
@@ -111,154 +103,143 @@ PURE SUBROUTINE DU11US(A,Mda,M,N,Ub,Db,Mode,Np,Krank,Ksure,H,W,Eb,Ir,Ic)
   !
   !        M A I N    L O O P
   !
-  100  j = j + 1
-  jp1 = j + 1
-  jm1 = j - 1
-  kz = Krank
-  IF( j<=Np ) kz = j
-  !
-  !        EACH ROW HAS NN=N-J+1 COMPONENTS
-  !
-  nn = N - j + 1
-  !
-  !         UB DETERMINES ROW PIVOT
-  !
-  200  imin = j
-  IF( H(j)/=0._DP ) THEN
-    rmin = Ub(j)/H(j)
-    DO i = j, kz
-      IF( Ub(i)<H(i)*rmin ) THEN
-        rmin = Ub(i)/H(i)
-        imin = i
-      END IF
-    END DO
+  main_loop: DO
+    j = j + 1
+    jp1 = j + 1
+    jm1 = j - 1
+    kz = Krank
+    IF( j<=Np ) kz = j
+    nn = N - j + 1
     !
-    !     TEST FOR RANK DEFICIENCY
-    !
-    IF( rmin<1._DP ) GOTO 400
-    tt = (Eb(imin)+ABS(Db(imin)))/H(imin)
-    IF( tt<1._DP ) THEN
-      !     COMPUTE EXACT UB
-      DO i = 1, jm1
-        W(i) = A(imin,i)
-      END DO
-      l = jm1
-      DO
-        W(l) = W(l)/A(l,l)
-        IF( l==1 ) THEN
-          tt = Eb(imin)
-          DO i = 1, jm1
-            tt = tt + ABS(W(i))*Eb(i)
-          END DO
-          Ub(imin) = tt
-          IF( Ub(imin)/H(imin)<1._DP ) GOTO 400
-          EXIT
+    pivot_select: DO
+      imin = j
+      do_row_pivot = .FALSE.
+      do_matrix_reduction = .FALSE.
+      IF( H(j)/=0._DP ) THEN
+        rmin = Ub(j)/H(j)
+        DO i = j, kz
+          IF( Ub(i)<H(i)*rmin ) THEN
+            rmin = Ub(i)/H(i)
+            imin = i
+          END IF
+        END DO
+        IF( rmin<1._DP ) THEN
+          do_row_pivot = .TRUE.
         ELSE
-          lm1 = l - 1
-          DO i = l, jm1
-            W(lm1) = W(lm1) - A(i,lm1)*W(i)
-          END DO
-          l = lm1
-        END IF
-      END DO
-    END IF
-  END IF
-  !
-  !        MATRIX REDUCTION
-  !
-  300  kk = Krank
-  Krank = Krank - 1
-  kz = Krank
-  IF( Mode==0 ) RETURN
-  IF( j>Np ) THEN
-    IF( imin<=Krank ) THEN
-      CALL ISWAP(1,Ir(imin),1,Ir(kk),1)
-      CALL DSWAP(N,A(imin,1),Mda,A(kk,1),Mda)
-      CALL DSWAP(1,Eb(imin),1,Eb(kk),1)
-      CALL DSWAP(1,Ub(imin),1,Ub(kk),1)
-      CALL DSWAP(1,Db(imin),1,Db(kk),1)
-      CALL DSWAP(1,W(imin),1,W(kk),1)
-      CALL DSWAP(1,H(imin),1,H(kk),1)
-    END IF
-    IF( j<=Krank ) GOTO 200
-    GOTO 500
-  ELSE
-    ! 'DU11US : FIRST NP ROWS ARE LINEARLY DEPENDENT'
-    Krank = j - 1
-    RETURN
-  END IF
-  !
-  !        ROW PIVOT
-  !
-  400 CONTINUE
-  IF( imin/=j ) THEN
-    CALL DSWAP(1,H(j),1,H(imin),1)
-    CALL DSWAP(N,A(j,1),Mda,A(imin,1),Mda)
-    CALL DSWAP(1,Eb(j),1,Eb(imin),1)
-    CALL DSWAP(1,Ub(j),1,Ub(imin),1)
-    CALL DSWAP(1,Db(j),1,Db(imin),1)
-    CALL DSWAP(1,W(j),1,W(imin),1)
-    CALL ISWAP(1,Ir(j),1,Ir(imin),1)
-  END IF
-  !
-  !        COLUMN PIVOT
-  !
-  jmax = MAXLOC(A(j:N,j),1)
-  jmax = jmax + j - 1
-  IF( jmax/=j ) THEN
-    CALL DSWAP(M,A(1,j),1,A(1,jmax),1)
-    CALL ISWAP(1,Ic(j),1,Ic(jmax),1)
-  END IF
-  !
-  !     APPLY HOUSEHOLDER TRANSFORMATION
-  !
-  tn = NORM2(A(j,j:N))
-  IF( tn==0._DP ) GOTO 300
-  IF( A(j,j)/=0._DP ) tn = SIGN(tn,A(j,j))
-  A(j,j:N) = A(j,j:N)/tn
-  A(j,j) = A(j,j) + 1._DP
-  IF( j/=M ) THEN
-    DO i = jp1, M
-      bb = -DOT_PRODUCT(A(j,j:N),A(i,j:N))/A(j,j)
-      CALL DAXPY(nn,bb,A(j,j),Mda,A(i,j),Mda)
-      IF( i>Np ) THEN
-        IF( H(i)/=0._DP ) THEN
-          tt = 1._DP - (ABS(A(i,j))/H(i))**2
-          tt = MAX(tt,0._DP)
-          t = tt
-          tt = 1._DP + .05_DP*tt*(H(i)/W(i))**2
-          IF( tt==1._DP ) THEN
-            H(i) = NORM2(A(i,j+1:N))
-            W(i) = H(i)
-          ELSE
-            H(i) = H(i)*SQRT(t)
+          tt = (Eb(imin)+ABS(Db(imin)))/H(imin)
+          IF( tt<1._DP ) THEN
+            DO i = 1, jm1
+              W(i) = A(imin,i)
+            END DO
+            l = jm1
+            exact_ub: DO
+              W(l) = W(l)/A(l,l)
+              IF( l==1 ) THEN
+                tt = Eb(imin)
+                DO i = 1, jm1
+                  tt = tt + ABS(W(i))*Eb(i)
+                END DO
+                Ub(imin) = tt
+                IF( Ub(imin)/H(imin)<1._DP ) do_row_pivot = .TRUE.
+                EXIT exact_ub
+              ELSE
+                lm1 = l - 1
+                DO i = l, jm1
+                  W(lm1) = W(lm1) - A(i,lm1)*W(i)
+                END DO
+                l = lm1
+              END IF
+            END DO exact_ub
           END IF
         END IF
       END IF
-    END DO
-  END IF
-  H(j) = A(j,j)
-  A(j,j) = -tn
-  !
-  !
-  !          UPDATE UB, DB
-  !
-  Ub(j) = Ub(j)/ABS(A(j,j))
-  Db(j) = (SIGN(Eb(j),Db(j))+Db(j))/A(j,j)
-  IF( j/=Krank ) THEN
-    DO i = jp1, Krank
-      Ub(i) = Ub(i) + ABS(A(i,j))*Ub(j)
-      Db(i) = Db(i) - A(i,j)*Db(j)
-    END DO
-    GOTO 100
-  END IF
-  !
-  !        E N D    M A I N    L O O P
-  !
+      IF( .NOT. do_row_pivot ) do_matrix_reduction = .TRUE.
+      !
+      IF( do_row_pivot ) THEN
+        IF( imin/=j ) THEN
+          CALL DSWAP(1,H(j),1,H(imin),1)
+          CALL DSWAP(N,A(j,1),Mda,A(imin,1),Mda)
+          CALL DSWAP(1,Eb(j),1,Eb(imin),1)
+          CALL DSWAP(1,Ub(j),1,Ub(imin),1)
+          CALL DSWAP(1,Db(j),1,Db(imin),1)
+          CALL DSWAP(1,W(j),1,W(imin),1)
+          CALL ISWAP(1,Ir(j),1,Ir(imin),1)
+        END IF
+        jmax = MAXLOC(A(j:N,j),1)
+        jmax = jmax + j - 1
+        IF( jmax/=j ) THEN
+          CALL DSWAP(M,A(1,j),1,A(1,jmax),1)
+          CALL ISWAP(1,Ic(j),1,Ic(jmax),1)
+        END IF
+        tn = NORM2(A(j,j:N))
+        IF( tn==0._DP ) THEN
+          do_matrix_reduction = .TRUE.
+        ELSE
+          IF( A(j,j)/=0._DP ) tn = SIGN(tn,A(j,j))
+          A(j,j:N) = A(j,j:N)/tn
+          A(j,j) = A(j,j) + 1._DP
+          IF( j/=M ) THEN
+            DO i = jp1, M
+              bb = -DOT_PRODUCT(A(j,j:N),A(i,j:N))/A(j,j)
+              CALL DAXPY(nn,bb,A(j,j),Mda,A(i,j),Mda)
+              IF( i>Np ) THEN
+                IF( H(i)/=0._DP ) THEN
+                  tt = 1._DP - (ABS(A(i,j))/H(i))**2
+                  tt = MAX(tt,0._DP)
+                  t = tt
+                  tt = 1._DP + .05_DP*tt*(H(i)/W(i))**2
+                  IF( tt==1._DP ) THEN
+                    H(i) = NORM2(A(i,j+1:N))
+                    W(i) = H(i)
+                  ELSE
+                    H(i) = H(i)*SQRT(t)
+                  END IF
+                END IF
+              END IF
+            END DO
+          END IF
+          H(j) = A(j,j)
+          A(j,j) = -tn
+          Ub(j) = Ub(j)/ABS(A(j,j))
+          Db(j) = (SIGN(Eb(j),Db(j))+Db(j))/A(j,j)
+          IF( j/=Krank ) THEN
+            DO i = jp1, Krank
+              Ub(i) = Ub(i) + ABS(A(i,j))*Ub(j)
+              Db(i) = Db(i) - A(i,j)*Db(j)
+            END DO
+            CYCLE main_loop
+          END IF
+          EXIT main_loop
+        END IF
+      END IF
+      IF( do_matrix_reduction ) THEN
+        kk = Krank
+        Krank = Krank - 1
+        kz = Krank
+        IF( Mode==0 ) RETURN
+        IF( j>Np ) THEN
+          IF( imin<=Krank ) THEN
+            CALL ISWAP(1,Ir(imin),1,Ir(kk),1)
+            CALL DSWAP(N,A(imin,1),Mda,A(kk,1),Mda)
+            CALL DSWAP(1,Eb(imin),1,Eb(kk),1)
+            CALL DSWAP(1,Ub(imin),1,Ub(kk),1)
+            CALL DSWAP(1,Db(imin),1,Db(kk),1)
+            CALL DSWAP(1,W(imin),1,W(kk),1)
+            CALL DSWAP(1,H(imin),1,H(kk),1)
+          END IF
+          IF( j<=Krank ) CYCLE pivot_select
+          EXIT main_loop
+        ELSE
+          Krank = j - 1
+          RETURN
+        END IF
+      END IF
+    END DO pivot_select
+  END DO main_loop
   !
   !        COMPUTE KSURE
   !
-  500  km1 = Krank - 1
+  km1 = Krank - 1
   DO i = 1, km1
     is = 0
     kmi = Krank - i
@@ -280,9 +261,6 @@ PURE SUBROUTINE DU11US(A,Mda,M,N,Ub,Db,Mode,Np,Krank,Ksure,H,W,Eb,Ir,Ic)
     summ = summ + r2
     Ksure = Ksure + 1
   END DO
-  !
-  !     IF SYSTEM IS OF REDUCED RANK AND MODE = 2
-  !     COMPLETE THE DECOMPOSITION FOR SHORTEST LEAST SQUARES SOLUTION
   !
   IF( Krank/=M .AND. Mode>=2 ) THEN
     mmk = M - Krank
