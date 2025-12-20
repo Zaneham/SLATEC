@@ -216,7 +216,8 @@ PURE SUBROUTINE DRC6J(L2,L3,L4,L5,L6,L1min,L1max,Sixcof,Ndim,Ier)
     ERROR STOP 'DRC6J : L1MIN > L1MAX.'
     RETURN
   END IF
-  100  lstep = lstep + 1
+  main_loop: DO
+    lstep = lstep + 1
   l1 = l1 + 1._DP
   !
   oldfac = newfac
@@ -280,7 +281,7 @@ PURE SUBROUTINE DRC6J(L2,L3,L4,L5,L6,L1min,L1max,Sixcof,Ndim,Ier)
       !  stable.  Once an increase of ABS(C1) is detected, the recursion
       !  direction is reversed.
       !
-      IF( c1old>ABS(c1) ) GOTO 100
+      IF( c1old>ABS(c1) ) CYCLE main_loop
     END IF
     !
     !
@@ -406,10 +407,12 @@ PURE SUBROUTINE DRC6J(L2,L3,L4,L5,L6,L1min,L1max,Sixcof,Ndim,Ier)
     Sixcof(2) = x
     sum1 = sum1 + tinyy*(l1+l1+1._DP)*c1*c1
     !
-    IF( lstep/=nfin ) GOTO 100
+    IF( lstep/=nfin ) CYCLE main_loop
     !
     sumuni = sum1
   END IF
+  EXIT main_loop
+  END DO main_loop
   !
   !
   !  Normalize 6j coefficients
