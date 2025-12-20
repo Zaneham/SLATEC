@@ -460,37 +460,49 @@ PURE SUBROUTINE QAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
   !           SET FINAL RESULT AND ERROR ESTIMATE.
   !           ------------------------------------
   !
-  IF( Abserr/=oflow ) THEN
-    IF( (Ier+ierro)/=0 ) THEN
-      IF( ierro==3 ) Abserr = Abserr + correc
-      IF( Ier==0 ) Ier = 3
-      IF( Result==0._SP .OR. area==0._SP ) THEN
-        IF( Abserr>errsum ) GOTO 200
-        IF( area==0._SP ) GOTO 300
-      ELSEIF( Abserr/ABS(Result)>errsum/ABS(area) ) THEN
-        GOTO 200
+  final_result: BLOCK
+    IF( compute_sum ) THEN
+      EXIT final_result  ! Go directly to compute global sum
+    END IF
+    IF( Abserr/=oflow ) THEN
+      IF( (Ier+ierro)/=0 ) THEN
+        IF( ierro==3 ) Abserr = Abserr + correc
+        IF( Ier==0 ) Ier = 3
+        IF( Result==0._SP .OR. area==0._SP ) THEN
+          IF( Abserr>errsum ) EXIT final_result  ! Compute global sum
+          IF( area==0._SP ) THEN
+            Neval = 30*Last - 15
+            IF( Inf==2 ) Neval = 2*Neval
+            IF( Ier>2 ) Ier = Ier - 1
+            RETURN
+          END IF
+        ELSEIF( Abserr/ABS(Result)>errsum/ABS(area) ) THEN
+          EXIT final_result  ! Compute global sum
+        END IF
       END IF
+      !
+      !           TEST ON DIVERGENCE
+      !
+      IF( ksgn/=(-1) .OR. MAX(ABS(Result),ABS(area))>defabs*0.1E-01 ) THEN
+        IF( 0.1E-01>(Result/area) .OR. (Result/area)>100._SP .OR. &
+          errsum>ABS(area) ) Ier = 6
+      END IF
+      Neval = 30*Last - 15
+      IF( Inf==2 ) Neval = 2*Neval
+      IF( Ier>2 ) Ier = Ier - 1
+      RETURN
     END IF
-    !
-    !           TEST ON DIVERGENCE
-    !
-    IF( ksgn/=(-1) .OR. MAX(ABS(Result),ABS(area))>defabs*0.1E-01 ) THEN
-      IF( 0.1E-01>(Result/area) .OR. (Result/area)>100._SP .OR. &
-        errsum>ABS(area) ) Ier = 6
-    END IF
-    GOTO 300
-  END IF
+  END BLOCK final_result
   !
   !           COMPUTE GLOBAL INTEGRAL SUM.
   !
-  200  Result = 0._SP
+  Result = 0._SP
   DO k = 1, Last
     Result = Result + Rlist(k)
   END DO
   Abserr = errsum
-  300  Neval = 30*Last - 15
+  Neval = 30*Last - 15
   IF( Inf==2 ) Neval = 2*Neval
   IF( Ier>2 ) Ier = Ier - 1
-  !
-  RETURN
+
 END SUBROUTINE QAGIE

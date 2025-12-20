@@ -227,7 +227,7 @@ PURE SUBROUTINE DQAGPE(F,A,B,Npts2,Points,Epsabs,Epsrel,Limit,Result,Abserr,&
     defab1, defab2, dres, epmach, erlarg, erlast, errbnd, errmax, error1, erro12, &
     error2, errsum, ertest, oflow, resa, resabs, reseps, res3la(3), rlist2(52), &
     signn, temp, uflow
-  LOGICAL :: extrap, noext
+  LOGICAL :: extrap, noext, compute_sum
   !
   !            THE DIMENSION OF RLIST2 IS DETERMINED BY THE VALUE OF
   !            LIMEXP IN SUBROUTINE EPSALG (RLIST2 SHOULD BE OF DIMENSION
@@ -398,6 +398,7 @@ PURE SUBROUTINE DQAGPE(F,A,B,Npts2,Points,Epsabs,Epsrel,Limit,Result,Abserr,&
   ktmin = 0
   extrap = .FALSE.
   noext = .FALSE.
+  compute_sum = .FALSE.
   erlarg = errsum
   ertest = errbnd
   levmax = 1
@@ -562,35 +563,45 @@ PURE SUBROUTINE DQAGPE(F,A,B,Npts2,Points,Epsabs,Epsrel,Limit,Result,Abserr,&
   !           ---------------------
   !
   !
-  IF( Abserr/=oflow ) THEN
-    IF( (Ier+ierro)/=0 ) THEN
-      IF( ierro==3 ) Abserr = Abserr + correc
-      IF( Ier==0 ) Ier = 3
-      IF( Result==0._DP .OR. area==0._DP ) THEN
-        IF( Abserr>errsum ) GOTO 200
-        IF( area==0._DP ) GOTO 300
-      ELSEIF( Abserr/ABS(Result)>errsum/ABS(area) ) THEN
-        GOTO 200
+  final_result: BLOCK
+    IF( compute_sum ) THEN
+      EXIT final_result  ! Go directly to compute global sum
+    END IF
+    IF( Abserr/=oflow ) THEN
+      IF( (Ier+ierro)/=0 ) THEN
+        IF( ierro==3 ) Abserr = Abserr + correc
+        IF( Ier==0 ) Ier = 3
+        IF( Result==0._DP .OR. area==0._DP ) THEN
+          IF( Abserr>errsum ) EXIT final_result  ! Compute global sum
+          IF( area==0._DP ) THEN
+            IF( Ier>2 ) Ier = Ier - 1
+            Result = Result*signn
+            RETURN
+          END IF
+        ELSEIF( Abserr/ABS(Result)>errsum/ABS(area) ) THEN
+          EXIT final_result  ! Compute global sum
+        END IF
       END IF
+      !
+      !           TEST ON DIVERGENCE.
+      !
+      IF( ksgn/=(-1) .OR. MAX(ABS(Result),ABS(area))>defabs*0.1D-01 ) THEN
+        IF( 0.1D-01>(Result/area) .OR. (Result/area)>0.1D+03 .OR. &
+          errsum>ABS(area) ) Ier = 6
+      END IF
+      IF( Ier>2 ) Ier = Ier - 1
+      Result = Result*signn
+      RETURN
     END IF
-    !
-    !           TEST ON DIVERGENCE.
-    !
-    IF( ksgn/=(-1) .OR. MAX(ABS(Result),ABS(area))>defabs*0.1D-01 ) THEN
-      IF( 0.1D-01>(Result/area) .OR. (Result/area)>0.1D+03 .OR. &
-        errsum>ABS(area) ) Ier = 6
-    END IF
-    GOTO 300
-  END IF
+  END BLOCK final_result
   !
   !           COMPUTE GLOBAL INTEGRAL SUM.
   !
-  200  Result = 0._DP
+  Result = 0._DP
   DO k = 1, Last
     Result = Result + Rlist(k)
   END DO
   Abserr = errsum
-  300 CONTINUE
   IF( Ier>2 ) Ier = Ier - 1
   Result = Result*signn
   !
