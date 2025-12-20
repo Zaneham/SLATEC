@@ -133,30 +133,32 @@ PURE SUBROUTINE DPCHNG(Ii,Xval,Iplace,Sx,Ix,Ircx)
   !
   !     THE VIRTUAL END OF DATA FOR THIS PAGE IS ILAST.
   !
-  100  ilast = MIN(iend,np*lpg+ll-2)
-  !
-  !     THE RELATIVE END OF DATA FOR THIS PAGE IS IL.
-  !     SEARCH FOR A MATRIX VALUE WITH AN INDEX >= I ON THE PRESENT
-  !     PAGE.
-  !
-  il = IDLOC(ilast,Ix)
-  il = MIN(il,lmx-2)
-  DO WHILE( .NOT. (ipl>=il .OR. Ix(ipl)>=i) )
-    ipl = ipl + 1
-  END DO
-  !
-  !     SET IPLACE AND STORE DATA ITEM IF FOUND.
-  !
-  IF( Ix(ipl)/=i .OR. ipl>il ) THEN
+  page_scan: DO
+    ilast = MIN(iend,np*lpg+ll-2)
     !
-    !     EXIT FROM LOOP IF ITEM WAS FOUND.
+    !     THE RELATIVE END OF DATA FOR THIS PAGE IS IL.
+    !     SEARCH FOR A MATRIX VALUE WITH AN INDEX >= I ON THE PRESENT
+    !     PAGE.
     !
-    IF( Ix(ipl)>i .AND. ipl<=il ) ilast = iend
-    IF( ilast/=iend ) THEN
-      ipl = ll + 1
-      np = np + 1
-    END IF
-    IF( ilast/=iend ) GOTO 100
+    il = IDLOC(ilast,Ix)
+    il = MIN(il,lmx-2)
+    DO WHILE( .NOT. (ipl>=il .OR. Ix(ipl)>=i) )
+      ipl = ipl + 1
+    END DO
+    !
+    !     SET IPLACE AND STORE DATA ITEM IF FOUND.
+    !
+    IF( Ix(ipl)/=i .OR. ipl>il ) THEN
+      !
+      !     EXIT FROM LOOP IF ITEM WAS FOUND.
+      !
+      IF( Ix(ipl)>i .AND. ipl<=il ) ilast = iend
+      IF( ilast/=iend ) THEN
+        ipl = ll + 1
+        np = np + 1
+        CYCLE page_scan
+      END IF
+      EXIT page_scan
     !
     !     INSERT NEW DATA ITEM INTO LOCATION AT IPLACE(IPL).
     !
@@ -177,37 +179,40 @@ PURE SUBROUTINE DPCHNG(Ii,Xval,Iplace,Sx,Ix,Ircx)
     !     KEEP THE ENTRIES SORTED.
     !
     sxval = Xval
-  ELSE
-    Sx(ipl) = Xval
-    Sx(lmx) = 1._DP
-    RETURN
-  END IF
-  200  ilast = MIN(iend,np*lpg+ll-2)
-  il = IDLOC(ilast,Ix)
-  il = MIN(il,lmx-2)
-  sxlast = Sx(il)
-  ixlast = Ix(il)
-  istart = ipl + 1
-  IF( istart<=il ) THEN
-    k = istart + il
-    DO jj = istart, il
-      Sx(k-jj) = Sx(k-jj-1)
-      Ix(k-jj) = Ix(k-jj-1)
-    END DO
-    Sx(lmx) = 1._DP
-  END IF
-  IF( ipl<=lmx ) THEN
-    Sx(ipl) = sxval
-    Ix(ipl) = i
-    sxval = sxlast
-    i = ixlast
-    Sx(lmx) = 1._DP
-    IF( Ix(lmx-1)>0 ) THEN
-      ipl = ll + 1
-      np = np + 1
+    ELSE
+      Sx(ipl) = Xval
+      Sx(lmx) = 1._DP
+      RETURN
     END IF
-  END IF
-  IF( Ix(lmx-1)>0 ) GOTO 200
+  END DO page_scan
+  data_move: DO
+    ilast = MIN(iend,np*lpg+ll-2)
+    il = IDLOC(ilast,Ix)
+    il = MIN(il,lmx-2)
+    sxlast = Sx(il)
+    ixlast = Ix(il)
+    istart = ipl + 1
+    IF( istart<=il ) THEN
+      k = istart + il
+      DO jj = istart, il
+        Sx(k-jj) = Sx(k-jj-1)
+        Ix(k-jj) = Ix(k-jj-1)
+      END DO
+      Sx(lmx) = 1._DP
+    END IF
+    IF( ipl<=lmx ) THEN
+      Sx(ipl) = sxval
+      Ix(ipl) = i
+      sxval = sxlast
+      i = ixlast
+      Sx(lmx) = 1._DP
+      IF( Ix(lmx-1)>0 ) THEN
+        ipl = ll + 1
+        np = np + 1
+      END IF
+    END IF
+    IF( Ix(lmx-1)<=0 ) EXIT data_move
+  END DO data_move
   np = ABS(Ix(lmx-1))
   !
   !     DETERMINE IF A NEW PAGE IS TO BE CREATED FOR THE LAST ELEMENT
