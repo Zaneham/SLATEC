@@ -33,6 +33,7 @@ PURE SUBROUTINE PROCP(Nd,Bd,Nm1,Bm1,Nm2,Bm2,Na,Aa,X,Y,M,A,B,C,D,U,W)
   !   890531  Changed all specific intrinsics to generic.  (WRB)
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   !   900402  Added TYPE section.  (WRB)
+  !   202412  Eliminated GOTOs using nested DO loops with CYCLE/EXIT.  (modernization)
 
   INTEGER, INTENT(IN) :: M, Na, Nd, Nm1, Nm2
   REAL(SP), INTENT(IN) :: Aa(Na), Bd(Nd), Bm1(Nm1), Bm2(Nm2)
@@ -54,8 +55,9 @@ PURE SUBROUTINE PROCP(Nd,Bd,Nm1,Bm1,Nm2,Bm2,Na,Aa,X,Y,M,A,B,C,D,U,W)
   m1 = Nm1
   m2 = Nm2
   ia = Na
-  100 CONTINUE
-  DO
+  ! Main iteration loop (replaces labels 100-500)
+  main_loop: DO
+  inner_loop: DO
     IF( ia>0 ) THEN
       rt = Aa(ia)
       IF( Nd==0 ) rt = -rt
@@ -108,39 +110,54 @@ PURE SUBROUTINE PROCP(Nd,Bd,Nm1,Bm1,Nm2,Bm2,Na,Aa,X,Y,M,A,B,C,D,U,W)
     END DO
     IF( Na<=0 ) THEN
       IF( m1<=0 ) THEN
-        IF( m2>0 ) GOTO 400
-        EXIT
+        IF( m2>0 ) THEN
+          ! Was GOTO 400: subtract Bm2
+          IF( ibr<=0 ) THEN
+            IF( ABS(Bm2(m2)-Bd(id))<ABS(Bm2(m2)-rt) ) THEN
+              Y(1:M) = W(1:M)
+              ibr = 1
+              CYCLE main_loop
+            END IF
+          END IF
+          rt = rt - Bm2(m2)
+          m2 = m2 - 1
+          Y(1:M) = Y(1:M) + rt*W(1:M)
+          CYCLE main_loop
+        END IF
+        EXIT inner_loop
       ELSE
-        IF( m2<=0 ) GOTO 300
-        IF( ABS(Bm1(m1))>ABS(Bm2(m2)) ) GOTO 300
-        GOTO 400
+        IF( m2<=0 .OR. ABS(Bm1(m1))>ABS(Bm2(m2)) ) THEN
+          ! Was GOTO 300: subtract Bm1
+          IF( ibr<=0 ) THEN
+            IF( ABS(Bm1(m1)-Bd(id))<ABS(Bm1(m1)-rt) ) THEN
+              Y(1:M) = W(1:M)
+              ibr = 1
+              CYCLE main_loop
+            END IF
+          END IF
+          rt = rt - Bm1(m1)
+          m1 = m1 - 1
+          Y(1:M) = Y(1:M) + rt*W(1:M)
+          CYCLE main_loop
+        ELSE
+          ! Was GOTO 400: subtract Bm2
+          IF( ibr<=0 ) THEN
+            IF( ABS(Bm2(m2)-Bd(id))<ABS(Bm2(m2)-rt) ) THEN
+              Y(1:M) = W(1:M)
+              ibr = 1
+              CYCLE main_loop
+            END IF
+          END IF
+          rt = rt - Bm2(m2)
+          m2 = m2 - 1
+          Y(1:M) = Y(1:M) + rt*W(1:M)
+          CYCLE main_loop
+        END IF
       END IF
     END IF
-  END DO
-  200 CONTINUE
-  DO j = 1, M
-    Y(j) = W(j)
-  END DO
-  ibr = 1
-  GOTO 100
-  300 CONTINUE
-  IF( ibr<=0 ) THEN
-    IF( ABS(Bm1(m1)-Bd(id))<ABS(Bm1(m1)-rt) ) GOTO 200
-  END IF
-  rt = rt - Bm1(m1)
-  m1 = m1 - 1
-  GOTO 500
-  400 CONTINUE
-  IF( ibr<=0 ) THEN
-    IF( ABS(Bm2(m2)-Bd(id))<ABS(Bm2(m2)-rt) ) GOTO 200
-  END IF
-  rt = rt - Bm2(m2)
-  m2 = m2 - 1
-  500 CONTINUE
-  DO j = 1, M
-    Y(j) = Y(j) + rt*W(j)
-  END DO
-  GOTO 100
+  END DO inner_loop
+  EXIT main_loop
+  END DO main_loop
   !
   RETURN
 END SUBROUTINE PROCP
