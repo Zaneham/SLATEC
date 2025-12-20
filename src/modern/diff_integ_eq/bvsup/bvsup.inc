@@ -443,13 +443,19 @@ SUBROUTINE BVSUP(Y,Nrowy,Ncomp,Xpts,Nxpts,A,Nrowa,Alpha,Nic,B,Nrowb,Beta,&
                         is = 1
                         IF( Xpts(Nxpts)<Xpts(1) ) is = 2
                         nxptsm = Nxpts - 1
+                        error_xpts = .FALSE.
                         DO k = 1, nxptsm
                           IF( is==2 ) THEN
-                            IF( Xpts(k)<=Xpts(k+1) ) GOTO 100
+                            IF( Xpts(k)<=Xpts(k+1) ) error_xpts = .TRUE.
                           ELSEIF( Xpts(k+1)<=Xpts(k) ) THEN
-                            GOTO 100
+                            error_xpts = .TRUE.
                           END IF
+                          IF( error_xpts ) EXIT
                         END DO
+                        IF( error_xpts ) THEN
+                          IFlag = -2
+                          RETURN
+                        END IF
                         !
                         !- *********************************************************************
                         !     CHECK FOR DISK STORAGE
@@ -471,15 +477,26 @@ SUBROUTINE BVSUP(Y,Nrowy,Ncomp,Xpts,Nxpts,A,Nrowa,Alpha,Nic,B,Nrowb,Beta,&
                         !- *********************************************************************
                         !     COMPUTE INHOMO
                         !
-                        IF( Igofx==1 ) GOTO 300
-                        DO j = 1, Nic
-                          IF( Alpha(j)/=0._SP ) GOTO 300
-                        END DO
-                        DO j = 1, Nfc
-                          IF( Beta(j)/=0._SP ) GOTO 200
-                        END DO
-                        inhomo_com = 3
-                        GOTO 400
+                        ! Determine inhomo_com: 1=Igofx or nonzero Alpha, 2=nonzero Beta, 3=homogeneous
+                        IF( Igofx==1 ) THEN
+                          inhomo_com = 1
+                        ELSE
+                          inhomo_com = 3  ! assume homogeneous
+                          DO j = 1, Nic
+                            IF( Alpha(j)/=0._SP ) THEN
+                              inhomo_com = 1
+                              EXIT
+                            END IF
+                          END DO
+                          IF( inhomo_com==3 ) THEN
+                            DO j = 1, Nfc
+                              IF( Beta(j)/=0._SP ) THEN
+                                inhomo_com = 2
+                                EXIT
+                              END IF
+                            END DO
+                          END IF
+                        END IF
                       END IF
                     END IF
                   END IF
@@ -491,19 +508,12 @@ SUBROUTINE BVSUP(Y,Nrowy,Ncomp,Xpts,Nxpts,A,Nrowa,Alpha,Nic,B,Nrowb,Beta,&
       END IF
     END IF
   END IF
-  100 CONTINUE
-  IFlag = -2
-  RETURN
-  200  inhomo_com = 2
-  GOTO 400
-  300  inhomo_com = 1
-  !
   !- *********************************************************************
   !     TO TAKE ADVANTAGE OF THE SPECIAL STRUCTURE WHEN SOLVING A
   !     COMPLEX VALUED PROBLEM,WE INTRODUCE NFCC=NFC WHILE CHANGING
   !     THE INTERNAL VALUE OF NFC
   !
-  400  nfcc_com = Nfc
+  nfcc_com = Nfc
   IF( Iflag==13 ) Nfc = Nfc/2
   !
   !- *********************************************************************
@@ -582,37 +592,41 @@ SUBROUTINE BVSUP(Y,Nrowy,Ncomp,Xpts,Nxpts,A,Nrowa,Alpha,Nic,B,Nrowb,Beta,&
       !     CHECK FOR PRE-ASSIGNED ORTHONORMALIZATION POINTS
       !
       nopg_com = 0
-      IF( Iwork(11)/=1 ) GOTO 500
-      IF( mxnon_com>=Iwork(1) ) THEN
+      skip_to_alloc = .FALSE.
+      IF( Iwork(11)/=1 ) THEN
+        skip_to_alloc = .TRUE.
+      ELSEIF( mxnon_com>=Iwork(1) ) THEN
         nopg_com = 1
         mxnon_com = Iwork(1)
         Work(mxnon_com+1) = 2._SP*Xpts(Nxpts) - Xpts(1)
-        GOTO 500
+        skip_to_alloc = .TRUE.
       END IF
     END IF
   END IF
   !
-  Iflag = -1
-  IF( ndisk_com/=1 ) THEN
-    WRITE (xern1,'(I8)') needw_com
-    WRITE (xern2,'(I8)') kkkzpw_com
-    WRITE (xern3,'(I8)') neediw_com
-    WRITE (xern4,'(I8)') lllip
-    ERROR STOP 'BVSUP : REQUIRED STORAGE FOR WORK NOT SATISFIED.&
-      & REQUIRED STORAGE FOR IWORK ARRAY NOT SATISFIED.'
-  ELSE
-    WRITE (xern1,'(I8)') needw_com
-    WRITE (xern2,'(I8)') neediw_com
-    ERROR STOP 'BVSUP : REQUIRED STORAGE FOR WORK NOT SATISFIED.&
-      & REQUIRED STORAGE FOR IWORK ARRAY NOT SATISFIED'
+  IF( .NOT. skip_to_alloc ) THEN
+    Iflag = -1
+    IF( ndisk_com/=1 ) THEN
+      WRITE (xern1,'(I8)') needw_com
+      WRITE (xern2,'(I8)') kkkzpw_com
+      WRITE (xern3,'(I8)') neediw_com
+      WRITE (xern4,'(I8)') lllip
+      ERROR STOP 'BVSUP : REQUIRED STORAGE FOR WORK NOT SATISFIED.&
+        & REQUIRED STORAGE FOR IWORK ARRAY NOT SATISFIED.'
+    ELSE
+      WRITE (xern1,'(I8)') needw_com
+      WRITE (xern2,'(I8)') neediw_com
+      ERROR STOP 'BVSUP : REQUIRED STORAGE FOR WORK NOT SATISFIED.&
+        & REQUIRED STORAGE FOR IWORK ARRAY NOT SATISFIED'
+    END IF
+    RETURN
   END IF
-  RETURN
   !
   !- *********************************************************************
   !     ALLOCATE STORAGE FROM WORK AND IWORK ARRAYS
   !
   !  (Z)
-  500  k1_com = 1 + (mxnon_com+1)
+  k1_com = 1 + (mxnon_com+1)
   !  (P)
   k2_com = k1_com + ntp_com*(non+1)
   !  (W)
