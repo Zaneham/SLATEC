@@ -401,6 +401,7 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
   !   900510  Convert XERRWV calls to XERMSG calls.  (RWC)
   !   920422  Fixed usage of MINPUT.  (WRB)
   !   901009  Editorial changes, code now reads from top to bottom.  (RWC)
+  !   202412  Eliminated GOTOs using state machine.  (modernization)
 
   !
   !     PURPOSE
@@ -435,7 +436,8 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
     i2(1), jbig2(1)
   REAL(DP) :: alpha, beta, bou, colabv, colblo, cl1, cl2, cl3, big, fac, &
     sc, ss, t, tolind, wt, t1, t2, wbig, wlarge, wmag, xnew, tolsze
-  LOGICAL :: found, constr
+  LOGICAL :: found, constr, do_swap
+  INTEGER :: istate  ! Algorithm state machine
   CHARACTER(8) :: xern1, xern2
   CHARACTER(16) :: xern3, xern4
   !
@@ -742,7 +744,15 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
     END IF
   END DO
   !
-  100  iter = iter + 1
+  !
+  ! Main algorithm using state machine to eliminate GOTOs
+  istate = 1  ! Start at ST_ITER
+  do_swap = .FALSE.
+  main_algo: DO WHILE (istate /= 0)
+    SELECT CASE (istate)
+    !
+    CASE (1)  ! ST_ITER - was label 100
+      iter = iter + 1
   IF( iter>itmax ) THEN
     WRITE (xern1,'(I8)') itmax
     ERROR STOP 'DBOLSM : MORE THAN ITMAX ITERATIONS SOLVING BOUNDED LEAST SQUARES PROBLEM.'
@@ -751,7 +761,8 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
     !        Rescale and translate variables.
     !
     igopr = 1
-    GOTO 700
+    istate = 5  ! -> ST_RESCALE
+        CYCLE main_algo
   END IF
   !
   !     Find a variable to become non-active.
@@ -776,7 +787,8 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
     !
     IF( nsetb==mrows ) THEN
       found = .FALSE.
-      GOTO 600
+      istate = 4  ! -> ST_FOUND
+          CYCLE main_algo
     END IF
     !
     !     Choose an extremal component of gradient vector for a candidate
@@ -826,7 +838,8 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
     IF( jbig==0 ) THEN
       found = .FALSE.
       IF( iprint>0 ) CALL IVOUT(0,i2,'('' FOUND NO VARIABLE TO ENTER'')',-4)
-      GOTO 600
+      istate = 4  ! -> ST_FOUND
+          CYCLE main_algo
     END IF
     !
     !     See if the incoming column is sufficiently independent.  This
@@ -916,11 +929,14 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
     EXIT
   END DO
   found = .TRUE.
-  GOTO 600
+      istate = 4  ! -> ST_FOUND
+      CYCLE main_algo
   !
   !     Solve the triangular system.
   !
-  200  Rw(1:nsetb) = W(1:nsetb,Ncols+1)
+    !
+    CASE (2)  ! ST_SOLVE - was label 200
+      Rw(1:nsetb) = W(1:nsetb,Ncols+1)
   DO j = nsetb, 1, -1
     Rw(j) = Rw(j)/W(j,j)
     jcol = ABS(Ibasis(j))
@@ -959,7 +975,8 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
         EXIT
       END IF
     END DO
-    GOTO 300
+    istate = 3  ! -> ST_DROP
+        CYCLE main_algo
   END IF
   !
   !     See if the unconstrained solution (obtained by solving the
@@ -1005,7 +1022,8 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
     !         on the variables.
     !
     X(1:nsetb) = Rw(1:nsetb)
-    GOTO 100
+    istate = 1  ! -> ST_ITER
+        CYCLE main_algo
   END IF
   !
   !     Take a step that is as large as possible with all variables
@@ -1021,8 +1039,12 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
     jdrop1 = 0
   END IF
   !
-  300 CONTINUE
-  IF( jdrop1+jdrop2<=0 .OR. nsetb<=0 ) GOTO 100
+    !
+    CASE (3)  ! ST_DROP - was label 300
+  IF( jdrop1+jdrop2<=0 .OR. nsetb<=0 ) THEN
+        istate = 1  ! -> ST_ITER
+        CYCLE main_algo
+      END IF
   jdrop = jdrop1 + jdrop2
   itemp = Ibasis(jdrop)
   jcol = ABS(itemp)
@@ -1090,18 +1112,21 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
           t = t1
         END IF
       END DO
-      GOTO 400
+      do_swap = .TRUE.
+          EXIT  ! Exit triangularize loop
     END IF
     CALL DROTG(W(i,i),W(i+1,i),sc,ss)
     W(i+1,i) = 0._DP
     CALL DROT(Ncols-i+1,W(i,i+1),Mdw,W(i+1,i+1),Mdw,sc,ss)
   END DO
-  GOTO 500
+  ! Fall through to feasibility check (was GOTO 500)
   !
   !     The triangularization is completed by giving up the Hessenberg
   !     form and triangularizing a rectangular matrix.
   !
-  400  CALL DSWAP(mrows,W(1,i),1,W(1,jbig),1)
+      ! Handle swap if needed (was label 400)
+      IF (do_swap) THEN
+        CALL DSWAP(mrows,W(1,i),1,W(1,jbig),1)
   CALL DSWAP(1,Ww(i),1,Ww(jbig),1)
   CALL DSWAP(1,X(i),1,X(jbig),1)
   itemp = Ibasis(i)
@@ -1120,23 +1145,32 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
   !     because of the way MIN(ALPHA,BETA) was chosen.  Any that are not
   !     feasible will be set to their bounds and appropriately translated.
   !
-  500  jdrop1 = 0
+      END IF  ! do_swap
+      do_swap = .FALSE.
+      !
+      ! Feasibility check (was label 500)
+      jdrop1 = 0
   jdrop2 = 0
   lgopr = 2
-  GOTO 200
+  istate = 2  ! -> ST_SOLVE
+      CYCLE main_algo
   !
   !     Find a variable to become non-active.
   !
-  600 CONTINUE
+    !
+    CASE (4)  ! ST_FOUND - was label 600
   IF( found ) THEN
     lgopr = 1
-    GOTO 200
+    istate = 2  ! -> ST_SOLVE
+      CYCLE main_algo
   END IF
   !
   !     Rescale and translate variables.
   !
   igopr = 2
-  700  Rw(1:nsetb) = X(1:nsetb)
+    !
+    CASE (5)  ! ST_RESCALE - was label 700
+      Rw(1:nsetb) = X(1:nsetb)
   X(1:Ncols) = 0._DP
   DO j = 1, nsetb
     jcol = ABS(Ibasis(j))
@@ -1159,7 +1193,10 @@ SUBROUTINE DBOLSM(W,Mdw,Minput,Ncols,Bl,Bu,Ind,Iopt,X,Rnorm,Mode,Rw,Ww,Scl,Ibasi
   i = MAX(nsetb,mval)
   Rnorm = NORM2(W(INEXT(i):INEXT(i)+mrows-i-1,Ncols+1))
   !
-  IF( igopr==2 ) Mode = nsetb
+      IF( igopr==2 ) Mode = nsetb
+      istate = 0  ! Exit main_algo
+    END SELECT
+  END DO main_algo
 CONTAINS
   INTEGER FUNCTION INEXT(idum)
     INTEGER, INTENT(IN) :: idum
