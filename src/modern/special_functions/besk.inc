@@ -24,7 +24,7 @@ PURE SUBROUTINE BESK(X,Fnu,Kode,N,Y,Nz)
   !         functions K_{FNU+I-1}(X), or scaled Bessel functions
   !         EXP(X)*K_{FNU+I-1}(X), I=1,..,N for real X > 0.0 and
   !         non-negative orders FNU.  If FNU < NULIM, orders FNU and
-  !         FNU+1 are obtained from BSKNU to start the recursion.  If
+  !         FNU+1 are obtained from BESKNU to start the recursion.  If
   !         FNU >= NULIM, the uniform asymptotic expansion is used for
   !         orders FNU and FNU+1 to start the recursion.  NULIM is 35 or
   !         70 depending on whether N=1 or N >= 2.
@@ -59,7 +59,7 @@ PURE SUBROUTINE BESK(X,Fnu,Kode,N,Y,Nz)
   !                 Bessel function of the third kind, Journal of
   !                 Computational Physics 19, (1975), pp. 324-337.
   !***
-  ! **Routines called:**  ASYIK, BESK0, BESK1, BSK0E, BSK1E, BSKNU, XERMSG
+  ! **Routines called:**  ASYIK, BESK0, BESK1, BESK0E, BESK1E, BESKNU, XERMSG
 
   !* REVISION HISTORY  (YYMMDD)
   !   790201  DATE WRITTEN
@@ -249,7 +249,7 @@ PURE SUBROUTINE BESK(X,Fnu,Kode,N,Y,Nz)
       IF( j/=1 ) THEN
         j = j + 1
         IF( Kode==2 ) THEN
-          Y(j) = BSK0E(X)
+          Y(j) = BESK0E(X)
         ELSE
           Y(j) = BESK0(X)
         END IF
@@ -261,19 +261,19 @@ PURE SUBROUTINE BESK(X,Fnu,Kode,N,Y,Nz)
       END IF
       IF( .NOT. done ) THEN
         IF( Kode==2 ) THEN
-          Y(j) = BSK1E(X)
+          Y(j) = BESK1E(X)
         ELSE
           Y(j) = BESK1(X)
         END IF
         done = .TRUE.
       END IF
     ELSE
-      CALL BSKNU(X,Fnu,Kode,nd,Y,mz)
+      CALL BESKNU(X,Fnu,Kode,nd,Y,mz)
       done = .TRUE.
     END IF
   END IF
 
-  ! BSKNU SECTION (was label 300)
+  ! BESKNU SECTION (was label 300)
   IF( do_bsknu .AND. .NOT. done ) THEN
     skip_to_y1 = .FALSE.
     skip_to_forward_recur = .FALSE.
@@ -281,7 +281,7 @@ PURE SUBROUTINE BESK(X,Fnu,Kode,N,Y,Nz)
     IF( dnu/=0._SP ) THEN
       nb = 2
       IF( nud==0 .AND. nd==1 ) nb = 1
-      CALL BSKNU(X,dnu,Kode,nb,w,Nz)
+      CALL BESKNU(X,dnu,Kode,nb,w,Nz)
       s1 = w(1)
       IF( nb==1 ) THEN
         skip_to_y1 = .TRUE.
@@ -290,7 +290,7 @@ PURE SUBROUTINE BESK(X,Fnu,Kode,N,Y,Nz)
       END IF
     ELSE
       IF( Kode==2 ) THEN
-        s1 = BSK0E(X)
+        s1 = BESK0E(X)
       ELSE
         s1 = BESK0(X)
       END IF
@@ -298,7 +298,7 @@ PURE SUBROUTINE BESK(X,Fnu,Kode,N,Y,Nz)
         skip_to_y1 = .TRUE.
       ELSE
         IF( Kode==2 ) THEN
-          s2 = BSK1E(X)
+          s2 = BESK1E(X)
         ELSE
           s2 = BESK1(X)
         END IF

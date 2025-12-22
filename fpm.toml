@@ -17,7 +17,7 @@ library = true
 
 [fortran]
 implicit-typing = false
-implicit-external = false
+implicit-external = true
 source-form = "free"
 
 [dev-dependencies]

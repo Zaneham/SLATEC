@@ -113,6 +113,7 @@ PURE SUBROUTINE DEXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
   REAL(DP) :: a(99), aa, aams, ah, ak, at, b(99), bk, bt, cc, cnorm, ct, em, emx, &
     etol, fnm, fx, pt, p1, p2, s, tx, xlim, xtol, y(2), yt, y1, y2
   INTEGER :: i, ic, icase, ict, ik, ind, ix, i1m, jset, k, kk, kn, ks, ml, mu, nd, nm
+  LOGICAL :: go_via_100, skip_50, do_300, do_400, converged
   REAL(DP), PARAMETER :: xcut = 2._DP
   !* FIRST EXECUTABLE STATEMENT  DEXINT
   Ierr = 0
@@ -312,6 +313,7 @@ PURE SUBROUTINE DEXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
   !-----------------------------------------------------------------------
   p1 = 0._DP
   p2 = 1._DP
+  converged = .FALSE.
   DO WHILE( ic/=99 )
     ic = ic + 1
     ak = ak + 1._DP
@@ -350,44 +352,45 @@ PURE SUBROUTINE DEXINT(X,N,Kode,M,Tol,En,Nz,Ierr)
       !     X IS INCORPORATED INTO THE NORMALIZING RELATION
       !-----------------------------------------------------------------------
       pt = y2/y1
-      cnorm = 1._SP - pt*(ah+1._SP)/aa
-      y(1) = 1._SP/(cnorm*aa+X)
+      cnorm = 1._DP - pt*(ah+1._DP)/aa
+      y(1) = 1._DP/(cnorm*aa+X)
       y(2) = cnorm*y(1)
-      IF( icase/=3 ) THEN
-        En(ind) = emx*y(jset)
-        IF( M==1 ) RETURN
-        aa = ks
-        do_300 = (icase==1)
-        do_400 = (icase==1 .OR. icase==2)
-      END IF
-      IF( do_300 .OR. do_400 ) THEN
-        ! Continue to recursion section below
-      ELSE
+      IF( icase==3 ) THEN
         !-----------------------------------------------------------------------
         !     RECURSION SECTION  N*E(N+1,X) + X*E(N,X)=EMX
-      !-----------------------------------------------------------------------
-      En(1) = emx*(1._SP-y(1))/X
-      RETURN
+        !-----------------------------------------------------------------------
+        En(1) = emx*(1._DP-y(1))/X
+        RETURN
+      END IF
+      En(ind) = emx*y(jset)
+      IF( M==1 ) RETURN
+      aa = ks
+      do_300 = (icase==1)
+      do_400 = (icase==1 .OR. icase==2)
+      converged = .TRUE.
+      EXIT  ! Go to recursion sections below
     END IF
   END DO
-  Ierr = 2
-  RETURN
-  ! Recursion sections
+  IF( .NOT. converged ) THEN
+    Ierr = 2
+    RETURN
+  END IF
+  ! Recursion sections (reached via EXIT from DO WHILE)
   IF( do_300 ) THEN
     k = ind - 1
     DO i = 1, ml
-    aa = aa - 1._DP
-    En(k) = (emx-aa*En(k+1))/X
-    k = k - 1
+      aa = aa - 1._DP
+      En(k) = (emx-aa*En(k+1))/X
+      k = k - 1
     END DO
     IF( mu<=0 ) RETURN
     aa = ks
   END IF
   IF( do_400 ) THEN
     k = ind
-  DO i = 1, mu
-    En(k+1) = (emx-X*En(k))/aa
-    aa = aa + 1._DP
+    DO i = 1, mu
+      En(k+1) = (emx-X*En(k))/aa
+      aa = aa + 1._DP
       k = k + 1
     END DO
   END IF

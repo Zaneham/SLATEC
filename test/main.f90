@@ -4,6 +4,9 @@ program tester
   use test_bessel_regression, only: collect_bessel_regression_tests
   use test_bessel_reference, only: collect_bessel_reference_tests
   use test_bessel_portability, only: collect_bessel_portability_tests
+  use test_specfun_bessel, only: collect_specfun_bessel_tests
+  use test_diff_integ_quadpack, only: collect_quadpack_tests
+  use test_diff_integ_eq, only: collect_diff_integ_eq_tests
   implicit none
   integer :: stat, is
   type(testsuite_type), allocatable :: testsuites(:)
@@ -14,7 +17,10 @@ program tester
   testsuites = [ &
     new_testsuite("Bessel Regression (Original vs Modern)", collect_bessel_regression_tests), &
     new_testsuite("Bessel Reference (vs Papers/A&S)", collect_bessel_reference_tests), &
-    new_testsuite("Bessel Portability (ULP cross-platform)", collect_bessel_portability_tests) &
+    new_testsuite("Bessel Portability (ULP cross-platform)", collect_bessel_portability_tests), &
+    new_testsuite("Special Functions: Bessel (Mehdi+ZH)", collect_specfun_bessel_tests), &
+    new_testsuite("QUADPACK Integration (Mehdi+ZH)", collect_quadpack_tests), &
+    new_testsuite("Differential Equations (Mehdi+ZH)", collect_diff_integ_eq_tests) &
   ]
 
   do is = 1, size(testsuites)

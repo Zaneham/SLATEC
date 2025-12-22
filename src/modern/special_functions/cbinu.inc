@@ -15,7 +15,7 @@ PURE SUBROUTINE CBINU(Z,Fnu,Kode,N,Cy,Nz,Rl,Fnul,Tol,Elim,Alim)
   !***
   ! **See also:**  ZAIRY, ZBESH, CBESI, ZBESJ, ZBESK, ZBIRY
   !***
-  ! **Routines called:**  ZABS, CASYI, ZBUNI, CMLRI, CSERI, CUOIK, CWRSK
+  ! **Routines called:**  ZABS, CASYI, CBUNI, CMLRI, CSERI, CUOIK, CWRSK
   !
   ! REVISION HISTORY  (YYMMDD)
   !   830501  DATE WRITTEN
@@ -105,7 +105,7 @@ PURE SUBROUTINE CBINU(Z,Fnu,Kode,N,Cy,Nz,Rl,Fnul,Tol,Elim,Alim)
     ! Label 500 equivalent
     nui = INT( Fnul - dfnu ) + 1
     nui = MAX(nui,0)
-    CALL ZBUNI(Z,Fnu,Kode,nn,Cy,nw,nui,nlast,Fnul,Tol,Elim,Alim)
+    CALL CBUNI(Z,Fnu,Kode,nn,Cy,nw,nui,nlast,Fnul,Tol,Elim,Alim)
     IF( nw<0 ) THEN
       Nz = -1
       IF( nw==(-2) ) Nz = -2

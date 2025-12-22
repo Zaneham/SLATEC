@@ -142,67 +142,69 @@ PURE SUBROUTINE CUNI1(Z,Fnu,Kode,N,Y,Nz,Nlast,Fnul,Tol,Elim,Alim)
     cy(i) = s2
     Y(m) = s2*csr(iflag)
     END DO inner_loop
-    IF( do_underflow ) EXIT main_loop
-  IF( nd>2 ) THEN
-    rz = CMPLX(2._SP,0._SP,SP)/Z
-    bry(2) = 1._SP/bry(1)
-    bry(3) = huge_sp
-    s1 = cy(1)
-    s2 = cy(2)
-    c1 = csr(iflag)
-    ascle = bry(iflag)
-    k = nd - 2
-    fn = k
-    DO i = 3, nd
-      c2 = s2
-      s2 = s1 + CMPLX(Fnu+fn,0._SP,SP)*rz*s2
-      s1 = c2
-      c2 = s2*c1
-      Y(k) = c2
-      k = k - 1
-      fn = fn - 1._SP
-      IF( iflag<3 ) THEN
-        c2r = REAL(c2,SP)
-        c2i = AIMAG(c2)
-        c2r = ABS(c2r)
-        c2i = ABS(c2i)
-        c2m = MAX(c2r,c2i)
-        IF( c2m>ascle ) THEN
-          iflag = iflag + 1
-          ascle = bry(iflag)
-          s1 = s1*c1
-          s2 = c2
-          s1 = s1*css(iflag)
-          s2 = s2*css(iflag)
-          c1 = csr(iflag)
+    !
+    IF( do_underflow ) THEN
+      !-----------------------------------------------------------------------
+      !     SET UNDERFLOW AND UPDATE PARAMETERS (was label 300)
+      !-----------------------------------------------------------------------
+      IF( rs1<=0._SP ) THEN
+        Y(nd) = (0._SP,0._SP)
+        Nz = Nz + 1
+        nd = nd - 1
+        IF( nd==0 ) RETURN
+        CALL CUOIK(Z,Fnu,Kode,1,nd,Y,nuf,Tol,Elim,Alim)
+        IF( nuf>=0 ) THEN
+          nd = nd - nuf
+          Nz = Nz + nuf
+          IF( nd==0 ) RETURN
+          fn = Fnu + (nd-1)
+          IF( fn>=Fnul ) CYCLE main_loop  ! Back to main computation
+          Nlast = nd
+          RETURN
         END IF
       END IF
-    END DO
-  END IF
-    EXIT main_loop  ! Normal completion
-  END DO main_loop
-  !
-  IF( .NOT. do_underflow ) RETURN
-  !-----------------------------------------------------------------------
-  !     SET UNDERFLOW AND UPDATE PARAMETERS
-  !-----------------------------------------------------------------------
-  IF( rs1<=0._SP ) THEN
-    Y(nd) = (0._SP,0._SP)
-    Nz = Nz + 1
-    nd = nd - 1
-    IF( nd==0 ) RETURN
-    CALL CUOIK(Z,Fnu,Kode,1,nd,Y,nuf,Tol,Elim,Alim)
-    IF( nuf>=0 ) THEN
-      nd = nd - nuf
-      Nz = Nz + nuf
-      IF( nd==0 ) RETURN
-      fn = Fnu + (nd-1)
-      IF( fn>=Fnul ) CYCLE main_loop
-      Nlast = nd
+      Nz = -1
       RETURN
     END IF
-  END IF
-  Nz = -1
+    !
+    IF( nd>2 ) THEN
+      rz = CMPLX(2._SP,0._SP,SP)/Z
+      bry(2) = 1._SP/bry(1)
+      bry(3) = huge_sp
+      s1 = cy(1)
+      s2 = cy(2)
+      c1 = csr(iflag)
+      ascle = bry(iflag)
+      k = nd - 2
+      fn = k
+      DO i = 3, nd
+        c2 = s2
+        s2 = s1 + CMPLX(Fnu+fn,0._SP,SP)*rz*s2
+        s1 = c2
+        c2 = s2*c1
+        Y(k) = c2
+        k = k - 1
+        fn = fn - 1._SP
+        IF( iflag<3 ) THEN
+          c2r = REAL(c2,SP)
+          c2i = AIMAG(c2)
+          c2r = ABS(c2r)
+          c2i = ABS(c2i)
+          c2m = MAX(c2r,c2i)
+          IF( c2m>ascle ) THEN
+            iflag = iflag + 1
+            ascle = bry(iflag)
+            s1 = s1*c1
+            s2 = c2
+            s1 = s1*css(iflag)
+            s2 = s2*css(iflag)
+            c1 = csr(iflag)
+          END IF
+        END IF
+      END DO
+    END IF
+    EXIT main_loop  ! Normal completion
+  END DO main_loop
   !
   RETURN
 END SUBROUTINE CUNI1

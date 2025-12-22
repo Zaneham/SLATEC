@@ -22,7 +22,7 @@ PURE SUBROUTINE CUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
   !***
   ! **See also:**  CBESK
   !***
-  ! **Routines called:**  D1MACH, ZABS, ZAIRY, CS1S2, CUCHK, ZUNHJ
+  ! **Routines called:**  D1MACH, ZABS, CAIRY, CS1S2, CUCHK, CUNHJ
   !
   ! REVISION HISTORY  (YYMMDD)
   !   830501  DATE WRITTEN
@@ -104,7 +104,7 @@ PURE SUBROUTINE CUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
     !-----------------------------------------------------------------------
     j = 3 - j
     fn = Fnu + (i-1)
-    CALL ZUNHJ(zn,fn,0,Tol,phi(j),arg(j),zeta1(j),zeta2(j),asum(j),bsum(j))
+    CALL CUNHJ(zn,fn,0,Tol,phi(j),arg(j),zeta1(j),zeta2(j),asum(j),bsum(j))
     IF( Kode==1 ) THEN
       s1 = zeta1(j) - zeta2(j)
     ELSE
@@ -140,8 +140,8 @@ PURE SUBROUTINE CUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
         !  SCALE S1 TO KEEP INTERMEDIATE ARITHMETIC ON SCALE NEAR EXPONENT EXTREMES
         !-----------------------------------------------------------------------
         c2 = arg(j)*cr2
-        CALL ZAIRY(c2,0,2,ai,nai,idum)
-        CALL ZAIRY(c2,1,2,dai,ndai,idum)
+        CALL CAIRY(c2,0,2,ai,nai,idum)
+        CALL CAIRY(c2,1,2,dai,ndai,idum)
         s2 = cs*phi(j)*(ai*asum(j)+cr2*dai*bsum(j))
         c2r = REAL(s1,SP)
         c2i = AIMAG(s1)
@@ -209,7 +209,7 @@ PURE SUBROUTINE CUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
     fn = Fnu + (N-1)
     ipard = 1
     IF( Mr/=0 ) ipard = 0
-    CALL ZUNHJ(zn,fn,ipard,Tol,phid,argd,zeta1d,zeta2d,asumd,bsumd)
+    CALL CUNHJ(zn,fn,ipard,Tol,phid,argd,zeta1d,zeta2d,asumd,bsumd)
     IF( Kode==1 ) THEN
       s1 = zeta1d - zeta2d
     ELSE
@@ -333,7 +333,7 @@ PURE SUBROUTINE CUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
       IF( (kk==N) .AND. (ib<N) ) THEN
         skip_param_reuse = .true.
       ELSE IF( (kk/=ib) .AND. (kk/=ic) ) THEN
-        CALL ZUNHJ(zn,fn,0,Tol,phid,argd,zeta1d,zeta2d,asumd,bsumd)
+        CALL CUNHJ(zn,fn,0,Tol,phid,argd,zeta1d,zeta2d,asumd,bsumd)
         skip_param_reuse = .true.
       END IF
     END IF
@@ -380,8 +380,8 @@ PURE SUBROUTINE CUNK2(Z,Fnu,Kode,Mr,N,Y,Nz,Tol,Elim,Alim)
       END IF
 
       IF( .not. underflow_occurred ) THEN
-        CALL ZAIRY(argd,0,2,ai,nai,idum)
-        CALL ZAIRY(argd,1,2,dai,ndai,idum)
+        CALL CAIRY(argd,0,2,ai,nai,idum)
+        CALL CAIRY(argd,1,2,dai,ndai,idum)
         s2 = cs*phid*(ai*asumd+dai*bsumd)
         c2r = REAL(s1,SP)
         c2i = AIMAG(s1)
