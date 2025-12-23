@@ -47,7 +47,7 @@ contains
 
   subroutine test_j0_values()
     !> J_0(x) values from A&S Table 9.1
-    real(DP) :: y(1), exact
+    real(DP) :: y(1)
     integer :: nz
     logical :: ok
     
@@ -159,24 +159,31 @@ contains
     character(*), intent(in) :: name
     real(DP), intent(in) :: computed, expected, tol
     logical, intent(out) :: ok
-    real(DP) :: rel_err
-    
+    real(DP) :: rel_err, abs_err
+    character(4) :: status
+
+    abs_err = abs(computed - expected)
     if (expected /= 0.0_DP) then
-      rel_err = abs(computed - expected) / abs(expected)
+      rel_err = abs_err / abs(expected)
     else
-      rel_err = abs(computed - expected)
+      rel_err = abs_err
     end if
-    
+
     ok = (rel_err < tol)
-    
+
     if (ok) then
-      print "(A,A,A)", "  PASS: ", name, ""
+      status = "PASS"
       npass = npass + 1
     else
-      print "(A,A,A,ES12.5,A,ES12.5,A,ES12.5)", &
-        "  FAIL: ", name, " computed=", computed, " expected=", expected, " err=", rel_err
+      status = "FAIL"
       nfail = nfail + 1
     end if
+
+    ! Always print: name, A&S reference, computed, absolute error, relative error
+    print "(A4,1X,A8,A,F19.16,A,F19.16,A,ES10.3,A,ES10.3)", &
+      status, name, &
+      "  ref=", expected, "  got=", computed, &
+      "  abs=", abs_err, "  rel=", rel_err
   end subroutine
 
 end program test_bessel_golden
