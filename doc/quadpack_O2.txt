@@ -1,0 +1,132 @@
+ ========================================
+ QUADPACK Floating-Point Deviation Report
+ ========================================
+
+ Compiler: gfortran (assumed)
+
+ === Polynomial: ∫₀¹ x² dx = 1/3 ===
+
+            x² (DP):
+   Expected:               0.3333333333333333
+   Computed:               0.3333333333333334
+   Hex:             3FD5555555555556
+   Abs error:        5.55112E-17
+   Rel error:        1.66533E-16
+   QUADPACK abserr:  3.70074E-15
+   Function evals:        21
+   Return code:            0
+            x² (SP):
+   Expected:              0.3333333433
+   Computed:              0.3333333433
+   Hex:             3EAAAAAB
+   Abs error:        0.00000E+00
+   Rel error:        0.00000E+00
+   QUADPACK abserr:  1.98682E-06
+   Function evals:        21
+   Return code:            0
+
+ === Trigonometric: ∫₀^π sin(x) dx = 2 ===
+
+         sin(x) (DP):
+   Expected:               2.0000000000000000
+   Computed:               2.0000000000000000
+   Hex:             4000000000000000
+   Abs error:        0.00000E+00
+   Rel error:        0.00000E+00
+   QUADPACK abserr:  2.22045E-14
+   Function evals:        21
+   Return code:            0
+         sin(x) (SP):
+   Expected:              2.0000000000
+   Computed:              2.0000002384
+   Hex:             40000001
+   Abs error:        2.38419E-07
+   Rel error:        1.19209E-07
+   QUADPACK abserr:  1.19209E-05
+   Function evals:        21
+   Return code:            0
+
+ === Exponential: ∫₀¹ exp(x) dx = e - 1 ===
+
+         exp(x) (DP):
+   Expected:               1.7182818284590451
+   Computed:               1.7182818284590453
+   Hex:             3FFB7E151628AED3
+   Abs error:        2.22045E-16
+   Rel error:        1.29225E-16
+   QUADPACK abserr:  1.90768E-14
+   Function evals:        21
+   Return code:            0
+         exp(x) (SP):
+   Expected:              1.7182817459
+   Computed:              1.7182817459
+   Hex:             3FDBF0A8
+   Abs error:        0.00000E+00
+   Rel error:        0.00000E+00
+   QUADPACK abserr:  1.02418E-05
+   Function evals:        21
+   Return code:            0
+
+ === Arctan: ∫₀¹ 1/(1+x²) dx = π/4 ===
+
+      1/(1+x²) (DP):
+   Expected:               0.7853981633974483
+   Computed:               0.7853981633974484
+   Hex:             3FE921FB54442D19
+   Abs error:        1.11022E-16
+   Rel error:        1.41358E-16
+   QUADPACK abserr:  8.71967E-15
+   Function evals:        21
+   Return code:            0
+      1/(1+x²) (SP):
+   Expected:              0.7853981853
+   Computed:              0.7853981256
+   Hex:             3F490FDA
+   Abs error:        5.96046E-08
+   Rel error:        7.58910E-08
+   QUADPACK abserr:  4.68134E-06
+   Function evals:        21
+   Return code:            0
+
+ === Gaussian: ∫₀^∞ exp(-x²) dx = √π/2 ===
+
+      exp(-x²) (DP):
+   Expected:               0.8862269254527579
+   Computed:               0.8862269254527579
+   Hex:             3FEC5BF891B4EF6A
+   Abs error:        0.00000E+00
+   Rel error:        0.00000E+00
+   QUADPACK abserr:  5.15326E-13
+   Function evals:       195
+   Return code:            0
+      exp(-x²) (SP):
+   Expected:              0.8862269521
+   Computed:              0.8862268925
+   Hex:             3F62DFC4
+   Abs error:        5.96046E-08
+   Rel error:        6.72566E-08
+   QUADPACK abserr:  7.43195E-06
+   Function evals:        75
+   Return code:            0
+
+ === QNG (Non-adaptive): ∫₀¹ x² dx = 1/3 ===
+
+        QNG x² (DP):
+   Expected:               0.3333333333333333
+   Computed:               0.3333333333333334
+   Hex:             3FD5555555555556
+   Abs error:        5.55112E-17
+   Rel error:        1.66533E-16
+   QUADPACK abserr:  3.70074E-15
+   Function evals:        21
+   Return code:            0
+        QNG x² (SP):
+   Expected:              0.3333333433
+   Computed:              0.3333333433
+   Hex:             3EAAAAAB
+   Abs error:        0.00000E+00
+   Rel error:        0.00000E+00
+   QUADPACK abserr:  1.98682E-06
+   Function evals:        21
+   Return code:            0
+

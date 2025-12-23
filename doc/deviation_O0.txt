@@ -1,0 +1,120 @@
+ ============================================================
+ SLATEC-MODERN DEVIATION REPORT
+ ============================================================
+ 
+ Compiler: gfortran 13.2.0
+ SP precision (digits): 6
+ DP precision (digits): 15
+ SP epsilon:  1.192E-07
+ DP epsilon:  2.220E-16
+ 
+ --- Bessel J (First Kind) ---
+ Reference: A&S Table 9.1
+ 
+ J_0(1.0):
+   A&S reference:     0.7651976865579666
+   SP computed:            0.7651976943016052
+   DP computed:            0.7651976865579666
+   SP hex:          3F43E3FF
+   DP hex:          3FE87C7FDBD7B8F0
+ 
+ J_0(2.0):
+   A&S reference:     0.2238907791412357
+   SP computed:            0.2238907665014267
+   DP computed:            0.2238907791412356
+   SP hex:          3E65439F
+   DP hex:          3FCCA873FB24CEF6
+ 
+ J_0(5.0):
+   A&S reference:    -0.1775967713143383
+   SP computed:           -0.1775967627763748
+   DP computed:           -0.1775967713143385
+   SP hex:          BE35DBED
+   DP hex:          BFC6BB7DB255CB92
+ 
+ J_0(50.0):
+   NIST reference:    0.0558123276692332
+   SP computed:            0.0558124817907810
+   DP computed:            0.0558123276692521
+   SP hex:          3D649BA1
+   DP hex:          3FAC936EF41B2C72
+ 
+ J_0(100.0):
+   NIST reference:    0.0199858503042232
+   SP computed:            0.0199856813997030
+   DP computed:            0.0199858503042233
+   SP hex:          3CA3B903
+   DP hex:          3F94772BB5C1EFA9
+ 
+ J_1(1.0):
+   A&S reference:     0.4400505857449335
+   SP computed:            0.4400506019592285
+   DP computed:            0.4400505857449336
+   SP hex:          3EE14E50
+   DP hex:          3FDC29C9EE970C6D
+ 
+ --- Bessel I (Modified First Kind) ---
+ Reference: A&S Table 9.8
+ 
+ I_0(1.0):
+   A&S reference:     1.2660658777520084
+   SP computed:            1.2660659551620483
+   DP computed:            1.2660658777520082
+   SP hex:          3FA20E73
+   DP hex:          3FF441CE4B386C2C
+ 
+ I_0(2.0):
+   A&S reference:     2.2795853023360673
+   SP computed:            2.2795851230621338
+   DP computed:            2.2795853023360668
+   SP hex:          4011E4B9
+   DP hex:          40023C97380FCE31
+ 
+ I_1(1.0):
+   A&S reference:     0.5651591039924851
+   SP computed:            0.5651590824127197
+   DP computed:            0.5651591039924850
+   SP hex:          3F10AE44
+   DP hex:          3FE215C88B95E67E
+ 
+ --- Bessel K (Modified Second Kind) ---
+ Reference: A&S Table 9.8
+ 
+ K_0(1.0): *** KNOWN DEVIATION POINT ***
+   A&S reference:     0.4210244382407084
+   SP computed:            0.4210244417190552
+   DP computed:            0.4210244382407085
+   SP hex:          3ED79084
+   DP hex:          3FDAF2107C43E11C
+ 
+ K_0(2.0):
+   A&S reference:     0.1138938727495334
+   SP computed:            0.1138938963413239
+   DP computed:            0.1138938727495334
+   SP hex:          3DE94134
+   DP hex:          3FBD28261AAC8D54
+ 
+ K_1(1.0):
+   A&S reference:     0.6019072301972346
+   SP computed:            0.6019072532653809
+   DP computed:            0.6019072301972346
+   SP hex:          3F1A1698
+   DP hex:          3FE342D2F39D89C2
+ 
+ --- Bessel Y (Second Kind) ---
+ Reference: A&S Table 9.1
+ 
+ Y_0(1.0):
+   A&S reference:     0.0882569642156769
+   DP computed:            0.0882569642156769
+   DP hex:          3FB6980226F358DE
+ 
+ Y_0(2.0):
+   A&S reference:     0.5103756726497451
+   DP computed:            0.5103756726497451
+   DP hex:          3FE054FF5CD68C8D
+ 
+ 
+ ============================================================
+ END REPORT
+ ============================================================

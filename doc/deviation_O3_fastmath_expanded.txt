@@ -1,0 +1,351 @@
+ ============================================================
+ SLATEC-MODERN DEVIATION REPORT (EXPANDED)
+ ============================================================
+ 
+ Compiler: gfortran 13.2.0
+ SP precision (digits): 6
+ DP precision (digits): 15
+ SP epsilon:  1.192E-07
+ DP epsilon:  2.220E-16
+ 
+ ================================================================
+ --- Bessel J (First Kind) - EXPANDED ---
+ ================================================================
+ 
+ === Standard test points (A&S Table 9.1) ===
+ 
+ J_0(1.0):
+  Reference:        0.7651976865579666
+   SP computed:            0.7651976943016052
+   DP computed:            0.7651976865579666
+   SP hex:          3F43E3FF
+   DP hex:          3FE87C7FDBD7B8F0
+ 
+ J_0(2.0):
+  Reference:        0.2238907791412357
+   SP computed:            0.2238907665014267
+   DP computed:            0.2238907791412356
+   SP hex:          3E65439F
+   DP hex:          3FCCA873FB24CEF6
+ 
+ J_0(5.0):
+  Reference:        -0.1775967713143383
+   SP computed:           -0.1775967627763748
+   DP computed:           -0.1775967713143385
+   SP hex:          BE35DBED
+   DP hex:          BFC6BB7DB255CB92
+ 
+ J_1(1.0):
+  Reference:        0.4400505857449335
+   SP computed:            0.4400506019592285
+   DP computed:            0.4400505857449336
+   SP hex:          3EE14E50
+   DP hex:          3FDC29C9EE970C6D
+ 
+ J_1(2.0):
+  Reference:        0.5767248077568734
+   SP computed:            0.5767248272895813
+   DP computed:            0.5767248077568736
+   SP hex:          3F13A43D
+   DP hex:          3FE27487958371F2
+ 
+ === Near zeros of J_0 (sensitive points) ===
+ 
+ J_0(2.404825557695773) [1st zero]:
+  Reference:        0.0
+   DP computed:            0.0000000000000001
+   DP hex:          3C90000000000000
+ 
+ J_0(5.520078110286311) [2nd zero]:
+  Reference:        0.0
+   DP computed:           -0.0000000000000000
+   DP hex:          BC88000000000000
+ 
+ J_0(8.653727912911012) [3rd zero]:
+  Reference:        0.0
+   DP computed:            0.0000000000000000
+   DP hex:                         0
+ 
+ === Near-zero argument (series expansion region) ===
+ 
+ J_0(1E-10):
+  Reference:        1.0 (exact)
+   DP computed:            1.0000000000000000
+   DP hex:          3FF0000000000000
+ 
+ J_0(1E-15):
+  Reference:        1.0 (exact)
+   DP computed:            1.0000000000000000
+   DP hex:          3FF0000000000000
+ 
+ J_1(1E-10):
+  Reference:        5E-11 (x/2)
+   DP computed:            0.0000000000500000
+   DP hex:          3DCB7CDFD9D7BDC5
+ 
+ === Large argument (asymptotic region) ===
+ 
+ J_0(50.0):
+  Reference:        0.0558123276692332 (NIST)
+   SP computed:            0.0558124817907810
+   DP computed:            0.0558123276692521
+   SP hex:          3D649BA1
+   DP hex:          3FAC936EF41B2C72
+ 
+ J_0(100.0):
+  Reference:        0.0199858503042232 (NIST)
+   SP computed:            0.0199856813997030
+   DP computed:            0.0199858503042233
+   SP hex:          3CA3B903
+   DP hex:          3F94772BB5C1EFA9
+ 
+ J_0(500.0):
+  Reference:        0.0179753822938868 (NIST)
+   DP computed:           -0.0341005568807317
+   DP hex:          BFA175A0D12800B8
+ 
+ J_0(1000.0):
+  Reference:        -0.0246711376936846 (NIST)
+   DP computed:            0.0247866861524200
+   DP hex:          3F9961AE599A7B0D
+ 
+ === Higher orders ===
+ 
+ J_4(5.0):
+  Reference:        0.3912057568779922 (A&S)
+   DP computed:            0.3912323604586483
+   DP hex:          3FD909F37453A241
+ 
+ J_5(10.0):
+  Reference:        -0.2340615281867937 (NIST)
+   DP computed:           -0.2340615281867928
+   DP hex:          BFCDF5BA68683308
+ 
+ J_9(20.0):
+  Reference:        0.2453202954891665 (NIST)
+   DP computed:            0.0000000000000000
+   DP hex:                         0
+ 
+ ================================================================
+ --- Bessel I (Modified First Kind) - EXPANDED ---
+ ================================================================
+ 
+ === Standard test points (A&S Table 9.8) ===
+ 
+ I_0(1.0):
+  Reference:        1.2660658777520084
+   SP computed:            1.2660659551620483
+   DP computed:            1.2660658777520082
+   SP hex:          3FA20E73
+   DP hex:          3FF441CE4B386C2C
+ 
+ I_0(2.0):
+  Reference:        2.2795853023360673
+   SP computed:            2.2795851230621338
+   DP computed:            2.2795853023360668
+   SP hex:          4011E4B9
+   DP hex:          40023C97380FCE31
+ 
+ I_1(1.0):
+  Reference:        0.5651591039924851
+   SP computed:            0.5651590824127197
+   DP computed:            0.5651591039924850
+   SP hex:          3F10AE44
+   DP hex:          3FE215C88B95E67E
+ 
+ I_1(2.0):
+  Reference:        1.5906368546373291
+   SP computed:            1.5906368494033813
+   DP computed:            1.5906368546373288
+   SP hex:          3FCB99FD
+   DP hex:          3FF9733FA167AC94
+ 
+ === Near-zero argument ===
+ 
+ I_0(1E-10):
+  Reference:        1.0 (exact)
+   DP computed:            1.0000000000000000
+   DP hex:          3FF0000000000000
+ 
+ I_1(1E-10):
+  Reference:        5E-11 (x/2)
+   DP computed:            0.0000000000500000
+   DP hex:          3DCB7CDFD9D7BDC5
+ 
+ === Large argument (exponential growth) ===
+ 
+ I_0(10.0):
+  Reference:        2815.7166284662544 (NIST)
+   DP computed:         2815.7166284662607723
+   DP hex:          40A5FF6EE9ED23F2
+ 
+ I_0(50.0):
+  Reference:        2.9325537838493547E+20 (NIST)
+   DP computed:     *************************
+   DP hex:          442FCB78C9D0A580
+ 
+ === Higher orders ===
+ 
+ I_2(5.0):
+  Reference:        17.505614966624236 (NIST)
+   DP computed:           17.5056149666242469
+   DP hex:          4031816FFB8204EF
+ 
+ ================================================================
+ --- Bessel K (Modified Second Kind) - EXPANDED ---
+ *** THIS FUNCTION SHOWS OPTIMIZATION-DEPENDENT DEVIATIONS ***
+ ================================================================
+ 
+ === Standard test points (A&S Table 9.8) ===
+ 
+ K_0(1.0): *** KNOWN DEVIATION ***
+  Reference:        0.4210244382407084
+   SP computed:            0.4210243821144104
+   DP computed:            0.4210244382407082
+   SP hex:          3ED79082
+   DP hex:          3FDAF2107C43E118
+ 
+ K_0(2.0): *** KNOWN DEVIATION ***
+  Reference:        0.1138938727495334
+   SP computed:            0.1138938665390015
+   DP computed:            0.1138938727495334
+   SP hex:          3DE94130
+   DP hex:          3FBD28261AAC8D58
+ 
+ K_1(1.0):
+  Reference:        0.6019072301972346
+   SP computed:            0.6019072532653809
+   DP computed:            0.6019072301972346
+   SP hex:          3F1A1698
+   DP hex:          3FE342D2F39D89C2
+ 
+ K_1(2.0):
+  Reference:        0.1398658818165224
+   SP computed:            0.1398659050464630
+   DP computed:            0.1398658818165224
+   SP hex:          3E0F3902
+   DP hex:          3FC1E7200E1D3481
+ 
+ === Near-zero argument (logarithmic singularity) ===
+ 
+ K_0(0.1):
+  Reference:        2.4270690247020166 (NIST)
+   DP computed:            2.4270690247020164
+   DP hex:          40036AA32A31D695
+ 
+ K_0(0.01):
+  Reference:        4.7212359359101134 (NIST)
+   DP computed:            4.7212447301610947
+   DP hex:          4012E28DFA81D126
+ 
+ K_0(1E-5):
+  Reference:        ~11.629 (-ln(x/2)-gamma)
+   DP computed:           11.6288569809443629
+   DP hex:          402741F98ACE08E0
+ 
+ === Large argument (exponential decay) ===
+ 
+ K_0(10.0):
+  Reference:        1.7780062316167652E-05 (NIST)
+   DP computed:            0.0000177800623162
+   DP hex:          3EF2A4CC9425B783
+ 
+ K_0(50.0):
+  Reference:        3.4101677497894956E-23 (NIST)
+   DP computed:            0.0000000000000000
+   DP hex:          3B449CFA9F978B3C
+ 
+ === Additional K_0 points for deviation tracking ===
+ 
+ K_0(0.5):
+  Reference:        0.9244190712276659 (NIST)
+   SP computed:            0.9244189262390137
+   DP computed:            0.9244190712276656
+   SP hex:          3F6CA6B8
+   DP hex:          3FED94D74DD716AE
+ 
+ K_0(1.5):
+  Reference:        0.2138055626545264 (NIST)
+   SP computed:            0.2138055562973022
+   DP computed:            0.2138055626475257
+   SP hex:          3E5AEFD8
+   DP hex:          3FCB5DFB0DA31280
+ 
+ K_0(3.0):
+  Reference:        0.0347395043862552 (NIST)
+   SP computed:            0.0347395017743111
+   DP computed:            0.0347395043862793
+   SP hex:          3D0E4B02
+   DP hex:          3FA1C960566FC75F
+ 
+ K_0(5.0):
+  Reference:        0.0036910982867735 (NIST)
+   SP computed:            0.0036910984199494
+   DP computed:            0.0036910983340426
+   SP hex:          3B71E65B
+   DP hex:          3F6E3CCB54316C2C
+ 
+ ================================================================
+ --- Bessel Y (Second Kind) - EXPANDED ---
+ ================================================================
+ 
+ === Standard test points (A&S Table 9.1) ===
+ 
+ Y_0(1.0):
+  Reference:        0.0882569642156769
+   SP computed:            0.0882569625973701
+   DP computed:            0.0882569642156769
+   SP hex:          3DB4C011
+   DP hex:          3FB6980226F358DE
+ 
+ Y_0(2.0):
+  Reference:        0.5103756726497451
+   SP computed:            0.5103756785392761
+   DP computed:            0.5103756726497451
+   SP hex:          3F02A7FB
+   DP hex:          3FE054FF5CD68C8D
+ 
+ Y_0(5.0):
+  Reference:        -0.3085176252490338
+   SP computed:           -0.3085176348686218
+   DP computed:           -0.3085176252490350
+   SP hex:          BE9DF606
+   DP hex:          BFD3BEC0B5ABC9C2
+ 
+ Y_1(1.0):
+  Reference:        -0.7812128213002887
+   SP computed:           -0.7812128067016602
+   DP computed:           -0.7812128213002887
+   SP hex:          BF47FD90
+   DP hex:          BFE8FFB207D66B94
+ 
+ === Near zeros of Y_0 ===
+ 
+ Y_0(0.893576966...) [1st zero]:
+  Reference:        0.0
+   DP computed:           -0.0000000000000000
+   DP hex:          BC7A37D757966132
+ 
+ Y_0(3.957678419...) [2nd zero]:
+  Reference:        0.0
+   DP computed:           -0.0000000000000007
+   DP hex:          BCC8807F21A29A50
+ 
+ === Large argument ===
+ 
+ Y_0(50.0):
+  Reference:        -0.0560404718523358 (NIST)
+   SP computed:           -0.0980649963021278
+   DP computed:           -0.0980649954700770
+   SP hex:          BDC8D64D
+   DP hex:          BFB91AC99C6D267F
+ 
+ Y_0(100.0):
+  Reference:        -0.0772433752531550 (NIST)
+   DP computed:           -0.0772443133650831
+   DP hex:          BFB3C64887B47B62
+ 
+ 
+ ============================================================
+ END REPORT
+ ============================================================
