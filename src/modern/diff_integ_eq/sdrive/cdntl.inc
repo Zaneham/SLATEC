@@ -41,7 +41,7 @@ PURE SUBROUTINE CDNTL(Eps,F,FA,Hmax,Hold,Impl,Jtask,Matdim,Maxord,Mint,Miter,&
   !   900329  Initial submission to SLATEC.
   USE blas, ONLY : SCNRM2
   USE linpack, ONLY : CGBFA, CGEFA
-  USE lapack, ONLY : CGBTRS, CGETRS
+  !USE lapack, ONLY : CGBTRS, CGETRS
   !
   INTERFACE
     PURE SUBROUTINE F(N,T,Y,Ydot)

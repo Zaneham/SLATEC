@@ -40,7 +40,7 @@ PURE SUBROUTINE DDNTL(Eps,F,FA,Hmax,Hold,Impl,Jtask,Matdim,Maxord,Mint,Miter,&
   !   790601  DATE WRITTEN
   !   900329  Initial submission to SLATEC.
   USE linpack, ONLY : DGBFA, DGEFA
-  USE lapack, ONLY : DGBTRS, DGETRS
+  !USE lapack, ONLY : DGBTRS, DGETRS
   !
   INTERFACE
     PURE SUBROUTINE F(N,T,Y,Ydot)

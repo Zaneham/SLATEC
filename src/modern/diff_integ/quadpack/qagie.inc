@@ -185,7 +185,7 @@ PURE SUBROUTINE QAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
     defabs, defab1, defab2, dres, epmach, erlarg, erlast, errbnd, errmax, error1, &
     error2, erro12, errsum, ertest, oflow, resabs, reseps, res3la(3), rlist2(52), &
     small, uflow
-  LOGICAL :: extrap, noext
+  LOGICAL :: extrap, noext, skip_to_end, compute_sum
   !
   !            THE DIMENSION OF RLIST2 IS DETERMINED BY THE VALUE OF
   !            LIMEXP IN SUBROUTINE QELG.
@@ -256,6 +256,8 @@ PURE SUBROUTINE QAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
   Rlist(1) = 0._SP
   Elist(1) = 0._SP
   Iord(1) = 0
+  skip_to_end = .FALSE.
+  compute_sum = .FALSE.
   IF( Epsabs<=0._SP .AND. Epsrel<MAX(50._SP*epmach,0.5E-14_SP) ) Ier = 6
   IF( Ier==6 ) RETURN
   !
@@ -504,5 +506,7 @@ PURE SUBROUTINE QAGIE(F,Bound,Inf,Epsabs,Epsrel,Limit,Result,Abserr,Neval,Ier,&
   Neval = 30*Last - 15
   IF( Inf==2 ) Neval = 2*Neval
   IF( Ier>2 ) Ier = Ier - 1
+
+END IF
 
 END SUBROUTINE QAGIE

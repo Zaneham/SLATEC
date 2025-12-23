@@ -29,7 +29,7 @@ PURE SUBROUTINE SDCOR(Dfdy,El,FA,H,Ierror,Impl,Ipvt,Matdim,Miter,Ml,Mu,N,Nde,&
   !   790601  DATE WRITTEN
   !   900329  Initial submission to SLATEC.
   USE linpack, ONLY : SGBSL, SGESL
-!  USE lapack, ONLY : SGBTRS, SGETRS
+  !USE lapack, ONLY : SGBTRS, SGETRS
   !
   INTERFACE
     PURE SUBROUTINE USERS(Y,Yh,Ywt,Save1,Save2,T,H,El,Impl,N,Nde,Iflag)

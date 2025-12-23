@@ -39,7 +39,7 @@ PURE SUBROUTINE SDNTL(Eps,F,FA,Hmax,Hold,Impl,Jtask,Matdim,Maxord,Mint,Miter,&
   !   790601  DATE WRITTEN
   !   900329  Initial submission to SLATEC.
   USE linpack, ONLY : SGBFA, SGEFA
-  USE lapack, ONLY : SGETRS, SGBTRS
+  !USE lapack, ONLY : SGETRS, SGBTRS
   !
   INTERFACE
     PURE SUBROUTINE F(N,T,Y,Ydot)

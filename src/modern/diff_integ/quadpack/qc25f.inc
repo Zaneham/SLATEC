@@ -109,7 +109,7 @@ PURE SUBROUTINE QC25F(F,A,B,Omega,Integr,Nrmom,Maxp1,Ksave,Result,Abserr,Neval,&
   !   861211  REVISION DATE from Version 3.2
   !   891214  Prologue converted to Version 4.0 format.  (BAB)
   USE service, ONLY : huge_sp
-  USE lapack, ONLY : SGTSV
+  !USE lapack, ONLY : SGTSV
   !
   INTERFACE
     REAL(SP) PURE FUNCTION F(X)

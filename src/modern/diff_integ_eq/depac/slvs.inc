@@ -31,7 +31,7 @@ SUBROUTINE SLVS(Wm,Iwm,X)
   !           Ref: ISO/IEC 1539-1:2018 S11.2.3 (RETURN statement)
   !           Original: Watts, SNLA
   USE DEBDF1, ONLY : el0_com, h_com, ier_com, miter_com, n_com
-  USE lapack, ONLY : SGBTRS, SGETRS
+  !USE lapack, ONLY : SGBTRS, SGETRS
   !
   INTEGER, INTENT(INOUT) :: Iwm(:)
   REAL(SP), INTENT(INOUT) :: Wm(:), X(n_com)

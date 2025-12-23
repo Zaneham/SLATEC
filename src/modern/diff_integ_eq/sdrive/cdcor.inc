@@ -30,7 +30,7 @@ PURE SUBROUTINE CDCOR(Dfdy,El,FA,H,Ierror,Impl,Ipvt,Matdim,Miter,Ml,Mu,N,Nde,&
   !   790601  DATE WRITTEN
   !   900329  Initial submission to SLATEC.
   USE blas, ONLY : SCNRM2
-  USE lapack, ONLY : CGBTRS, CGETRS
+  !USE lapack, ONLY : CGBTRS, CGETRS
   !
   INTERFACE
     PURE SUBROUTINE USERS(Y,Yh,Ywt,Save1,Save2,T,H,El,Impl,N,Nde,Iflag)

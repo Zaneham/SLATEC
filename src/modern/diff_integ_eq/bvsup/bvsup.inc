@@ -424,6 +424,7 @@ SUBROUTINE BVSUP(Y,Nrowy,Ncomp,Xpts,Nxpts,A,Nrowa,Alpha,Nic,B,Nrowb,Beta,&
     kkksud, kkksvc, kkku, kkkv, kkkws, kkkyhp, kpts, lllcof, lllip, llliws, &
     lllsud, lllsvc, mxnoni, mxnonr, ndeq, nxptsm
   CHARACTER(8) :: xern1, xern2, xern3, xern4
+  LOGICAL :: error_xpts, skip_to_alloc
   !* FIRST EXECUTABLE STATEMENT  BVSUP
   !
   !- *********************************************************************

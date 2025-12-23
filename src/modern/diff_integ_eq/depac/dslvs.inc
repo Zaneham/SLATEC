@@ -32,7 +32,7 @@ SUBROUTINE DSLVS(Wm,Iwm,X)
   !           Ref: ISO/IEC 1539-1:2018 S11.2.3 (RETURN statement)
   !           Original: Watts, SNLA
   USE DDEBD1, ONLY : el0_com, h_com, ier_com, miter_com, n_com
-  USE lapack, ONLY : DGBTRS, DGETRS
+  !USE lapack, ONLY : DGBTRS, DGETRS
   !
   INTEGER, INTENT(INOUT) :: Iwm(:)
   REAL(DP), INTENT(INOUT) :: Wm(:), X(n_com)

@@ -29,7 +29,7 @@ PURE SUBROUTINE DDCOR(Dfdy,El,FA,H,Ierror,Impl,Ipvt,Matdim,Miter,Ml,Mu,N,Nde,&
   !* REVISION HISTORY  (YYMMDD)
   !   790601  DATE WRITTEN
   !   900329  Initial submission to SLATEC.
-  USE lapack, ONLY : DGBTRS, DGETRS
+  !USE lapack, ONLY : DGBTRS, DGETRS
   !
   INTERFACE
     PURE SUBROUTINE USERS(Y,Yh,Ywt,Save1,Save2,T,H,El,Impl,N,Nde,Iflag)

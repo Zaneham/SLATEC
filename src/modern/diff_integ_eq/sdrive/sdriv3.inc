@@ -44,7 +44,7 @@ SUBROUTINE SDRIV3(N,T,Y,F,Nstate,Tout,Ntask,Nroot,Eps,Ewt,Ierror,Mint,&
   !           (C. Markwardt, modernisation project)
   USE service, ONLY : eps_sp, tiny_sp
   USE linpack, ONLY : SGBFA, SGEFA
-  USE lapack, ONLY : SGBTRS, SGETRS
+  !USE lapack, ONLY : SGBTRS, SGETRS
   !
   INTERFACE
     REAL(SP) PURE FUNCTION G(N,T,Y,Iroot)

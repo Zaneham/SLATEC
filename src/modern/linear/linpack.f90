@@ -4,6 +4,9 @@ include"slap/dslblk.inc"
 
 MODULE linpack
   USE service, ONLY : SP, DP
+  USE blas, ONLY : SAXPY, DAXPY, CAXPY, SSWAP, DSWAP, CSWAP, &
+                   SCOPY, DCOPY, SSCAL, DSCAL, CSCAL, &
+                   SCABS1, SCASUM, ICAMAX
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: CGBFA, CGEFA, CGECO, CPOCO, CPOSL, CGESL, CPOFA

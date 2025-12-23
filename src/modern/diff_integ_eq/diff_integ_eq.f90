@@ -12,6 +12,9 @@ include"fishpack/splpcm.inc"
 MODULE diff_integ_eq
   USE service, ONLY : SP, DP
   USE linpack
+  USE data_handling
+  USE integ_trans
+  USE lapack, ONLY : SGETRS, DGETRS, CGETRS, SGBTRS, DGBTRS, CGBTRS
   IMPLICIT NONE
 
 CONTAINS

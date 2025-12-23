@@ -1,23 +1,25 @@
-MODULE lapack
-  USE service, ONLY : SP, DP
-  IMPLICIT NONE
-  PRIVATE
-  PUBLIC :: SHSEQR, CHSEQR, SGTSV, DGTSV
-  PUBLIC :: SGBTRS, DGBTRS, CGBTRS, SGETRS, DGETRS, CGETRS
-CONTAINS
-PURE SUBROUTINE SGTSV(N, Nrhs, Dl, D, Du, B, Ldb, Info)
+!> ZH: External linkage wrappers for LAPACK stubs
+!> These provide the sgtsv_, sgetrs_, etc. symbols that gfortran expects
+!> when implicit-external = true is set
+
+SUBROUTINE sgtsv(N, Nrhs, Dl, D, Du, B, Ldb, Info)
+  USE service, ONLY : SP
   INTEGER, INTENT(IN) :: Ldb, N, Nrhs
   INTEGER, INTENT(OUT) :: Info
   REAL(SP), INTENT(INOUT) :: B(Ldb,*), D(*), Dl(*), Du(*)
   Info = -999
 END SUBROUTINE
-PURE SUBROUTINE DGTSV(N, Nrhs, Dl, D, Du, B, Ldb, Info)
+
+SUBROUTINE dgtsv(N, Nrhs, Dl, D, Du, B, Ldb, Info)
+  USE service, ONLY : DP
   INTEGER, INTENT(IN) :: Ldb, N, Nrhs
   INTEGER, INTENT(OUT) :: Info
   REAL(DP), INTENT(INOUT) :: B(Ldb,*), D(*), Dl(*), Du(*)
   Info = -999
 END SUBROUTINE
-PURE SUBROUTINE SGETRS(Trans, N, Nrhs, A, Lda, Ipiv, B, Ldb, Info)
+
+SUBROUTINE sgetrs(Trans, N, Nrhs, A, Lda, Ipiv, B, Ldb, Info)
+  USE service, ONLY : SP
   CHARACTER, INTENT(IN) :: Trans
   INTEGER, INTENT(IN) :: Lda, Ldb, N, Nrhs
   INTEGER, INTENT(OUT) :: Info
@@ -26,7 +28,9 @@ PURE SUBROUTINE SGETRS(Trans, N, Nrhs, A, Lda, Ipiv, B, Ldb, Info)
   REAL(SP), INTENT(INOUT) :: B(Ldb,*)
   Info = -999
 END SUBROUTINE
-PURE SUBROUTINE DGETRS(Trans, N, Nrhs, A, Lda, Ipiv, B, Ldb, Info)
+
+SUBROUTINE dgetrs(Trans, N, Nrhs, A, Lda, Ipiv, B, Ldb, Info)
+  USE service, ONLY : DP
   CHARACTER, INTENT(IN) :: Trans
   INTEGER, INTENT(IN) :: Lda, Ldb, N, Nrhs
   INTEGER, INTENT(OUT) :: Info
@@ -35,7 +39,9 @@ PURE SUBROUTINE DGETRS(Trans, N, Nrhs, A, Lda, Ipiv, B, Ldb, Info)
   REAL(DP), INTENT(INOUT) :: B(Ldb,*)
   Info = -999
 END SUBROUTINE
-PURE SUBROUTINE CGETRS(Trans, N, Nrhs, A, Lda, Ipiv, B, Ldb, Info)
+
+SUBROUTINE cgetrs(Trans, N, Nrhs, A, Lda, Ipiv, B, Ldb, Info)
+  USE service, ONLY : SP
   CHARACTER, INTENT(IN) :: Trans
   INTEGER, INTENT(IN) :: Lda, Ldb, N, Nrhs
   INTEGER, INTENT(OUT) :: Info
@@ -44,7 +50,9 @@ PURE SUBROUTINE CGETRS(Trans, N, Nrhs, A, Lda, Ipiv, B, Ldb, Info)
   COMPLEX(SP), INTENT(INOUT) :: B(Ldb,*)
   Info = -999
 END SUBROUTINE
-PURE SUBROUTINE SGBTRS(Trans, N, Kl, Ku, Nrhs, Ab, Ldab, Ipiv, B, Ldb, Info)
+
+SUBROUTINE sgbtrs(Trans, N, Kl, Ku, Nrhs, Ab, Ldab, Ipiv, B, Ldb, Info)
+  USE service, ONLY : SP
   CHARACTER, INTENT(IN) :: Trans
   INTEGER, INTENT(IN) :: Kl, Ku, Ldab, Ldb, N, Nrhs
   INTEGER, INTENT(OUT) :: Info
@@ -53,7 +61,9 @@ PURE SUBROUTINE SGBTRS(Trans, N, Kl, Ku, Nrhs, Ab, Ldab, Ipiv, B, Ldb, Info)
   REAL(SP), INTENT(INOUT) :: B(Ldb,*)
   Info = -999
 END SUBROUTINE
-PURE SUBROUTINE DGBTRS(Trans, N, Kl, Ku, Nrhs, Ab, Ldab, Ipiv, B, Ldb, Info)
+
+SUBROUTINE dgbtrs(Trans, N, Kl, Ku, Nrhs, Ab, Ldab, Ipiv, B, Ldb, Info)
+  USE service, ONLY : DP
   CHARACTER, INTENT(IN) :: Trans
   INTEGER, INTENT(IN) :: Kl, Ku, Ldab, Ldb, N, Nrhs
   INTEGER, INTENT(OUT) :: Info
@@ -62,7 +72,9 @@ PURE SUBROUTINE DGBTRS(Trans, N, Kl, Ku, Nrhs, Ab, Ldab, Ipiv, B, Ldb, Info)
   REAL(DP), INTENT(INOUT) :: B(Ldb,*)
   Info = -999
 END SUBROUTINE
-PURE SUBROUTINE CGBTRS(Trans, N, Kl, Ku, Nrhs, Ab, Ldab, Ipiv, B, Ldb, Info)
+
+SUBROUTINE cgbtrs(Trans, N, Kl, Ku, Nrhs, Ab, Ldab, Ipiv, B, Ldb, Info)
+  USE service, ONLY : SP
   CHARACTER, INTENT(IN) :: Trans
   INTEGER, INTENT(IN) :: Kl, Ku, Ldab, Ldb, N, Nrhs
   INTEGER, INTENT(OUT) :: Info
@@ -71,20 +83,3 @@ PURE SUBROUTINE CGBTRS(Trans, N, Kl, Ku, Nrhs, Ab, Ldab, Ipiv, B, Ldb, Info)
   COMPLEX(SP), INTENT(INOUT) :: B(Ldb,*)
   Info = -999
 END SUBROUTINE
-PURE SUBROUTINE SHSEQR(Job, Compz, N, Ilo, Ihi, H, Ldh, Wr, Wi, Z, Ldz, Work, Lwork, Info)
-  INTEGER, INTENT(IN) :: Ihi, Ilo, Ldh, Ldz, Lwork, N
-  INTEGER, INTENT(OUT) :: Info
-  CHARACTER, INTENT(IN) :: Compz, Job
-  REAL(SP), INTENT(INOUT) :: H(Ldh,*), Z(Ldz,*)
-  REAL(SP), INTENT(OUT) :: Wi(*), Wr(*), Work(*)
-  Info = -999
-END SUBROUTINE
-PURE SUBROUTINE CHSEQR(Job, Compz, N, Ilo, Ihi, H, Ldh, W, Z, Ldz, Work, Lwork, Info)
-  INTEGER, INTENT(IN) :: Ihi, Ilo, Ldh, Ldz, Lwork, N
-  INTEGER, INTENT(OUT) :: Info
-  CHARACTER, INTENT(IN) :: Compz, Job
-  COMPLEX(SP), INTENT(INOUT) :: H(Ldh,*), Z(Ldz,*)
-  COMPLEX(SP), INTENT(OUT) :: W(*), Work(*)
-  Info = -999
-END SUBROUTINE
-END MODULE lapack

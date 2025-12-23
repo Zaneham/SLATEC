@@ -1,6 +1,7 @@
 MODULE diff_integ
   USE service, ONLY : SP, DP
   USE interpolation
+  USE lapack, ONLY : SGTSV, DGTSV
   IMPLICIT NONE
 
 CONTAINS

@@ -629,6 +629,7 @@ SUBROUTINE DBVSUP(Y,Nrowy,Ncomp,Xpts,Nxpts,A,Nrowa,Alpha,Nic,B,Nrowb,Beta,&
     ERROR STOP 'DBVSUP : REQUIRED STORAGE FOR WORK ARRAY NOT SATISFIED.&
       & REQUIRED STORAGE FOR IWORK ARRAY NOT SATISFIED.'
   END IF
+  END IF
   RETURN
   !
   !        ***************************************************************

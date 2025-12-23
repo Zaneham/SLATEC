@@ -45,7 +45,7 @@ SUBROUTINE CDRIV3(N,T,Y,F,Nstate,Tout,Ntask,Nroot,Eps,Ewt,Ierror,Mint,&
   USE service, ONLY : eps_sp, tiny_sp
   USE blas, ONLY : SCNRM2
   USE linpack, ONLY : CGBFA, CGEFA
-  USE lapack, ONLY : CGBTRS, CGETRS
+  !USE lapack, ONLY : CGBTRS, CGETRS
   !
   INTERFACE
     REAL(SP) PURE FUNCTION G(N,T,Y,Iroot)

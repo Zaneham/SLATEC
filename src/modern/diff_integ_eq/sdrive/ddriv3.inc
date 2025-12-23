@@ -44,7 +44,7 @@ SUBROUTINE DDRIV3(N,T,Y,F,Nstate,Tout,Ntask,Nroot,Eps,Ewt,Ierror,Mint,&
   !           (C. Markwardt, modernisation project)
   USE service, ONLY : eps_dp, tiny_dp
   USE linpack, ONLY : DGBFA, DGEFA
-  USE lapack, ONLY : DGBTRS, DGETRS
+  !USE lapack, ONLY : DGBTRS, DGETRS
   !
   INTERFACE
     REAL(DP) PURE FUNCTION G(N,T,Y,Iroot)
