@@ -218,7 +218,7 @@ def validate_content(content: str, context: str = "") -> dict:
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
                 "additionalContext": (
-                    f"Epistemic state: {state.value} - "
+                    f"Epistemic state: {state.state.name} - "
                     f"RAG confidence: {retrieval_confidence:.2f}, chunks: {chunks_found}. "
                     "Consider adding uncertainty or verifying against sources."
                 )
