@@ -379,6 +379,11 @@ PURE SUBROUTINE HW3CRT(Xs,Xf,L,Lbdcnd,Bdxs,Bdxf,Ys,Yf,M,Mbdcnd,Bdys,Bdyf,Zs,Zf,&
     mp, mp1, mstart, mstop, mstpm1, munk, np, np1, nperod, nstart, nstop, nstpm1, nunk
   REAL(SP) :: c1, c2, c3, dx, dy, dz, s, s1, s2, twbydx, twbydy, twbydz, xlp, ylp, zlp
   !* FIRST EXECUTABLE STATEMENT  HW3CRT
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using IF-THEN-ELSE blocks.
+  !   Original F77 used labels 50/100/150/200/250/300.
+  !
   Ierror = 0
   IF( Xf<=Xs ) Ierror = 1
   IF( L<5 ) Ierror = 2
@@ -399,19 +404,19 @@ PURE SUBROUTINE HW3CRT(Xs,Xf,L,Lbdcnd,Bdxs,Bdxf,Ys,Yf,M,Mbdcnd,Bdys,Bdyf,Zs,Zf,&
     mstop = M
     mp1 = M + 1
     mp = Mbdcnd + 1
-    SELECT CASE (mp)
-      CASE (1)
-        GOTO 50
-      CASE (4,5)
-      CASE DEFAULT
-        mstart = 2
-    END SELECT
-    SELECT CASE (mp)
-      CASE (1,2,5)
-      CASE DEFAULT
-        mstop = mp1
-    END SELECT
-    50  munk = mstop - mstart + 1
+    IF( mp/=1 ) THEN
+      SELECT CASE (mp)
+        CASE (4,5)
+        CASE DEFAULT
+          mstart = 2
+      END SELECT
+      SELECT CASE (mp)
+        CASE (2,5)
+        CASE DEFAULT
+          mstop = mp1
+      END SELECT
+    END IF
+    munk = mstop - mstart + 1
     dz = (Zf-Zs)/N
     twbydz = 2._SP/dz
     np = Nbdcnd + 1
@@ -419,19 +424,19 @@ PURE SUBROUTINE HW3CRT(Xs,Xf,L,Lbdcnd,Bdxs,Bdxf,Ys,Yf,M,Mbdcnd,Bdys,Bdyf,Zs,Zf,&
     np1 = N + 1
     nstart = 1
     nstop = N
-    SELECT CASE (np)
-      CASE (1)
-        GOTO 100
-      CASE (4,5)
-      CASE DEFAULT
-        nstart = 2
-    END SELECT
-    SELECT CASE (np)
-      CASE (1,2,5)
-      CASE DEFAULT
-        nstop = np1
-    END SELECT
-    100  nunk = nstop - nstart + 1
+    IF( np/=1 ) THEN
+      SELECT CASE (np)
+        CASE (4,5)
+        CASE DEFAULT
+          nstart = 2
+      END SELECT
+      SELECT CASE (np)
+        CASE (2,5)
+        CASE DEFAULT
+          nstop = np1
+      END SELECT
+    END IF
+    nunk = nstop - nstart + 1
     lp1 = L + 1
     dx = (Xf-Xs)/L
     c1 = 1._SP/(dx**2)
@@ -442,113 +447,109 @@ PURE SUBROUTINE HW3CRT(Xs,Xf,L,Lbdcnd,Bdxs,Bdxf,Ys,Yf,M,Mbdcnd,Bdys,Bdyf,Zs,Zf,&
     !
     !     ENTER BOUNDARY DATA FOR X-BOUNDARIES.
     !
-    SELECT CASE (lp)
-      CASE (1)
-        GOTO 150
-      CASE (4,5)
-        DO j = mstart, mstop
-          DO k = nstart, nstop
-            F(1,j,k) = F(1,j,k) + twbydx*Bdxs(j,k)
+    IF( lp/=1 ) THEN
+      SELECT CASE (lp)
+        CASE (4,5)
+          DO j = mstart, mstop
+            DO k = nstart, nstop
+              F(1,j,k) = F(1,j,k) + twbydx*Bdxs(j,k)
+            END DO
           END DO
-        END DO
-      CASE DEFAULT
-        lstart = 2
-        DO j = mstart, mstop
-          DO k = nstart, nstop
-            F(2,j,k) = F(2,j,k) - c1*F(1,j,k)
+        CASE DEFAULT
+          lstart = 2
+          DO j = mstart, mstop
+            DO k = nstart, nstop
+              F(2,j,k) = F(2,j,k) - c1*F(1,j,k)
+            END DO
           END DO
-        END DO
-    END SELECT
-    SELECT CASE (lp)
-      CASE (1)
-      CASE (3,4)
-        lstop = lp1
-        DO j = mstart, mstop
-          DO k = nstart, nstop
-            F(lp1,j,k) = F(lp1,j,k) - twbydx*Bdxf(j,k)
+      END SELECT
+      SELECT CASE (lp)
+        CASE (3,4)
+          lstop = lp1
+          DO j = mstart, mstop
+            DO k = nstart, nstop
+              F(lp1,j,k) = F(lp1,j,k) - twbydx*Bdxf(j,k)
+            END DO
           END DO
-        END DO
-      CASE DEFAULT
-        DO j = mstart, mstop
-          DO k = nstart, nstop
-            F(L,j,k) = F(L,j,k) - c1*F(lp1,j,k)
+        CASE DEFAULT
+          DO j = mstart, mstop
+            DO k = nstart, nstop
+              F(L,j,k) = F(L,j,k) - c1*F(lp1,j,k)
+            END DO
           END DO
-        END DO
-    END SELECT
-    150  lunk = lstop - lstart + 1
+      END SELECT
+    END IF
+    lunk = lstop - lstart + 1
     !
     !     ENTER BOUNDARY DATA FOR Y-BOUNDARIES.
     !
-    SELECT CASE (mp)
-      CASE (1)
-        GOTO 200
-      CASE (4,5)
-        DO i = lstart, lstop
-          DO k = nstart, nstop
-            F(i,1,k) = F(i,1,k) + twbydy*Bdys(i,k)
+    IF( mp/=1 ) THEN
+      SELECT CASE (mp)
+        CASE (4,5)
+          DO i = lstart, lstop
+            DO k = nstart, nstop
+              F(i,1,k) = F(i,1,k) + twbydy*Bdys(i,k)
+            END DO
           END DO
-        END DO
-      CASE DEFAULT
-        DO i = lstart, lstop
-          DO k = nstart, nstop
-            F(i,2,k) = F(i,2,k) - c2*F(i,1,k)
+        CASE DEFAULT
+          DO i = lstart, lstop
+            DO k = nstart, nstop
+              F(i,2,k) = F(i,2,k) - c2*F(i,1,k)
+            END DO
           END DO
-        END DO
-    END SELECT
-    SELECT CASE (mp)
-      CASE (1)
-      CASE (3,4)
-        DO i = lstart, lstop
-          DO k = nstart, nstop
-            F(i,mp1,k) = F(i,mp1,k) - twbydy*Bdyf(i,k)
+      END SELECT
+      SELECT CASE (mp)
+        CASE (3,4)
+          DO i = lstart, lstop
+            DO k = nstart, nstop
+              F(i,mp1,k) = F(i,mp1,k) - twbydy*Bdyf(i,k)
+            END DO
           END DO
-        END DO
-      CASE DEFAULT
-        DO i = lstart, lstop
-          DO k = nstart, nstop
-            F(i,M,k) = F(i,M,k) - c2*F(i,mp1,k)
+        CASE DEFAULT
+          DO i = lstart, lstop
+            DO k = nstart, nstop
+              F(i,M,k) = F(i,M,k) - c2*F(i,mp1,k)
+            END DO
           END DO
-        END DO
-    END SELECT
+      END SELECT
+    END IF
     !
     !     ENTER BOUNDARY DATA FOR Z-BOUNDARIES.
     !
-    200 CONTINUE
-    SELECT CASE (np)
-      CASE (1)
-        GOTO 250
-      CASE (4,5)
-        DO i = lstart, lstop
-          DO j = mstart, mstop
-            F(i,j,1) = F(i,j,1) + twbydz*Bdzs(i,j)
+    IF( np/=1 ) THEN
+      SELECT CASE (np)
+        CASE (4,5)
+          DO i = lstart, lstop
+            DO j = mstart, mstop
+              F(i,j,1) = F(i,j,1) + twbydz*Bdzs(i,j)
+            END DO
           END DO
-        END DO
-      CASE DEFAULT
-        DO i = lstart, lstop
-          DO j = mstart, mstop
-            F(i,j,2) = F(i,j,2) - c3*F(i,j,1)
+        CASE DEFAULT
+          DO i = lstart, lstop
+            DO j = mstart, mstop
+              F(i,j,2) = F(i,j,2) - c3*F(i,j,1)
+            END DO
           END DO
-        END DO
-    END SELECT
-    SELECT CASE (np)
-      CASE (1)
-      CASE (3,4)
-        DO i = lstart, lstop
-          DO j = mstart, mstop
-            F(i,j,np1) = F(i,j,np1) - twbydz*Bdzf(i,j)
+      END SELECT
+      SELECT CASE (np)
+        CASE (3,4)
+          DO i = lstart, lstop
+            DO j = mstart, mstop
+              F(i,j,np1) = F(i,j,np1) - twbydz*Bdzf(i,j)
+            END DO
           END DO
-        END DO
-      CASE DEFAULT
-        DO i = lstart, lstop
-          DO j = mstart, mstop
-            F(i,j,N) = F(i,j,N) - c3*F(i,j,np1)
+        CASE DEFAULT
+          DO i = lstart, lstop
+            DO j = mstart, mstop
+              F(i,j,N) = F(i,j,N) - c3*F(i,j,np1)
+            END DO
           END DO
-        END DO
-    END SELECT
+      END SELECT
+    END IF
     !
     !     DEFINE A,B,C COEFFICIENTS IN W-ARRAY.
     !
-    250  iwb = nunk + 1
+    iwb = nunk + 1
     iwc = iwb + nunk
     iww = iwc + nunk
     DO k = 1, nunk
@@ -558,19 +559,19 @@ PURE SUBROUTINE HW3CRT(Xs,Xf,L,Lbdcnd,Bdxs,Bdxf,Ys,Yf,M,Mbdcnd,Bdys,Bdyf,Zs,Zf,&
       i = iwb + k - 1
       W(i) = -2._SP*c3 + Elmbda
     END DO
-    SELECT CASE (np)
-      CASE (1,2)
-        GOTO 300
-      CASE (3)
-      CASE DEFAULT
-        W(iwc) = 2._SP*c3
-    END SELECT
-    SELECT CASE (np)
-      CASE (1,2,5)
-      CASE DEFAULT
-        W(iwb-1) = 2._SP*c3
-    END SELECT
-    300  Pertrb = 0._SP
+    IF( np/=1 .AND. np/=2 ) THEN
+      SELECT CASE (np)
+        CASE (3)
+        CASE DEFAULT
+          W(iwc) = 2._SP*c3
+      END SELECT
+      SELECT CASE (np)
+        CASE (5)
+        CASE DEFAULT
+          W(iwb-1) = 2._SP*c3
+      END SELECT
+    END IF
+    Pertrb = 0._SP
     !
     !     FOR SINGULAR PROBLEMS ADJUST DATA TO INSURE A SOLUTION WILL EXIST.
     !

@@ -37,7 +37,14 @@ PURE SUBROUTINE CMPOSD(Mr,Nr,Istag,Ba,Bb,Bc,Q,Idimq,B,W,D,Tcos,P)
     jp1, jp2, jp3, jsh, jsp, jst, jstsav, kr, krpi, l, lr, m, n, nodd, noddpr, nun
   REAL(SP) :: fi
   COMPLEX(SP) :: t
+  LOGICAL :: skip_to_trix, skip_regular_cosgen
   !* FIRST EXECUTABLE STATEMENT  CMPOSD
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using main loop and logical flags.
+  !   Original F77 used labels 100/200/250/300/310/320.
+  !   Algorithm unchanged - Swarztrauber cyclic reduction.
+  !
   m = Mr
   n = Nr
   fi = 1._SP/Istag
@@ -48,27 +55,30 @@ PURE SUBROUTINE CMPOSD(Mr,Nr,Istag,Ba,Bb,Bc,Q,Idimq,B,W,D,Tcos,P)
     kr = 1
     jstsav = 1
     irreg = 2
-    IF( n>1 ) GOTO 100
-    Tcos(1) = CMPLX(-1._SP,0._SP,SP)
+    IF( n<=1 ) Tcos(1) = CMPLX(-1._SP,0._SP,SP)
   ELSE
     kr = 0
     irreg = 1
-    IF( n>1 ) GOTO 100
-    Tcos(1) = (0._SP,0._SP)
+    IF( n<=1 ) Tcos(1) = (0._SP,0._SP)
   END IF
-  DO i = 1, m
-    B(i) = Q(i,1)
-  END DO
-  CALL CMPTRX(1,0,m,Ba,Bb,Bc,B,Tcos,D,W)
-  DO i = 1, m
-    Q(i,1) = B(i)
-  END DO
   !
-  !     RETURN STORAGE REQUIREMENTS FOR P VECTORS.
+  ! Handle trivial case n=1
   !
-  W(1) = CMPLX(REAL(ipstor,SP),0._SP,SP)
-  RETURN
-  100  lr = 0
+  IF( n<=1 ) THEN
+    DO i = 1, m
+      B(i) = Q(i,1)
+    END DO
+    CALL CMPTRX(1,0,m,Ba,Bb,Bc,B,Tcos,D,W)
+    DO i = 1, m
+      Q(i,1) = B(i)
+    END DO
+    W(1) = CMPLX(REAL(ipstor,SP),0._SP,SP)
+    RETURN
+  END IF
+  !
+  ! Main cyclic reduction for n>1
+  !
+  lr = 0
   DO i = 1, m
     P(i) = CMPLX(0._SP,0._SP,SP)
   END DO
@@ -78,8 +88,9 @@ PURE SUBROUTINE CMPOSD(Mr,Nr,Istag,Ba,Bb,Bc,Q,Idimq,B,W,D,Tcos,P)
   !
   !     IRREG = 1 WHEN NO IRREGULARITIES HAVE OCCURRED, OTHERWISE IT IS 2.
   !
-  200  l = 2*jst
-  nodd = 2 - 2*((nun+1)/2) + nun
+  main_reduction: DO WHILE( nun>=2 )
+    l = 2*jst
+    nodd = 2 - 2*((nun+1)/2) + nun
   !
   !     NODD = 1 WHEN NUN IS ODD, OTHERWISE IT IS 2.
   !
@@ -174,10 +185,9 @@ PURE SUBROUTINE CMPOSD(Mr,Nr,Istag,Ba,Bb,Bc,Q,Idimq,B,W,D,Tcos,P)
     DO i = 1, m
       Q(i,j) = Q(i,j) + B(i)
     END DO
-  ELSE
-    IF( irreg==1 ) GOTO 300
+  ELSEIF( irreg/=1 ) THEN
     !
-    !     ODD NUMBER OF UNKNOWNS
+    !     ODD NUMBER OF UNKNOWNS (only when irregularities have occurred)
     !
     jsp = jsp + l
     j = jsp
@@ -186,29 +196,32 @@ PURE SUBROUTINE CMPOSD(Mr,Nr,Istag,Ba,Bb,Bc,Q,Idimq,B,W,D,Tcos,P)
     jm2 = j - jst
     jp2 = j + jst
     jm3 = jm2 - jsh
+    skip_to_trix = .FALSE.
     IF( Istag/=1 ) THEN
       IF( jst==1 ) THEN
         DO i = 1, m
           B(i) = Q(i,j)
           Q(i,j) = CMPLX(0._SP,0._SP)
         END DO
-        GOTO 250
+        skip_to_trix = .TRUE.
       END IF
     END IF
-    IF( noddpr==2 ) THEN
+    IF( .NOT. skip_to_trix ) THEN
+      IF( noddpr==2 ) THEN
+        DO i = 1, m
+          B(i) = 0.5_SP*(Q(i,jm2)-Q(i,jm1)-Q(i,jm3)) + Q(i,jp2) - Q(i,jp1) + Q(i,j)
+        END DO
+      ELSE
+        DO i = 1, m
+          ip1 = ip + i
+          B(i) = 0.5_SP*(Q(i,jm2)-Q(i,jm1)-Q(i,jm3)) + P(ip1) + Q(i,j)
+        END DO
+      END IF
       DO i = 1, m
-        B(i) = 0.5_SP*(Q(i,jm2)-Q(i,jm1)-Q(i,jm3)) + Q(i,jp2) - Q(i,jp1) + Q(i,j)
-      END DO
-    ELSE
-      DO i = 1, m
-        ip1 = ip + i
-        B(i) = 0.5_SP*(Q(i,jm2)-Q(i,jm1)-Q(i,jm3)) + P(ip1) + Q(i,j)
+        Q(i,j) = 0.5_SP*(Q(i,j)-Q(i,jm1)-Q(i,jp1))
       END DO
     END IF
-    DO i = 1, m
-      Q(i,j) = 0.5_SP*(Q(i,j)-Q(i,jm1)-Q(i,jp1))
-    END DO
-    250  CALL CMPTRX(jst,0,m,Ba,Bb,Bc,B,Tcos,D,W)
+    CALL CMPTRX(jst,0,m,Ba,Bb,Bc,B,Tcos,D,W)
     ip = ip + m
     ipstor = MAX(ipstor,ip+m)
     DO i = 1, m
@@ -234,11 +247,12 @@ PURE SUBROUTINE CMPOSD(Mr,Nr,Istag,Ba,Bb,Bc,Q,Idimq,B,W,D,Tcos,P)
     lr = kr
     kr = kr + l
   END IF
-  300  nun = nun/2
-  noddpr = nodd
-  jsh = jst
-  jst = 2*jst
-  IF( nun>=2 ) GOTO 200
+    ! End of odd/even processing, halve nun and continue
+    nun = nun/2
+    noddpr = nodd
+    jsh = jst
+    jst = 2*jst
+  END DO main_reduction
   !
   !     START SOLUTION.
   !
@@ -289,13 +303,13 @@ PURE SUBROUTINE CMPOSD(Mr,Nr,Istag,Ba,Bb,Bc,Q,Idimq,B,W,D,Tcos,P)
         jp1 = j + jsh
         jm2 = j - jst
         jp2 = j + jst
+        skip_regular_cosgen = .FALSE.
         IF( j>jst ) THEN
           IF( jp2>n ) THEN
             DO i = 1, m
               B(i) = Q(i,j) + Q(i,jm2)
             END DO
             IF( jst<jstsav ) irreg = 1
-            IF( irreg==1 ) GOTO 310
             IF( irreg==2 ) THEN
               IF( j+l>n ) lr = lr - jst
               kr = jst + lr
@@ -303,21 +317,24 @@ PURE SUBROUTINE CMPOSD(Mr,Nr,Istag,Ba,Bb,Bc,Q,Idimq,B,W,D,Tcos,P)
               CALL CMPCSG(lr,jstsav,0._SP,fi,Tcos(kr+1))
               ideg = kr
               jdeg = lr
-              GOTO 320
+              skip_regular_cosgen = .TRUE.
             END IF
+          ELSE
+            DO i = 1, m
+              B(i) = Q(i,j) + Q(i,jm2) + Q(i,jp2)
+            END DO
           END IF
-          DO i = 1, m
-            B(i) = Q(i,j) + Q(i,jm2) + Q(i,jp2)
-          END DO
         ELSE
           DO i = 1, m
             B(i) = Q(i,j) + Q(i,jp2)
           END DO
         END IF
-        310  CALL CMPCSG(jst,1,0.5_SP,0._SP,Tcos)
-        ideg = jst
-        jdeg = 0
-        320  CALL CMPTRX(ideg,jdeg,m,Ba,Bb,Bc,B,Tcos,D,W)
+        IF( .NOT. skip_regular_cosgen ) THEN
+          CALL CMPCSG(jst,1,0.5_SP,0._SP,Tcos)
+          ideg = jst
+          jdeg = 0
+        END IF
+        CALL CMPTRX(ideg,jdeg,m,Ba,Bb,Bc,B,Tcos,D,W)
         IF( jst>1 ) THEN
           IF( jp2>n ) THEN
             IF( irreg/=1 ) THEN

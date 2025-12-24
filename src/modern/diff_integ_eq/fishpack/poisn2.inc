@@ -42,7 +42,14 @@ PURE SUBROUTINE POISN2(M,N,Istag,Mixbnd,A,Bb,C,Q,Idimq,B,B2,B3,W,W2,W3,D,Tcos,P)
     jp3, jr, jr2, jstart, jstep, jstop, k(4), kr, lr, mr, nlast, nlastp, nr, &
     nrod, nrodpr
   REAL(SP) :: fden, fi, fistag, fnum, t
+  LOGICAL :: skip_to_back_sub, skip_to_mid_back, goto_general_case
   !* FIRST EXECUTABLE STATEMENT  POISN2
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using main reduction loop, solution phase flags,
+  !   and back substitution loop. Original F77 used labels 100/200/300/400/500.
+  !   Algorithm unchanged - Swarztrauber cyclic reduction for Neumann BCs.
+  !
   fistag = 3 - Istag
   fnum = 1._SP/Istag
   fden = 0.5_SP*(Istag-1)
@@ -55,14 +62,21 @@ PURE SUBROUTINE POISN2(M,N,Istag,Mixbnd,A,Bb,C,Q,Idimq,B,B2,B3,W,W2,W3,D,Tcos,P)
   nlast = N
   kr = 1
   lr = 0
+  skip_to_back_sub = .FALSE.
+  skip_to_mid_back = .FALSE.
+  goto_general_case = .FALSE.
   IF( Istag/=2 ) THEN
     DO i = 1, mr
       Q(i,N) = 0.5_SP*Q(i,N)
     END DO
-    IF( Mixbnd==2 ) GOTO 100
   END IF
-  IF( N<=3 ) GOTO 200
-  100  jr = 2*i2r
+  !
+  ! Main reduction loop (original label 100)
+  ! Enter if: N>3, or (Istag/=2 and Mixbnd==2)
+  !
+  IF( N>3 .OR. (Istag/=2 .AND. Mixbnd==2) ) THEN
+    main_reduction: DO
+      jr = 2*i2r
   nrod = 1
   IF( (nr/2)*2==nr ) nrod = 0
   IF( Mixbnd==2 ) THEN
@@ -240,25 +254,28 @@ PURE SUBROUTINE POISN2(M,N,Istag,Mixbnd,A,Bb,C,Q,Idimq,B,B2,B3,W,W2,W3,D,Tcos,P)
     END DO
     kr = kr + i2r
   END IF
-  IF( Mixbnd==2 ) THEN
-    nr = nlast/jr
-    IF( nr<=1 ) THEN
-      DO i = 1, mr
-        B(i) = Q(i,nlast)
-      END DO
-      GOTO 500
-    END IF
-  ELSE
-    nr = (nlast-1)/jr + 1
-    IF( nr<=3 ) GOTO 200
+      IF( Mixbnd==2 ) THEN
+        nr = nlast/jr
+        IF( nr<=1 ) THEN
+          DO i = 1, mr
+            B(i) = Q(i,nlast)
+          END DO
+          skip_to_mid_back = .TRUE.
+          EXIT main_reduction
+        END IF
+      ELSE
+        nr = (nlast-1)/jr + 1
+        IF( nr<=3 ) EXIT main_reduction
+      END IF
+      i2r = jr
+      nrodpr = nrod
+    END DO main_reduction
   END IF
-  i2r = jr
-  nrodpr = nrod
-  GOTO 100
   !
-  !      BEGIN SOLUTION
+  !      BEGIN SOLUTION (original label 200)
   !
-  200  j = 1 + jr
+  IF( .NOT. skip_to_mid_back ) THEN
+    j = 1 + jr
   jm1 = j - i2r
   jp1 = j + i2r
   jm2 = nlast - i2r
@@ -318,8 +335,9 @@ PURE SUBROUTINE POISN2(M,N,Istag,Mixbnd,A,Bb,C,Q,Idimq,B,B2,B3,W,W2,W3,D,Tcos,P)
       jr = 1
       i2r = 0
     END IF
-    GOTO 400
-  ELSE
+    skip_to_back_sub = .TRUE.
+  END IF
+  IF( .NOT. skip_to_back_sub ) THEN
     IF( lr==0 ) THEN
       IF( N/=3 ) THEN
         !
@@ -352,7 +370,7 @@ PURE SUBROUTINE POISN2(M,N,Istag,Mixbnd,A,Bb,C,Q,Idimq,B,B2,B3,W,W2,W3,D,Tcos,P)
           DO i = 1, mr
             Q(i,1) = 0.5_SP*Q(i,1) - Q(i,jm1) + B(i)
           END DO
-          GOTO 400
+          skip_to_back_sub = .TRUE.
         END IF
         !
         !     CASE N = 3.
@@ -370,7 +388,7 @@ PURE SUBROUTINE POISN2(M,N,Istag,Mixbnd,A,Bb,C,Q,Idimq,B,B2,B3,W,W2,W3,D,Tcos,P)
         jr = 1
         i2r = 0
         j = 2
-        GOTO 300
+        goto_general_case = .TRUE.
       ELSE
         DO i = 1, mr
           B(i) = Q(i,2)
@@ -397,30 +415,36 @@ PURE SUBROUTINE POISN2(M,N,Istag,Mixbnd,A,Bb,C,Q,Idimq,B,B2,B3,W,W2,W3,D,Tcos,P)
         END DO
         jr = 1
         i2r = 0
-        GOTO 400
+        skip_to_back_sub = .TRUE.
       END IF
     END IF
-    DO i = 1, mr
-      B(i) = 0.5_SP*Q(i,1) - Q(i,jm1) + Q(i,j)
-    END DO
-    IF( nrod/=0 ) THEN
+    IF( .NOT. skip_to_back_sub .AND. .NOT. goto_general_case ) THEN
       DO i = 1, mr
-        B(i) = B(i) + Q(i,nlast) - Q(i,jm2)
+        B(i) = 0.5_SP*Q(i,1) - Q(i,jm1) + Q(i,j)
       END DO
-    ELSE
+      IF( nrod/=0 ) THEN
+        DO i = 1, mr
+          B(i) = B(i) + Q(i,nlast) - Q(i,jm2)
+        END DO
+      ELSE
+        DO i = 1, mr
+          ii = ip + i
+          B(i) = B(i) + P(ii)
+        END DO
+      END IF
       DO i = 1, mr
-        ii = ip + i
-        B(i) = B(i) + P(ii)
+        t = 0.5_SP*(Q(i,j)-Q(i,jm1)-Q(i,jp1))
+        Q(i,j) = t
+        B2(i) = Q(i,nlast) + t
+        B3(i) = Q(i,1) + 2._SP*t
       END DO
     END IF
-    DO i = 1, mr
-      t = 0.5_SP*(Q(i,j)-Q(i,jm1)-Q(i,jp1))
-      Q(i,j) = t
-      B2(i) = Q(i,nlast) + t
-      B3(i) = Q(i,1) + 2._SP*t
-    END DO
   END IF
-  300  k(1) = kr + 2*jr - 1
+  !
+  ! General case (original label 300)
+  !
+  IF( .NOT. skip_to_back_sub ) THEN
+    k(1) = kr + 2*jr - 1
   k(2) = kr + jr
   Tcos(k(1)+1) = -2._SP
   k(4) = k(1) + 3 - Istag
@@ -461,14 +485,20 @@ PURE SUBROUTINE POISN2(M,N,Istag,Mixbnd,A,Bb,C,Q,Idimq,B,B2,B3,W,W2,W3,D,Tcos,P)
       Q(i,1) = B(i)
     END DO
   END IF
+  END IF  ! end of label 300 block
+  END IF  ! end of solution phase (skip_to_mid_back check)
   !
-  !     START BACK SUBSTITUTION.
+  !     START BACK SUBSTITUTION. (original labels 400/500)
   !
-  400  j = nlast - jr
-  DO i = 1, mr
-    B(i) = Q(i,nlast) + Q(i,j)
-  END DO
-  500  jm2 = nlast - i2r
+  back_substitution: DO
+    IF( .NOT. skip_to_mid_back ) THEN
+      j = nlast - jr
+      DO i = 1, mr
+        B(i) = Q(i,nlast) + Q(i,j)
+      END DO
+    END IF
+    skip_to_mid_back = .FALSE.
+    jm2 = nlast - i2r
   IF( jr==1 ) THEN
     DO i = 1, mr
       Q(i,nlast) = 0._SP
@@ -495,18 +525,18 @@ PURE SUBROUTINE POISN2(M,N,Istag,Mixbnd,A,Bb,C,Q,Idimq,B,B2,B3,W,W2,W3,D,Tcos,P)
   DO i = 1, mr
     Q(i,nlast) = Q(i,nlast) + B(i)
   END DO
-  nlastp = nlast
-  DO
-    jstep = jr
-    jr = i2r
-    i2r = i2r/2
-    IF( jr==0 ) THEN
-      !
-      !     RETURN STORAGE REQUIREMENTS FOR P VECTORS.
-      !
-      W(1) = ipstor
-      EXIT
-    ELSE
+    nlastp = nlast
+    inner_loop: DO
+      jstep = jr
+      jr = i2r
+      i2r = i2r/2
+      IF( jr==0 ) THEN
+        !
+        !     RETURN STORAGE REQUIREMENTS FOR P VECTORS.
+        !
+        W(1) = ipstor
+        EXIT back_substitution
+      ELSE
       IF( Mixbnd==2 ) THEN
         jstart = jr
       ELSE
@@ -550,10 +580,11 @@ PURE SUBROUTINE POISN2(M,N,Istag,Mixbnd,A,Bb,C,Q,Idimq,B,B2,B3,W,W2,W3,D,Tcos,P)
           Q(i,j) = Q(i,j) + B(i)
         END DO
       END DO
-      nrod = 1
-      IF( nlast+i2r<=N ) nrod = 0
-      IF( nlastp/=nlast ) GOTO 400
-    END IF
-  END DO
+        nrod = 1
+        IF( nlast+i2r<=N ) nrod = 0
+        IF( nlastp/=nlast ) CYCLE back_substitution
+      END IF
+    END DO inner_loop
+  END DO back_substitution
   !
 END SUBROUTINE POISN2
