@@ -40,7 +40,16 @@ SUBROUTINE MPMUL2(X,Iy,Z,Trunc)
   INTEGER, INTENT(IN) :: X(mxr_com)
   INTEGER, INTENT(INOUT) :: Z(mxr_com)
   INTEGER :: i, ij, is, ix, j, j1, j2, re, rs, c, c1, c2, ri, t1, t3, t4
+  LOGICAL :: do_multiply, overflow
   !* FIRST EXECUTABLE STATEMENT  MPMUL2
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using logical flags and EXIT.
+  !   Original F77 used labels 100/200/300/400.
+  !   Algorithm unchanged - Brent multiple-precision arithmetic.
+  !
+  do_multiply = .FALSE.
+  overflow = .FALSE.
   rs = X(1)
   IF( rs/=0 ) THEN
     j = Iy
@@ -48,8 +57,9 @@ SUBROUTINE MPMUL2(X,Iy,Z,Trunc)
       j = -j
       rs = -rs
       ! CHECK FOR MULTIPLICATION BY B
-      IF( j/=b_com ) GOTO 200
-      IF( X(2)<m_com ) THEN
+      IF( j/=b_com ) THEN
+        do_multiply = .TRUE.
+      ELSEIF( X(2)<m_com ) THEN
         CALL MPSTR(X,Z)
         Z(1) = rs
         Z(2) = X(2) + 1
@@ -61,14 +71,18 @@ SUBROUTINE MPMUL2(X,Iy,Z,Trunc)
         RETURN
       END IF
     ELSEIF( j/=0 ) THEN
-      GOTO 200
+      do_multiply = .TRUE.
     END IF
   END IF
-  ! RESULT ZERO
-  100  Z(1) = 0
-  RETURN
+  !
+  IF( .NOT. do_multiply ) THEN
+    ! RESULT ZERO
+    Z(1) = 0
+    RETURN
+  END IF
+  !
   ! SET EXPONENT TO EXPONENT(X) + 4
-  200  re = X(2) + 4
+  re = X(2) + 4
   ! FORM PRODUCT IN ACCUMULATOR
   c = 0
   t1 = t_com + 1
@@ -92,8 +106,7 @@ SUBROUTINE MPMUL2(X,Iy,Z,Trunc)
       c = j1*ix + c1 + is
       r_com(i+4) = ri - b_com*is
     END DO
-    IF( c<0 ) GOTO 400
-    IF( c==0 ) GOTO 300
+    IF( c<0 ) overflow = .TRUE.
   ELSE
     DO ij = 1, t_com
       i = t1 - ij
@@ -102,34 +115,45 @@ SUBROUTINE MPMUL2(X,Iy,Z,Trunc)
       r_com(i+4) = ri - b_com*c
     END DO
     ! CHECK FOR INTEGER OVERFLOW
-    IF( ri<0 ) GOTO 400
-    ! HAVE TO TREAT FIRST FOUR WORDS OF R SEPARATELY
-    DO ij = 1, 4
-      i = 5 - ij
+    IF( ri<0 ) overflow = .TRUE.
+    IF( .NOT. overflow ) THEN
+      ! HAVE TO TREAT FIRST FOUR WORDS OF R SEPARATELY
+      DO ij = 1, 4
+        i = 5 - ij
+        ri = c
+        c = ri/b_com
+        r_com(i) = ri - b_com*c
+      END DO
+    END IF
+  END IF
+  !
+  IF( .NOT. overflow .AND. c/=0 ) THEN
+    DO
+      ! HAVE TO SHIFT RIGHT HERE AS CARRY OFF END
+      DO ij = 1, t3
+        i = t4 - ij
+        r_com(i+1) = r_com(i)
+      END DO
       ri = c
       c = ri/b_com
-      r_com(i) = ri - b_com*c
+      r_com(1) = ri - b_com*c
+      re = re + 1
+      IF( c<0 ) THEN
+        overflow = .TRUE.
+        EXIT
+      END IF
+      IF( c==0 ) EXIT
     END DO
-    IF( c==0 ) GOTO 300
   END IF
-  DO
-    ! HAVE TO SHIFT RIGHT HERE AS CARRY OFF END
-    DO ij = 1, t3
-      i = t4 - ij
-      r_com(i+1) = r_com(i)
-    END DO
-    ri = c
-    c = ri/b_com
-    r_com(1) = ri - b_com*c
-    re = re + 1
-    IF( c<0 ) GOTO 400
-    IF( c==0 ) EXIT
-  END DO
+  !
+  IF( overflow ) THEN
+    ! CAN ONLY GET HERE IF INTEGER OVERFLOW OCCURRED
+    ERROR STOP ' *** INTEGER OVERFLOW IN MPMUL2, b_com TOO LARGE ***'
+    Z(1) = 0
+    RETURN
+  END IF
+  !
   ! NORMALIZE AND ROUND OR TRUNCATE RESULT
-  300  CALL MPNZR(rs,re,Z,Trunc)
-  RETURN
-  ! CAN ONLY GET HERE IF INTEGER OVERFLOW OCCURRED
-  400 ERROR STOP ' *** INTEGER OVERFLOW IN MPMUL2, b_com TOO LARGE ***'
-  GOTO 100
-
+  CALL MPNZR(rs,re,Z,Trunc)
+  !
 END SUBROUTINE MPMUL2

@@ -86,6 +86,16 @@ PURE SUBROUTINE QS2I1D(Ia,Ja,A,N,Kflag)
   !     .. Local Arrays ..
   INTEGER :: il(21), iu(21)
   !* FIRST EXECUTABLE STATEMENT  QS2I1D
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using state machine with named loops.
+  !   Original F77 used labels 100/200/300/400 for Singleton quicksort states.
+  !   Algorithm unchanged - see Singleton, CACM 12:3 (1969).
+  !
+  INTEGER :: state
+  INTEGER, PARAMETER :: STATE_ADJUST_R = 1, STATE_PARTITION = 2, &
+                        STATE_POP_STACK = 3, STATE_DISPATCH = 4
+  !
   nn = N
   IF( nn<1 ) THEN
     ERROR STOP 'QS2I1D : The number of values to be sorted was not positive.'
@@ -112,157 +122,183 @@ PURE SUBROUTINE QS2I1D(Ia,Ja,A,N,Kflag)
   i = 1
   j = nn
   r = .375_DP
-  100 CONTINUE
-  IF( r<=0.5898437_DP ) THEN
-    r = r + 3.90625E-2_DP
-  ELSE
-    r = r - .21875_DP
-  END IF
-  200  k = i
+  state = STATE_ADJUST_R
   !
-  !     Select a central element of the array and save it in location
-  !     it, jt, at.
-  !
-  ij = i + INT((j-i)*r)
-  it = Ia(ij)
-  jt = Ja(ij)
-  ta = A(ij)
-  !
-  !     If first element of array is greater than it, interchange with it.
-  !
-  IF( Ia(i)>it ) THEN
-    Ia(ij) = Ia(i)
-    Ia(i) = it
-    it = Ia(ij)
-    Ja(ij) = Ja(i)
-    Ja(i) = jt
-    jt = Ja(ij)
-    A(ij) = A(i)
-    A(i) = ta
-    ta = A(ij)
-  END IF
-  l = j
-  !
-  !     If last element of array is less than it, swap with it.
-  !
-  IF( Ia(j)<it ) THEN
-    Ia(ij) = Ia(j)
-    Ia(j) = it
-    it = Ia(ij)
-    Ja(ij) = Ja(j)
-    Ja(j) = jt
-    jt = Ja(ij)
-    A(ij) = A(j)
-    A(j) = ta
-    ta = A(ij)
+  main_loop: DO
     !
-    !     If first element of array is greater than it, swap with it.
+    SELECT CASE (state)
     !
-    IF( Ia(i)>it ) THEN
-      Ia(ij) = Ia(i)
-      Ia(i) = it
-      it = Ia(ij)
-      Ja(ij) = Ja(i)
-      Ja(i) = jt
-      jt = Ja(ij)
-      A(ij) = A(i)
-      A(i) = ta
-      ta = A(ij)
-    END IF
-  END IF
-  DO
-    !
-    !     Find an element in the second half of the array which is
-    !     smaller than it.
-    !
-    l = l - 1
-    IF( Ia(l)<=it ) THEN
-      DO
-        !
-        !     Find an element in the first half of the array which is
-        !     greater than it.
-        !
-        k = k + 1
-        IF( Ia(k)>=it ) THEN
-          !
-          !     Interchange these elements.
-          !
-          IF( k<=l ) THEN
-            iit = Ia(l)
-            Ia(l) = Ia(k)
-            Ia(k) = iit
-            jjt = Ja(l)
-            Ja(l) = Ja(k)
-            Ja(k) = jjt
-            tta = A(l)
-            A(l) = A(k)
-            A(k) = tta
-            EXIT
-          END IF
-          !
-          !     Save upper and lower subscripts of the array yet to be sorted.
-          !
-          IF( l-i>j-k ) THEN
-            il(m) = i
-            iu(m) = l
-            i = k
-            m = m + 1
-          ELSE
-            il(m) = k
-            iu(m) = j
-            j = l
-            m = m + 1
-          END IF
-          GOTO 400
-        END IF
-      END DO
-    END IF
-  END DO
-  !
-  !     Begin again on another portion of the unsorted array.
-  !
-  300  m = m - 1
-  IF( m==0 ) THEN
-    !
-    !     Clean up, if necessary.
-    !
-    IF( Kflag<1 ) THEN
-      DO i = 1, nn
-        Ia(i) = -Ia(i)
-      END DO
-    END IF
-    RETURN
-  ELSE
-    i = il(m)
-    j = iu(m)
-  END IF
-  400 CONTINUE
-  IF( j-i>=1 ) GOTO 200
-  IF( i==j ) GOTO 300
-  IF( i==1 ) GOTO 100
-  i = i - 1
-  DO
-    i = i + 1
-    IF( i==j ) GOTO 300
-    it = Ia(i+1)
-    jt = Ja(i+1)
-    ta = A(i+1)
-    IF( Ia(i)>it ) THEN
+    CASE (STATE_ADJUST_R)  ! Was label 100
+      IF( r<=0.5898437_DP ) THEN
+        r = r + 3.90625E-2_DP
+      ELSE
+        r = r - .21875_DP
+      END IF
+      state = STATE_PARTITION
+      !
+    CASE (STATE_PARTITION)  ! Was label 200
       k = i
-      DO
-        Ia(k+1) = Ia(k)
-        Ja(k+1) = Ja(k)
-        A(k+1) = A(k)
-        k = k - 1
-        IF( it>=Ia(k) ) THEN
-          Ia(k+1) = it
-          Ja(k+1) = jt
-          A(k+1) = ta
-          EXIT
+      !
+      !     Select a central element of the array and save it in location
+      !     it, jt, at.
+      !
+      ij = i + INT((j-i)*r)
+      it = Ia(ij)
+      jt = Ja(ij)
+      ta = A(ij)
+      !
+      !     If first element of array is greater than it, interchange with it.
+      !
+      IF( Ia(i)>it ) THEN
+        Ia(ij) = Ia(i)
+        Ia(i) = it
+        it = Ia(ij)
+        Ja(ij) = Ja(i)
+        Ja(i) = jt
+        jt = Ja(ij)
+        A(ij) = A(i)
+        A(i) = ta
+        ta = A(ij)
+      END IF
+      l = j
+      !
+      !     If last element of array is less than it, swap with it.
+      !
+      IF( Ia(j)<it ) THEN
+        Ia(ij) = Ia(j)
+        Ia(j) = it
+        it = Ia(ij)
+        Ja(ij) = Ja(j)
+        Ja(j) = jt
+        jt = Ja(ij)
+        A(ij) = A(j)
+        A(j) = ta
+        ta = A(ij)
+        !
+        !     If first element of array is greater than it, swap with it.
+        !
+        IF( Ia(i)>it ) THEN
+          Ia(ij) = Ia(i)
+          Ia(i) = it
+          it = Ia(ij)
+          Ja(ij) = Ja(i)
+          Ja(i) = jt
+          jt = Ja(ij)
+          A(ij) = A(i)
+          A(i) = ta
+          ta = A(ij)
         END IF
-      END DO
-    END IF
-  END DO
-  !------------- LAST LINE OF QS2I1D FOLLOWS ----------------------------
-  RETURN
+      END IF
+      partition_loop: DO
+        !
+        !     Find an element in the second half of the array which is
+        !     smaller than it.
+        !
+        l = l - 1
+        IF( Ia(l)<=it ) THEN
+          inner_loop: DO
+            !
+            !     Find an element in the first half of the array which is
+            !     greater than it.
+            !
+            k = k + 1
+            IF( Ia(k)>=it ) THEN
+              !
+              !     Interchange these elements.
+              !
+              IF( k<=l ) THEN
+                iit = Ia(l)
+                Ia(l) = Ia(k)
+                Ia(k) = iit
+                jjt = Ja(l)
+                Ja(l) = Ja(k)
+                Ja(k) = jjt
+                tta = A(l)
+                A(l) = A(k)
+                A(k) = tta
+                EXIT inner_loop
+              END IF
+              !
+              !     Save upper and lower subscripts of the array yet to be sorted.
+              !
+              IF( l-i>j-k ) THEN
+                il(m) = i
+                iu(m) = l
+                i = k
+                m = m + 1
+              ELSE
+                il(m) = k
+                iu(m) = j
+                j = l
+                m = m + 1
+              END IF
+              state = STATE_DISPATCH
+              CYCLE main_loop
+            END IF
+          END DO inner_loop
+        END IF
+      END DO partition_loop
+      !
+    CASE (STATE_POP_STACK)  ! Was label 300
+      !
+      !     Begin again on another portion of the unsorted array.
+      !
+      m = m - 1
+      IF( m==0 ) THEN
+        !
+        !     Clean up, if necessary.
+        !
+        IF( Kflag<1 ) THEN
+          DO i = 1, nn
+            Ia(i) = -Ia(i)
+          END DO
+        END IF
+        RETURN
+      ELSE
+        i = il(m)
+        j = iu(m)
+      END IF
+      state = STATE_DISPATCH
+      !
+    CASE (STATE_DISPATCH)  ! Was label 400
+      IF( j-i>=1 ) THEN
+        state = STATE_PARTITION
+      ELSEIF( i==j ) THEN
+        state = STATE_POP_STACK
+      ELSEIF( i==1 ) THEN
+        state = STATE_ADJUST_R
+      ELSE
+        !     Insertion sort for small subarrays
+        i = i - 1
+        insertion_loop: DO
+          i = i + 1
+          IF( i==j ) THEN
+            state = STATE_POP_STACK
+            EXIT insertion_loop
+          END IF
+          it = Ia(i+1)
+          jt = Ja(i+1)
+          ta = A(i+1)
+          IF( Ia(i)>it ) THEN
+            k = i
+            DO
+              Ia(k+1) = Ia(k)
+              Ja(k+1) = Ja(k)
+              A(k+1) = A(k)
+              k = k - 1
+              IF( it>=Ia(k) ) THEN
+                Ia(k+1) = it
+                Ja(k+1) = jt
+                A(k+1) = ta
+                EXIT
+              END IF
+            END DO
+          END IF
+        END DO insertion_loop
+      END IF
+      !
+    END SELECT
+    !
+  END DO main_loop
+  !
 END SUBROUTINE QS2I1D

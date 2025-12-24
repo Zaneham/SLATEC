@@ -456,8 +456,13 @@ PURE SUBROUTINE DNSQ(FCN,JAC,Iopt,N,X,Fvec,Fjac,Ldfjac,Xtol,Maxfev,Ml,Mu,&
   REAL(DP), PARAMETER :: p1 = 1.0E-1_DP, p5 = 5.0E-1_DP, p001 = 1.0E-3_DP, &
     p0001 = 1.0E-4_DP
   !
-  !     BEGIN BLOCK PERMITTING ...EXITS TO 320
   !* FIRST EXECUTABLE STATEMENT  DNSQ
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using DO loops with EXIT/CYCLE.
+  !   Original F77 used labels 100 (outer loop), 200 (inner loop), 300 (termination).
+  !   Mathematical algorithm unchanged - Powell hybrid method (MINPACK).
+  !
   epsmch = eps_dp
   !
   Info = 0
@@ -467,13 +472,17 @@ PURE SUBROUTINE DNSQ(FCN,JAC,Iopt,N,X,Fvec,Fjac,Ldfjac,Xtol,Maxfev,Ml,Mu,&
   !
   !        CHECK THE INPUT PARAMETERS FOR ERRORS.
   !
-  !     ...EXIT
   IF( Iopt<1 .OR. Iopt>2 .OR. N<=0 .OR. Xtol<0._DP .OR. Maxfev<=0 .OR. Ml<0 .OR. &
-    Mu<0 .OR. Factor<=0._DP .OR. Ldfjac<N .OR. Lr<(N*(N+1))/2 ) GOTO 300
+    Mu<0 .OR. Factor<=0._DP .OR. Ldfjac<N .OR. Lr<(N*(N+1))/2 ) THEN
+    CALL termination()
+    RETURN
+  END IF
   IF( Mode==2 ) THEN
     DO j = 1, N
-      !     .........EXIT
-      IF( Diag(j)<=0._DP ) GOTO 300
+      IF( Diag(j)<=0._DP ) THEN
+        CALL termination()
+        RETURN
+      END IF
     END DO
   END IF
   !
@@ -483,8 +492,10 @@ PURE SUBROUTINE DNSQ(FCN,JAC,Iopt,N,X,Fvec,Fjac,Ldfjac,Xtol,Maxfev,Ml,Mu,&
   iflag = 1
   CALL FCN(N,X,Fvec,iflag)
   Nfev = 1
-  !     ...EXIT
-  IF( iflag<0 ) GOTO 300
+  IF( iflag<0 ) THEN
+    CALL termination()
+    RETURN
+  END IF
   fnorm = NORM2(Fvec)
   !
   !        INITIALIZE ITERATION COUNTER AND MONITORS.
@@ -497,208 +508,203 @@ PURE SUBROUTINE DNSQ(FCN,JAC,Iopt,N,X,Fvec,Fjac,Ldfjac,Xtol,Maxfev,Ml,Mu,&
   !
   !        BEGINNING OF THE OUTER LOOP.
   !
-  !           BEGIN BLOCK PERMITTING ...EXITS TO 90
-  100  jeval = .TRUE.
-  !
-  !              CALCULATE THE JACOBIAN MATRIX.
-  !
-  IF( Iopt==2 ) THEN
+  outer_loop: DO
+    jeval = .TRUE.
     !
-    !                 CODE APPROXIMATES THE JACOBIAN
+    !              CALCULATE THE JACOBIAN MATRIX.
     !
-    iflag = 2
-    CALL DFDJC1(FCN,N,X,Fvec,Fjac,Ldfjac,iflag,Ml,Mu,Epsfcn,Wa1,Wa2)
-    Nfev = Nfev + MIN(Ml+Mu+1,N)
-  ELSE
+    IF( Iopt==2 ) THEN
+      !
+      !                 CODE APPROXIMATES THE JACOBIAN
+      !
+      iflag = 2
+      CALL DFDJC1(FCN,N,X,Fvec,Fjac,Ldfjac,iflag,Ml,Mu,Epsfcn,Wa1,Wa2)
+      Nfev = Nfev + MIN(Ml+Mu+1,N)
+    ELSE
+      !
+      !                 USER SUPPLIES JACOBIAN
+      !
+      CALL JAC(N,X,Fvec,Fjac,Ldfjac,iflag)
+      Njev = Njev + 1
+    END IF
     !
-    !                 USER SUPPLIES JACOBIAN
+    IF( iflag<0 ) EXIT outer_loop
     !
-    CALL JAC(N,X,Fvec,Fjac,Ldfjac,iflag)
-    Njev = Njev + 1
-  END IF
-  !
-  !     .........EXIT
-  IF( iflag<0 ) GOTO 300
-  !
-  !              COMPUTE THE QR FACTORIZATION OF THE JACOBIAN.
-  !
-  CALL DQRFAC(N,N,Fjac,Ldfjac,.FALSE.,iwa,1,Wa1,Wa2,Wa3)
-  !
-  !              ON THE FIRST ITERATION AND IF MODE IS 1, SCALE ACCORDING
-  !              TO THE NORMS OF THE COLUMNS OF THE INITIAL JACOBIAN.
-  !
-  !           ...EXIT
-  IF( iter==1 ) THEN
+    !              COMPUTE THE QR FACTORIZATION OF THE JACOBIAN.
+    !
+    CALL DQRFAC(N,N,Fjac,Ldfjac,.FALSE.,iwa,1,Wa1,Wa2,Wa3)
+    !
+    !              ON THE FIRST ITERATION AND IF MODE IS 1, SCALE ACCORDING
+    !              TO THE NORMS OF THE COLUMNS OF THE INITIAL JACOBIAN.
+    !
+    IF( iter==1 ) THEN
+      IF( Mode/=2 ) THEN
+        DO j = 1, N
+          Diag(j) = Wa2(j)
+          IF( Wa2(j)==0._DP ) Diag(j) = 1._DP
+        END DO
+      END IF
+      !
+      !              ON THE FIRST ITERATION, CALCULATE THE NORM OF THE SCALED
+      !              X AND INITIALIZE THE STEP BOUND DELTA.
+      !
+      DO j = 1, N
+        Wa3(j) = Diag(j)*X(j)
+      END DO
+      xnorm = NORM2(Wa3)
+      delta = Factor*xnorm
+      IF( delta==0._DP ) delta = Factor
+    END IF
+    !
+    !           FORM (Q TRANSPOSE)*FVEC AND STORE IN QTF.
+    !
+    DO i = 1, N
+      Qtf(i) = Fvec(i)
+    END DO
+    DO j = 1, N
+      IF( Fjac(j,j)/=0._DP ) THEN
+        summ = 0._DP
+        DO i = j, N
+          summ = summ + Fjac(i,j)*Qtf(i)
+        END DO
+        temp = -summ/Fjac(j,j)
+        DO i = j, N
+          Qtf(i) = Qtf(i) + Fjac(i,j)*temp
+        END DO
+      END IF
+    END DO
+    !
+    !           COPY THE TRIANGULAR FACTOR OF THE QR FACTORIZATION INTO R.
+    !
+    sing = .FALSE.
+    DO j = 1, N
+      l = j
+      jm1 = j - 1
+      IF( jm1>=1 ) THEN
+        DO i = 1, jm1
+          R(l) = Fjac(i,j)
+          l = l + N - i
+        END DO
+      END IF
+      R(l) = Wa1(j)
+      IF( Wa1(j)==0._DP ) sing = .TRUE.
+    END DO
+    !
+    !           ACCUMULATE THE ORTHOGONAL FACTOR IN FJAC.
+    !
+    CALL DQFORM(N,N,Fjac,Ldfjac,Wa1)
+    !
+    !           RESCALE IF NECESSARY.
+    !
     IF( Mode/=2 ) THEN
       DO j = 1, N
-        Diag(j) = Wa2(j)
-        IF( Wa2(j)==0._DP ) Diag(j) = 1._DP
+        Diag(j) = MAX(Diag(j),Wa2(j))
       END DO
     END IF
     !
-    !              ON THE FIRST ITERATION, CALCULATE THE NORM OF THE SCALED
-    !              X AND INITIALIZE THE STEP BOUND DELTA.
+    !           BEGINNING OF THE INNER LOOP.
     !
-    DO j = 1, N
-      Wa3(j) = Diag(j)*X(j)
-    END DO
-    xnorm = NORM2(Wa3)
-    delta = Factor*xnorm
-    IF( delta==0._DP ) delta = Factor
-  END IF
-  !
-  !           FORM (Q TRANSPOSE)*FVEC AND STORE IN QTF.
-  !
-  DO i = 1, N
-    Qtf(i) = Fvec(i)
-  END DO
-  DO j = 1, N
-    IF( Fjac(j,j)/=0._DP ) THEN
-      summ = 0._DP
-      DO i = j, N
-        summ = summ + Fjac(i,j)*Qtf(i)
-      END DO
-      temp = -summ/Fjac(j,j)
-      DO i = j, N
-        Qtf(i) = Qtf(i) + Fjac(i,j)*temp
-      END DO
-    END IF
-  END DO
-  !
-  !           COPY THE TRIANGULAR FACTOR OF THE QR FACTORIZATION INTO R.
-  !
-  sing = .FALSE.
-  DO j = 1, N
-    l = j
-    jm1 = j - 1
-    IF( jm1>=1 ) THEN
-      DO i = 1, jm1
-        R(l) = Fjac(i,j)
-        l = l + N - i
-      END DO
-    END IF
-    R(l) = Wa1(j)
-    IF( Wa1(j)==0._DP ) sing = .TRUE.
-  END DO
-  !
-  !           ACCUMULATE THE ORTHOGONAL FACTOR IN FJAC.
-  !
-  CALL DQFORM(N,N,Fjac,Ldfjac,Wa1)
-  !
-  !           RESCALE IF NECESSARY.
-  !
-  IF( Mode/=2 ) THEN
-    DO j = 1, N
-      Diag(j) = MAX(Diag(j),Wa2(j))
-    END DO
-  END IF
-  !
-  !           BEGINNING OF THE INNER LOOP.
-  !
-  !
-  !              IF REQUESTED, CALL FCN TO ENABLE PRINTING OF ITERATES.
-  !
-  200 CONTINUE
-  IF( Nprint>0 ) THEN
-    iflag = 0
-    IF( MOD(iter-1,Nprint)==0 ) CALL FCN(N,X,Fvec,iflag)
-    !     ............EXIT
-    IF( iflag<0 ) GOTO 300
-  END IF
-  !
-  !              DETERMINE THE DIRECTION P.
-  !
-  CALL DDOGLG(N,R,Lr,Diag,Qtf,delta,Wa1,Wa2,Wa3)
-  !
-  !              STORE THE DIRECTION P AND X + P. CALCULATE THE NORM OF P.
-  !
-  DO j = 1, N
-    Wa1(j) = -Wa1(j)
-    Wa2(j) = X(j) + Wa1(j)
-    Wa3(j) = Diag(j)*Wa1(j)
-  END DO
-  pnorm = NORM2(Wa3)
-  !
-  !              ON THE FIRST ITERATION, ADJUST THE INITIAL STEP BOUND.
-  !
-  IF( iter==1 ) delta = MIN(delta,pnorm)
-  !
-  !              EVALUATE THE FUNCTION AT X + P AND CALCULATE ITS NORM.
-  !
-  iflag = 1
-  CALL FCN(N,Wa2,Wa4,iflag)
-  Nfev = Nfev + 1
-  !     .........EXIT
-  IF( iflag>=0 ) THEN
-    fnorm1 = NORM2(Wa4)
-    !
-    !              COMPUTE THE SCALED ACTUAL REDUCTION.
-    !
-    actred = -1._DP
-    IF( fnorm1<fnorm ) actred = 1._DP - (fnorm1/fnorm)**2
-    !
-    !              COMPUTE THE SCALED PREDICTED REDUCTION.
-    !
-    l = 1
-    DO i = 1, N
-      summ = 0._DP
-      DO j = i, N
-        summ = summ + R(l)*Wa1(j)
-        l = l + 1
-      END DO
-      Wa3(i) = Qtf(i) + summ
-    END DO
-    temp = NORM2(Wa3)
-    prered = 0._DP
-    IF( temp<fnorm ) prered = 1._DP - (temp/fnorm)**2
-    !
-    !              COMPUTE THE RATIO OF THE ACTUAL TO THE PREDICTED
-    !              REDUCTION.
-    !
-    ratio = 0._DP
-    IF( prered>0._DP ) ratio = actred/prered
-    !
-    !              UPDATE THE STEP BOUND.
-    !
-    IF( ratio>=p1 ) THEN
-      ncfail = 0
-      ncsuc = ncsuc + 1
-      IF( ratio>=p5 .OR. ncsuc>1 ) delta = MAX(delta,pnorm/p5)
-      IF( ABS(ratio-1._DP)<=p1 ) delta = pnorm/p5
-    ELSE
-      ncsuc = 0
-      ncfail = ncfail + 1
-      delta = p5*delta
-    END IF
-    !
-    !              TEST FOR SUCCESSFUL ITERATION.
-    !
-    IF( ratio>=p0001 ) THEN
+    inner_loop: DO
       !
-      !                 SUCCESSFUL ITERATION. UPDATE X, FVEC, AND THEIR NORMS.
+      !              IF REQUESTED, CALL FCN TO ENABLE PRINTING OF ITERATES.
+      !
+      IF( Nprint>0 ) THEN
+        iflag = 0
+        IF( MOD(iter-1,Nprint)==0 ) CALL FCN(N,X,Fvec,iflag)
+        IF( iflag<0 ) EXIT outer_loop
+      END IF
+      !
+      !              DETERMINE THE DIRECTION P.
+      !
+      CALL DDOGLG(N,R,Lr,Diag,Qtf,delta,Wa1,Wa2,Wa3)
+      !
+      !              STORE THE DIRECTION P AND X + P. CALCULATE THE NORM OF P.
       !
       DO j = 1, N
-        X(j) = Wa2(j)
-        Wa2(j) = Diag(j)*X(j)
-        Fvec(j) = Wa4(j)
+        Wa1(j) = -Wa1(j)
+        Wa2(j) = X(j) + Wa1(j)
+        Wa3(j) = Diag(j)*Wa1(j)
       END DO
-      xnorm = NORM2(Wa2)
-      fnorm = fnorm1
-      iter = iter + 1
-    END IF
-    !
-    !              DETERMINE THE PROGRESS OF THE ITERATION.
-    !
-    nslow1 = nslow1 + 1
-    IF( actred>=p001 ) nslow1 = 0
-    IF( jeval ) nslow2 = nslow2 + 1
-    IF( actred>=p1 ) nslow2 = 0
-    !
-    !              TEST FOR CONVERGENCE.
-    !
-    IF( delta<=Xtol*xnorm .OR. fnorm==0._DP ) Info = 1
-    !     .........EXIT
-    IF( Info==0 ) THEN
+      pnorm = NORM2(Wa3)
+      !
+      !              ON THE FIRST ITERATION, ADJUST THE INITIAL STEP BOUND.
+      !
+      IF( iter==1 ) delta = MIN(delta,pnorm)
+      !
+      !              EVALUATE THE FUNCTION AT X + P AND CALCULATE ITS NORM.
+      !
+      iflag = 1
+      CALL FCN(N,Wa2,Wa4,iflag)
+      Nfev = Nfev + 1
+      IF( iflag<0 ) EXIT outer_loop
+      !
+      fnorm1 = NORM2(Wa4)
+      !
+      !              COMPUTE THE SCALED ACTUAL REDUCTION.
+      !
+      actred = -1._DP
+      IF( fnorm1<fnorm ) actred = 1._DP - (fnorm1/fnorm)**2
+      !
+      !              COMPUTE THE SCALED PREDICTED REDUCTION.
+      !
+      l = 1
+      DO i = 1, N
+        summ = 0._DP
+        DO j = i, N
+          summ = summ + R(l)*Wa1(j)
+          l = l + 1
+        END DO
+        Wa3(i) = Qtf(i) + summ
+      END DO
+      temp = NORM2(Wa3)
+      prered = 0._DP
+      IF( temp<fnorm ) prered = 1._DP - (temp/fnorm)**2
+      !
+      !              COMPUTE THE RATIO OF THE ACTUAL TO THE PREDICTED REDUCTION.
+      !
+      ratio = 0._DP
+      IF( prered>0._DP ) ratio = actred/prered
+      !
+      !              UPDATE THE STEP BOUND.
+      !
+      IF( ratio>=p1 ) THEN
+        ncfail = 0
+        ncsuc = ncsuc + 1
+        IF( ratio>=p5 .OR. ncsuc>1 ) delta = MAX(delta,pnorm/p5)
+        IF( ABS(ratio-1._DP)<=p1 ) delta = pnorm/p5
+      ELSE
+        ncsuc = 0
+        ncfail = ncfail + 1
+        delta = p5*delta
+      END IF
+      !
+      !              TEST FOR SUCCESSFUL ITERATION.
+      !
+      IF( ratio>=p0001 ) THEN
+        !
+        !                 SUCCESSFUL ITERATION. UPDATE X, FVEC, AND THEIR NORMS.
+        !
+        DO j = 1, N
+          X(j) = Wa2(j)
+          Wa2(j) = Diag(j)*X(j)
+          Fvec(j) = Wa4(j)
+        END DO
+        xnorm = NORM2(Wa2)
+        fnorm = fnorm1
+        iter = iter + 1
+      END IF
+      !
+      !              DETERMINE THE PROGRESS OF THE ITERATION.
+      !
+      nslow1 = nslow1 + 1
+      IF( actred>=p001 ) nslow1 = 0
+      IF( jeval ) nslow2 = nslow2 + 1
+      IF( actred>=p1 ) nslow2 = 0
+      !
+      !              TEST FOR CONVERGENCE.
+      !
+      IF( delta<=Xtol*xnorm .OR. fnorm==0._DP ) Info = 1
+      IF( Info/=0 ) EXIT outer_loop
       !
       !              TESTS FOR TERMINATION AND STRINGENT TOLERANCES.
       !
@@ -706,56 +712,53 @@ PURE SUBROUTINE DNSQ(FCN,JAC,Iopt,N,X,Fvec,Fjac,Ldfjac,Xtol,Maxfev,Ml,Mu,&
       IF( p1*MAX(p1*delta,pnorm)<=epsmch*xnorm ) Info = 3
       IF( nslow2==5 ) Info = 4
       IF( nslow1==10 ) Info = 5
-      !     .........EXIT
-      IF( Info==0 ) THEN
-        !
-        !              CRITERION FOR RECALCULATING JACOBIAN
-        !
-        !           ...EXIT
-        IF( ncfail==2 ) GOTO 100
-        !
-        !              CALCULATE THE RANK ONE MODIFICATION TO THE JACOBIAN
-        !              AND UPDATE QTF IF NECESSARY.
-        !
-        DO j = 1, N
-          summ = 0._DP
-          DO i = 1, N
-            summ = summ + Fjac(i,j)*Wa4(i)
-          END DO
-          Wa2(j) = (summ-Wa3(j))/pnorm
-          Wa1(j) = Diag(j)*((Diag(j)*Wa1(j))/pnorm)
-          IF( ratio>=p0001 ) Qtf(j) = summ
+      IF( Info/=0 ) EXIT outer_loop
+      !
+      !              CRITERION FOR RECALCULATING JACOBIAN
+      !
+      IF( ncfail==2 ) CYCLE outer_loop
+      !
+      !              CALCULATE THE RANK ONE MODIFICATION TO THE JACOBIAN
+      !              AND UPDATE QTF IF NECESSARY.
+      !
+      DO j = 1, N
+        summ = 0._DP
+        DO i = 1, N
+          summ = summ + Fjac(i,j)*Wa4(i)
         END DO
-        !
-        !              COMPUTE THE QR FACTORIZATION OF THE UPDATED JACOBIAN.
-        !
-        CALL D1UPDT(N,N,R,Lr,Wa1,Wa2,Wa3,sing)
-        CALL D1MPYQ(N,N,Fjac,Ldfjac,Wa2,Wa3)
-        CALL D1MPYQ(1,N,Qtf,1,Wa2,Wa3)
-        !
-        !              END OF THE INNER LOOP.
-        !
-        jeval = .FALSE.
-        !
-        !           END OF THE OUTER LOOP.
-        !
-        GOTO 200
-      END IF
-    END IF
-  END IF
+        Wa2(j) = (summ-Wa3(j))/pnorm
+        Wa1(j) = Diag(j)*((Diag(j)*Wa1(j))/pnorm)
+        IF( ratio>=p0001 ) Qtf(j) = summ
+      END DO
+      !
+      !              COMPUTE THE QR FACTORIZATION OF THE UPDATED JACOBIAN.
+      !
+      CALL D1UPDT(N,N,R,Lr,Wa1,Wa2,Wa3,sing)
+      CALL D1MPYQ(N,N,Fjac,Ldfjac,Wa2,Wa3)
+      CALL D1MPYQ(1,N,Qtf,1,Wa2,Wa3)
+      !
+      !              END OF THE INNER LOOP.
+      !
+      jeval = .FALSE.
+    END DO inner_loop
+    !
+  END DO outer_loop
   !
   !     TERMINATION, EITHER NORMAL OR USER IMPOSED.
   !
-  300 CONTINUE
-  IF( iflag<0 ) Info = iflag
-  iflag = 0
-  IF( Nprint>0 ) CALL FCN(N,X,Fvec,iflag)
-  IF( Info<0 ) ERROR STOP 'DNSQ : EXECUTION TERMINATED BECAUSE USER SET IFLAG NEGATIVE.'
-  IF( Info==0 ) ERROR STOP 'DNSQ : INVALID INPUT PARAMETER.'
-  IF( Info==2 ) ERROR STOP 'DNSQ : TOO MANY FUNCTION EVALUATIONS.'
-  IF( Info==3 ) ERROR STOP 'DNSQ : XTOL TOO SMALL. NO FURTHER IMPROVEMENT POSSIBLE.'
-  IF( Info>4 ) ERROR STOP 'DNSQ : ITERATION NOT MAKING GOOD PROGRESS.'
+  CALL termination()
   !
-  !     LAST CARD OF SUBROUTINE DNSQ.
+CONTAINS
+  !
+  SUBROUTINE termination()
+    IF( iflag<0 ) Info = iflag
+    iflag = 0
+    IF( Nprint>0 ) CALL FCN(N,X,Fvec,iflag)
+    IF( Info<0 ) ERROR STOP 'DNSQ : EXECUTION TERMINATED BECAUSE USER SET IFLAG NEGATIVE.'
+    IF( Info==0 ) ERROR STOP 'DNSQ : INVALID INPUT PARAMETER.'
+    IF( Info==2 ) ERROR STOP 'DNSQ : TOO MANY FUNCTION EVALUATIONS.'
+    IF( Info==3 ) ERROR STOP 'DNSQ : XTOL TOO SMALL. NO FURTHER IMPROVEMENT POSSIBLE.'
+    IF( Info>4 ) ERROR STOP 'DNSQ : ITERATION NOT MAKING GOOD PROGRESS.'
+  END SUBROUTINE termination
   !
 END SUBROUTINE DNSQ

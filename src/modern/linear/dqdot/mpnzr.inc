@@ -37,25 +37,41 @@ SUBROUTINE MPNZR(Rs,Re,Z,Trunc)
   INTEGER, INTENT(IN) :: Rs, Trunc
   INTEGER, INTENT(INOUT) :: Re, Z(mxr_com)
   INTEGER :: i, i2, i2m, i2p, is, it, j, k, b2
+  LOGICAL :: found_nonzero, do_round
   !* FIRST EXECUTABLE STATEMENT  MPNZR
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using logical flags.
+  !   Original F77 used labels 100/150/200.
+  !   Algorithm unchanged - Brent multiple-precision arithmetic.
+  !
   i2 = t_com + 4
+  found_nonzero = .FALSE.
+  is = 0
+  !
   IF( Rs/=0 ) THEN
     ! CHECK THAT SIGN = +-1
     IF( ABS(Rs)<=1 ) THEN
       ! LOOK FOR FIRST NONZERO DIGIT
       DO i = 1, i2
         is = i - 1
-        IF( r_com(i)>0 ) GOTO 100
+        IF( r_com(i)>0 ) THEN
+          found_nonzero = .TRUE.
+          EXIT
+        END IF
         ! FRACTION ZERO
       END DO
     ELSE
       ERROR STOP ' *** SIGN NOT 0, +1 OR -1 IN CALL TO MPNZR, POSSIBLE OVERWRITING PROBLEM ***'
     END IF
   END IF
-  ! STORE ZERO IN Z
-  Z(1) = 0
-  RETURN
-  100 CONTINUE
+  !
+  IF( .NOT. found_nonzero ) THEN
+    ! STORE ZERO IN Z
+    Z(1) = 0
+    RETURN
+  END IF
+  !
   IF( is/=0 ) THEN
     ! NORMALIZE
     Re = Re - is
@@ -69,43 +85,53 @@ SUBROUTINE MPNZR(Rs,Re,Z,Trunc)
       r_com(j) = 0
     END DO
   END IF
+  !
   ! CHECK TO SEE IF TRUNCATION IS DESIRED
   IF( Trunc==0 ) THEN
     ! SEE IF ROUNDING NECESSARY
     ! TREAT EVEN AND ODD BASES DIFFERENTLY
     b2 = b_com/2
+    do_round = .FALSE.
     IF( (2*b2)/=b_com ) THEN
       ! ODD BASE, ROUND IF R(T+1)... > 1/2
       DO i = 1, 4
         it = t_com + i
         IF( r_com(it)<b2 ) EXIT
-        IF( r_com(it)/=b2 ) GOTO 150
+        IF( r_com(it)/=b2 ) THEN
+          do_round = .TRUE.
+          EXIT
+        END IF
       END DO
-      GOTO 200
     ELSE
       ! B EVEN.  ROUND IF R(T+1)>=B2 UNLESS R(T) ODD AND ALL ZEROS
       ! AFTER R(T+2).
-      IF( r_com(t_com+1)<b2 ) GOTO 200
-      IF( r_com(t_com+1)==b2 ) THEN
-        IF( MOD(r_com(t_com),2)/=0 ) THEN
-          IF( (r_com(t_com+2)+r_com(t_com+3)+r_com(t_com+4))==0 ) GOTO 200
+      IF( r_com(t_com+1)>=b2 ) THEN
+        do_round = .TRUE.
+        IF( r_com(t_com+1)==b2 ) THEN
+          IF( MOD(r_com(t_com),2)/=0 ) THEN
+            IF( (r_com(t_com+2)+r_com(t_com+3)+r_com(t_com+4))==0 ) do_round = .FALSE.
+          END IF
         END IF
       END IF
     END IF
-    ! ROUND
-    150 CONTINUE
-    DO j = 1, t_com
-      i = t_com + 1 - j
-      r_com(i) = r_com(i) + 1
-      IF( r_com(i)<b_com ) GOTO 200
-      r_com(i) = 0
-    END DO
-    ! EXCEPTIONAL CASE, ROUNDED UP TO .10000...
-    Re = Re + 1
-    r_com(1) = 1
+    !
+    IF( do_round ) THEN
+      ! ROUND
+      DO j = 1, t_com
+        i = t_com + 1 - j
+        r_com(i) = r_com(i) + 1
+        IF( r_com(i)<b_com ) EXIT
+        r_com(i) = 0
+        IF( j==t_com ) THEN
+          ! EXCEPTIONAL CASE, ROUNDED UP TO .10000...
+          Re = Re + 1
+          r_com(1) = 1
+        END IF
+      END DO
+    END IF
   END IF
+  !
   ! CHECK FOR OVERFLOW
-  200 CONTINUE
   IF( Re>m_com ) THEN
     WRITE (lun_com,99002)
     99002 FORMAT (' *** OVERFLOW OCCURRED IN MPNZR ***')
@@ -117,12 +143,12 @@ SUBROUTINE MPNZR(Rs,Re,Z,Trunc)
     CALL MPUNFL(Z)
     RETURN
   END IF
+  !
   ! STORE RESULT IN Z
   Z(1) = Rs
   Z(2) = Re
   DO i = 1, t_com
     Z(i+2) = r_com(i)
   END DO
-
-  RETURN
+  !
 END SUBROUTINE MPNZR

@@ -57,53 +57,81 @@ SUBROUTINE MPADD2(X,Y,Z,Y1,Trunc)
   INTEGER, INTENT(IN) :: X(mxr_com), Y(mxr_com), Y1(mxr_com)
   INTEGER, INTENT(OUT) :: Z(mxr_com)
   INTEGER :: j, med, s, ed, rs, re
+  LOGICAL :: use_x, use_y_larger
   !* FIRST EXECUTABLE STATEMENT  MPADD2
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using logical flags.
+  !   Original F77 used labels 100/200/300/400 for case dispatch.
+  !   Algorithm unchanged - Brent multiple-precision arithmetic.
+  !
+  use_x = .FALSE.
+  use_y_larger = .FALSE.
+  !
   IF( X(1)/=0 ) THEN
-    IF( Y1(1)==0 ) GOTO 100
-    ! COMPARE SIGNS
-    s = X(1)*Y1(1)
-    IF( ABS(s)<=1 ) THEN
-      ! COMPARE EXPONENTS
-      ed = X(2) - Y(2)
-      med = ABS(ed)
-      IF( ed<0 ) THEN
-        ! HERE EXPONENT(Y) >= EXPONENT(X)
-        IF( med<=t_com ) GOTO 200
-      ELSEIF( ed==0 ) THEN
-        ! EXPONENTS EQUAL SO COMPARE SIGNS, THEN FRACTIONS IF NEC.
-        IF( s>0 ) GOTO 200
-        DO j = 1, t_com
-          IF( X(j+2)<Y(j+2) ) GOTO 200
-          IF( X(j+2)/=Y(j+2) ) GOTO 400
-        END DO
-        ! RESULT IS ZERO
+    IF( Y1(1)==0 ) THEN
+      use_x = .TRUE.
+    ELSE
+      ! COMPARE SIGNS
+      s = X(1)*Y1(1)
+      IF( ABS(s)<=1 ) THEN
+        ! COMPARE EXPONENTS
+        ed = X(2) - Y(2)
+        med = ABS(ed)
+        IF( ed<0 ) THEN
+          ! HERE EXPONENT(Y) >= EXPONENT(X)
+          IF( med<=t_com ) use_y_larger = .TRUE.
+        ELSEIF( ed==0 ) THEN
+          ! EXPONENTS EQUAL SO COMPARE SIGNS, THEN FRACTIONS IF NEC.
+          IF( s>0 ) THEN
+            use_y_larger = .TRUE.
+          ELSE
+            DO j = 1, t_com
+              IF( X(j+2)<Y(j+2) ) THEN
+                use_y_larger = .TRUE.
+                EXIT
+              ELSEIF( X(j+2)/=Y(j+2) ) THEN
+                EXIT
+              END IF
+            END DO
+            IF( .NOT. use_y_larger .AND. X(t_com+2)==Y(t_com+2) ) THEN
+              ! RESULT IS ZERO
+              Z(1) = 0
+              RETURN
+            END IF
+          END IF
+        ELSE
+          ! ABS(X) > ABS(Y)
+          IF( med>t_com ) use_x = .TRUE.
+        END IF
+      ELSE
+        ERROR STOP ' *** SIGN NOT 0, +1 OR -1 IN CALL TO MPADD2, POSSIBLE OVERWRITING PROBLEM ***'
         Z(1) = 0
         RETURN
-      ELSE
-        ! ABS(X) > ABS(Y)
-        IF( med<=t_com ) GOTO 400
-        GOTO 100
       END IF
-    ELSE
-      ERROR STOP ' *** SIGN NOT 0, +1 OR -1 IN CALL TO MPADD2, POSSIBLE OVERWRITING PROBLEM ***'
-      Z(1) = 0
-      RETURN
     END IF
   END IF
-  CALL MPSTR(Y,Z)
-  Z(1) = Y1(1)
-  RETURN
-  100  CALL MPSTR(X,Z)
-  RETURN
-  200  rs = Y1(1)
-  re = Y(2)
-  CALL MPADD3(X,Y,s,med,re)
+  !
+  IF( use_x ) THEN
+    CALL MPSTR(X,Z)
+    RETURN
+  END IF
+  !
+  IF( use_y_larger .OR. X(1)==0 .OR. Y1(1)==0 ) THEN
+    IF( X(1)==0 .OR. Y1(1)==0 ) THEN
+      CALL MPSTR(Y,Z)
+      Z(1) = Y1(1)
+      RETURN
+    END IF
+    rs = Y1(1)
+    re = Y(2)
+    CALL MPADD3(X,Y,s,med,re)
+  ELSE
+    rs = X(1)
+    re = X(2)
+    CALL MPADD3(Y,X,s,med,re)
+  END IF
   ! NORMALIZE, ROUND OR TRUNCATE, AND RETURN
-  300  CALL MPNZR(rs,re,Z,Trunc)
-  RETURN
-  400  rs = X(1)
-  re = X(2)
-  CALL MPADD3(Y,X,s,med,re)
-  GOTO 300
-
+  CALL MPNZR(rs,re,Z,Trunc)
+  !
 END SUBROUTINE MPADD2
