@@ -172,10 +172,19 @@ PURE SUBROUTINE ZBESK(Z,Fnu,Kode,N,Cy,Nz,Ierr)
   REAL(DP) :: aa, alim, aln, arg, az, dig, elim, fn, fnul, rl, &
     r1m5, tol, ufl, xx, yy, bb
   !* FIRST EXECUTABLE STATEMENT  ZBESK
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using inline error returns.
+  !   Original F77 used labels 100 (IERR=2), 200 (IERR=5), 300 (IERR=4).
+  !   Mathematical algorithm unchanged - see Amos, SAND83-0086.
+  !
   Ierr = 0
   Nz = 0
   xx = REAL(Z,DP)
   yy = AIMAG(Z)
+  !-----------------------------------------------------------------------
+  !     INPUT VALIDATION
+  !-----------------------------------------------------------------------
   IF( Z==(0._DP,0._DP) .OR. Fnu<0._DP .OR. Kode<1 .OR. Kode>2 .OR. N<1 ) THEN
     Ierr = 1
     RETURN
@@ -213,82 +222,115 @@ PURE SUBROUTINE ZBESK(Z,Fnu,Kode,N,Cy,Nz,Ierr)
   aa = 0.5_DP/tol
   bb = huge_int*0.5_DP
   aa = MIN(aa,bb)
-  IF( az>aa ) GOTO 300
-  IF( fn>aa ) GOTO 300
+  IF( az>aa .OR. fn>aa ) THEN
+    ! Precision error - no computation (was GOTO 300)
+    Nz = 0
+    Ierr = 4
+    RETURN
+  END IF
   aa = SQRT(aa)
   IF( az>aa ) Ierr = 3
   IF( fn>aa ) Ierr = 3
   !-----------------------------------------------------------------------
   !     OVERFLOW TEST ON THE LAST MEMBER OF THE SEQUENCE
   !-----------------------------------------------------------------------
-  !     UFL = EXP(-ELIM)
   ufl = tiny_dp*1.E3_DP
-  IF( az>=ufl ) THEN
-    IF( Fnu>fnul ) THEN
-      !-----------------------------------------------------------------------
-      !     UNIFORM ASYMPTOTIC EXPANSIONS FOR FNU>FNUL
-      !-----------------------------------------------------------------------
-      mr = 0
-      IF( xx<0._DP ) THEN
-        mr = 1
-        IF( yy<0._DP ) mr = -1
+  IF( az<ufl ) THEN
+    ! Overflow - no computation (was GOTO 100)
+    Nz = 0
+    Ierr = 2
+    RETURN
+  END IF
+  !
+  IF( Fnu>fnul ) THEN
+    !-------------------------------------------------------------------
+    !     UNIFORM ASYMPTOTIC EXPANSIONS FOR FNU>FNUL
+    !-------------------------------------------------------------------
+    mr = 0
+    IF( xx<0._DP ) THEN
+      mr = 1
+      IF( yy<0._DP ) mr = -1
+    END IF
+    CALL ZBUNK(Z,Fnu,Kode,mr,nn,Cy,nw,tol,elim,alim)
+    IF( nw<0 ) THEN
+      IF( nw==(-1) ) THEN
+        Ierr = 2  ! Overflow (was GOTO 100 via 200)
+      ELSE
+        Ierr = 5  ! Algorithmic error (was GOTO 200)
       END IF
-      CALL ZBUNK(Z,Fnu,Kode,mr,nn,Cy,nw,tol,elim,alim)
-      IF( nw<0 ) GOTO 200
-      Nz = Nz + nw
+      Nz = 0
       RETURN
-    ELSE
-      IF( fn>1._DP ) THEN
-        IF( fn>2._DP ) THEN
-          CALL ZUOIK(Z,Fnu,Kode,2,nn,Cy,nuf,tol,elim,alim)
-          IF( nuf<0 ) GOTO 100
-          Nz = Nz + nuf
-          nn = nn - nuf
-          !-----------------------------------------------------------------------
-          !     HERE NN=N OR NN=0 SINCE NUF=0,NN, OR -1 ON RETURN FROM CUOIK
-          !     IF NUF=NN, THEN CY(I)=CZERO FOR ALL I
-          !-----------------------------------------------------------------------
-          IF( nn==0 ) THEN
-            IF( xx<0._DP ) GOTO 100
-            RETURN
-          END IF
-        ELSEIF( az<=tol ) THEN
-          arg = 0.5_DP*az
-          aln = -fn*LOG(arg)
-          IF( aln>elim ) GOTO 100
-        END IF
-      END IF
-      IF( xx>=0._DP ) THEN
-        !-----------------------------------------------------------------------
-        !     RIGHT HALF PLANE COMPUTATION, REAL(Z)>=0.
-        !-----------------------------------------------------------------------
-        CALL ZBKNU(Z,Fnu,Kode,nn,Cy,nw,tol,elim,alim)
-        IF( nw<0 ) GOTO 200
-        Nz = nw
+    END IF
+    Nz = Nz + nw
+    RETURN
+  END IF
+  !
+  IF( fn>1._DP ) THEN
+    IF( fn>2._DP ) THEN
+      CALL ZUOIK(Z,Fnu,Kode,2,nn,Cy,nuf,tol,elim,alim)
+      IF( nuf<0 ) THEN
+        Nz = 0
+        Ierr = 2  ! Overflow (was GOTO 100)
         RETURN
-        !-----------------------------------------------------------------------
-        !     LEFT HALF PLANE COMPUTATION
-        !     PI/2<ARG(Z)<=PI AND -PI<ARG(Z)<-PI/2.
-        !-----------------------------------------------------------------------
-      ELSEIF( Nz==0 ) THEN
-        mr = 1
-        IF( yy<0._DP ) mr = -1
-        CALL ZACON(Z,Fnu,Kode,mr,nn,Cy,nw,rl,fnul,tol,elim,alim)
-        IF( nw<0 ) GOTO 200
-        Nz = nw
+      END IF
+      Nz = Nz + nuf
+      nn = nn - nuf
+      !-----------------------------------------------------------------
+      !     HERE NN=N OR NN=0 SINCE NUF=0,NN, OR -1 ON RETURN FROM ZUOIK
+      !     IF NUF=NN, THEN CY(I)=CZERO FOR ALL I
+      !-----------------------------------------------------------------
+      IF( nn==0 ) THEN
+        IF( xx<0._DP ) THEN
+          Nz = 0
+          Ierr = 2  ! Overflow (was GOTO 100)
+          RETURN
+        END IF
+        RETURN
+      END IF
+    ELSEIF( az<=tol ) THEN
+      arg = 0.5_DP*az
+      aln = -fn*LOG(arg)
+      IF( aln>elim ) THEN
+        Nz = 0
+        Ierr = 2  ! Overflow (was GOTO 100)
         RETURN
       END IF
     END IF
   END IF
-  100  Nz = 0
-  Ierr = 2
-  RETURN
-  200 CONTINUE
-  IF( nw==(-1) ) GOTO 100
-  Nz = 0
-  Ierr = 5
-  RETURN
-  300  Nz = 0
-  Ierr = 4
+  !
+  IF( xx>=0._DP ) THEN
+    !-------------------------------------------------------------------
+    !     RIGHT HALF PLANE COMPUTATION, REAL(Z)>=0.
+    !-------------------------------------------------------------------
+    CALL ZBKNU(Z,Fnu,Kode,nn,Cy,nw,tol,elim,alim)
+    IF( nw<0 ) THEN
+      IF( nw==(-1) ) THEN
+        Ierr = 2  ! Overflow (was GOTO 100 via 200)
+      ELSE
+        Ierr = 5  ! Algorithmic error (was GOTO 200)
+      END IF
+      Nz = 0
+      RETURN
+    END IF
+    Nz = nw
+  ELSE
+    !-------------------------------------------------------------------
+    !     LEFT HALF PLANE COMPUTATION
+    !     PI/2<ARG(Z)<=PI AND -PI<ARG(Z)<-PI/2.
+    !-------------------------------------------------------------------
+    mr = 1
+    IF( yy<0._DP ) mr = -1
+    CALL ZACON(Z,Fnu,Kode,mr,nn,Cy,nw,rl,fnul,tol,elim,alim)
+    IF( nw<0 ) THEN
+      IF( nw==(-1) ) THEN
+        Ierr = 2  ! Overflow (was GOTO 100 via 200)
+      ELSE
+        Ierr = 5  ! Algorithmic error (was GOTO 200)
+      END IF
+      Nz = 0
+      RETURN
+    END IF
+    Nz = nw
+  END IF
   !
 END SUBROUTINE ZBESK

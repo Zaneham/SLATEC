@@ -178,10 +178,19 @@ PURE SUBROUTINE ZBESH(Z,Fnu,Kode,M,N,Cy,Nz,Ierr)
   REAL(DP), PARAMETER :: hpi = 1.57079632679489662_DP
   !
   !* FIRST EXECUTABLE STATEMENT  ZBESH
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using inline error returns and named BLOCK construct.
+  !   Original F77 used labels 100 (IERR=2), 200 (IERR=5), 300 (IERR=4).
+  !   Mathematical algorithm unchanged - see Amos, SAND83-0086.
+  !
   Nz = 0
   xx = REAL(Z,DP)
   yy = AIMAG(Z)
   Ierr = 0
+  !-----------------------------------------------------------------------
+  !     INPUT VALIDATION
+  !-----------------------------------------------------------------------
   IF( Z==(0._DP,0._DP) .OR. Fnu<0._DP .OR. M<1 .OR. M>2 .OR. Kode<1 .OR. Kode>2 &
     .OR. N<1 ) THEN
     Ierr = 1
@@ -225,8 +234,12 @@ PURE SUBROUTINE ZBESH(Z,Fnu,Kode,M,N,Cy,Nz,Ierr)
   aa = 0.5_DP/tol
   bb = huge_int*0.5_DP
   aa = MIN(aa,bb)
-  IF( az>aa ) GOTO 300
-  IF( fn>aa ) GOTO 300
+  IF( az>aa .OR. fn>aa ) THEN
+    ! Precision error - no computation (was GOTO 300)
+    Nz = 0
+    Ierr = 4
+    RETURN
+  END IF
   aa = SQRT(aa)
   IF( az>aa ) Ierr = 3
   IF( fn>aa ) Ierr = 3
@@ -234,106 +247,129 @@ PURE SUBROUTINE ZBESH(Z,Fnu,Kode,M,N,Cy,Nz,Ierr)
   !     OVERFLOW TEST ON THE LAST MEMBER OF THE SEQUENCE
   !-----------------------------------------------------------------------
   ufl = tiny_dp*1.E+3_DP
-  IF( az>=ufl ) THEN
+  IF( az<ufl ) THEN
+    ! Overflow - no computation (was GOTO 100)
+    Ierr = 2
+    Nz = 0
+    RETURN
+  END IF
+  !
+  !-----------------------------------------------------------------------
+  !     MAIN COMPUTATION BLOCK
+  !-----------------------------------------------------------------------
+  compute: BLOCK
     IF( Fnu>fnul ) THEN
-      !-----------------------------------------------------------------------
+      !-------------------------------------------------------------------
       !     UNIFORM ASYMPTOTIC EXPANSIONS FOR FNU>FNUL
-      !-----------------------------------------------------------------------
+      !-------------------------------------------------------------------
       mr = 0
       IF( .NOT. ((xn>=0._DP) .AND. (xn/=0._DP .OR. yn>=0._DP .OR. M/=2)) ) THEN
         mr = -mm
         IF( xn==0._DP .AND. yn<0._DP ) zn = -zn
       END IF
       CALL ZBUNK(zn,Fnu,Kode,mr,nn,Cy,nw,tol,elim,alim)
-      IF( nw<0 ) GOTO 200
+      IF( nw<0 ) THEN
+        IF( nw==(-1) ) THEN
+          Ierr = 2  ! Overflow (was GOTO 100 via 200)
+        ELSE
+          Ierr = 5  ! Algorithmic error (was GOTO 200)
+        END IF
+        Nz = 0
+        RETURN
+      END IF
       Nz = Nz + nw
     ELSE
       IF( fn>1._DP ) THEN
         IF( fn>2._DP ) THEN
           CALL ZUOIK(zn,Fnu,Kode,2,nn,Cy,nuf,tol,elim,alim)
-          IF( nuf<0 ) GOTO 100
+          IF( nuf<0 ) THEN
+            Ierr = 2  ! Overflow (was GOTO 100)
+            Nz = 0
+            RETURN
+          END IF
           Nz = Nz + nuf
           nn = nn - nuf
-          !-----------------------------------------------------------------------
-          !     HERE NN=N OR NN=0 SINCE NUF=0,NN, OR -1 ON RETURN FROM CUOIK
+          !---------------------------------------------------------------
+          !     HERE NN=N OR NN=0 SINCE NUF=0,NN, OR -1 ON RETURN FROM ZUOIK
           !     IF NUF=NN, THEN CY(I)=CZERO FOR ALL I
-          !-----------------------------------------------------------------------
+          !---------------------------------------------------------------
           IF( nn==0 ) THEN
-            IF( xn<0._DP ) GOTO 100
+            IF( xn<0._DP ) THEN
+              Ierr = 2  ! Overflow (was GOTO 100)
+              Nz = 0
+              RETURN
+            END IF
             RETURN
           END IF
         ELSEIF( az<=tol ) THEN
           arg = 0.5_DP*az
           aln = -fn*LOG(arg)
-          IF( aln>elim ) GOTO 100
+          IF( aln>elim ) THEN
+            Ierr = 2  ! Overflow (was GOTO 100)
+            Nz = 0
+            RETURN
+          END IF
         END IF
       END IF
       IF( (xn<0._DP) .OR. (xn==0._DP .AND. yn<0._DP .AND. M==2) ) THEN
-        !-----------------------------------------------------------------------
+        !---------------------------------------------------------------
         !     LEFT HALF PLANE COMPUTATION
-        !-----------------------------------------------------------------------
+        !---------------------------------------------------------------
         mr = -mm
         CALL ZACON(zn,Fnu,Kode,mr,nn,Cy,nw,rl,fnul,tol,elim,alim)
-        IF( nw<0 ) GOTO 200
+        IF( nw<0 ) THEN
+          IF( nw==(-1) ) THEN
+            Ierr = 2  ! Overflow (was GOTO 100 via 200)
+          ELSE
+            Ierr = 5  ! Algorithmic error (was GOTO 200)
+          END IF
+          Nz = 0
+          RETURN
+        END IF
         Nz = nw
       ELSE
-        !-----------------------------------------------------------------------
+        !---------------------------------------------------------------
         !     RIGHT HALF PLANE COMPUTATION, XN>=0. .AND. (XN/=0.  .OR.
         !     YN>=0. .OR. M=1)
-        !-----------------------------------------------------------------------
+        !---------------------------------------------------------------
         CALL ZBKNU(zn,Fnu,Kode,nn,Cy,Nz,tol,elim,alim)
       END IF
     END IF
-    !-----------------------------------------------------------------------
-    !     H(M,FNU,Z) = -FMM*(I/HPI)*(ZT**FNU)*K(FNU,-Z*ZT)
-    !
-    !     ZT=EXP(-FMM*HPI*I) = CMPLX(0.0,-FMM), FMM=3-2*M, M=1,2
-    !-----------------------------------------------------------------------
-    sgn = SIGN(hpi,-fmm)
-    !-----------------------------------------------------------------------
-    !     CALCULATE EXP(FNU*HPI*I) TO MINIMIZE LOSSES OF SIGNIFICANCE
-    !     WHEN FNU IS LARGE
-    !-----------------------------------------------------------------------
-    inu = INT( Fnu )
-    inuh = inu/2
-    ir = inu - 2*inuh
-    arg = (Fnu-(inu-ir))*sgn
-    rhpi = 1._DP/sgn
-    cpn = rhpi*COS(arg)
-    spn = rhpi*SIN(arg)
-    !     ZN = CMPLX(-SPN,CPN)
-    csgn = CMPLX(-spn,cpn,DP)
-    !     IF(MOD(INUH,2)=1) ZN = -ZN
-    IF( MOD(inuh,2)==1 ) csgn = -csgn
-    zt = CMPLX(0._DP,-fmm,DP)
-    rtol = 1._DP/tol
-    ascle = ufl*rtol
-    DO i = 1, nn
-      !       CY(I) = CY(I)*ZN
-      !       ZN = ZN*ZT
-      zn = Cy(i)
-      aa = REAL(zn,DP)
-      bb = AIMAG(zn)
-      atol = 1._DP
-      IF( MAX(ABS(aa),ABS(bb))<=ascle ) THEN
-        zn = zn*CMPLX(rtol,0._DP,DP)
-        atol = tol
-      END IF
-      zn = zn*csgn
-      Cy(i) = zn*CMPLX(atol,0._DP,DP)
-      csgn = csgn*zt
-    END DO
-    RETURN
-  END IF
-  100  Ierr = 2
-  Nz = 0
-  RETURN
-  200 CONTINUE
-  IF( nw==(-1) ) GOTO 100
-  Nz = 0
-  Ierr = 5
-  RETURN
-  300  Nz = 0
-  Ierr = 4
+  END BLOCK compute
+  !-----------------------------------------------------------------------
+  !     H(M,FNU,Z) = -FMM*(I/HPI)*(ZT**FNU)*K(FNU,-Z*ZT)
+  !
+  !     ZT=EXP(-FMM*HPI*I) = CMPLX(0.0,-FMM), FMM=3-2*M, M=1,2
+  !-----------------------------------------------------------------------
+  sgn = SIGN(hpi,-fmm)
+  !-----------------------------------------------------------------------
+  !     CALCULATE EXP(FNU*HPI*I) TO MINIMIZE LOSSES OF SIGNIFICANCE
+  !     WHEN FNU IS LARGE
+  !-----------------------------------------------------------------------
+  inu = INT( Fnu )
+  inuh = inu/2
+  ir = inu - 2*inuh
+  arg = (Fnu-(inu-ir))*sgn
+  rhpi = 1._DP/sgn
+  cpn = rhpi*COS(arg)
+  spn = rhpi*SIN(arg)
+  csgn = CMPLX(-spn,cpn,DP)
+  IF( MOD(inuh,2)==1 ) csgn = -csgn
+  zt = CMPLX(0._DP,-fmm,DP)
+  rtol = 1._DP/tol
+  ascle = ufl*rtol
+  DO i = 1, nn
+    zn = Cy(i)
+    aa = REAL(zn,DP)
+    bb = AIMAG(zn)
+    atol = 1._DP
+    IF( MAX(ABS(aa),ABS(bb))<=ascle ) THEN
+      zn = zn*CMPLX(rtol,0._DP,DP)
+      atol = tol
+    END IF
+    zn = zn*csgn
+    Cy(i) = zn*CMPLX(atol,0._DP,DP)
+    csgn = csgn*zt
+  END DO
   !
 END SUBROUTINE ZBESH
