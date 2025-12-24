@@ -232,7 +232,14 @@ PURE SUBROUTINE POISTG(Nperod,N,Mperod,M,A,B,C,Idimy,Y,Ierror,W)
   INTEGER :: i, ipstor, irev, iwb2, iwb3, iwba, iwbb, iwbc, iwd, iwp, iwtcos, &
     iww1, iww2, iww3, j, k, mh, mhm1, mhmi, mhpi, modd, mp, mskip, nby2, np
   REAL(SP) :: a1
+  LOGICAL :: coeff_mismatch
   !* FIRST EXECUTABLE STATEMENT  POISTG
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using phased structure.
+  !   Original F77 used labels 100/200/300/400/500/600/700/800.
+  !   Algorithm unchanged - Schumann & Sweet staggered grid method.
+  !
   Ierror = 0
   IF( M<=2 ) Ierror = 1
   IF( N<=2 ) Ierror = 2
@@ -242,11 +249,14 @@ PURE SUBROUTINE POISTG(Nperod,N,Mperod,M,A,B,C,Idimy,Y,Ierror,W)
   IF( Mperod==1 ) THEN
     IF( A(1)/=0. .OR. C(M)/=0. ) Ierror = 7
   ELSE
+    coeff_mismatch = .FALSE.
     DO i = 1, M
-      IF( A(i)/=C(1) ) GOTO 100
-      IF( C(i)/=C(1) ) GOTO 100
-      IF( B(i)/=B(1) ) GOTO 100
+      IF( A(i)/=C(1) .OR. C(i)/=C(1) .OR. B(i)/=B(1) ) THEN
+        coeff_mismatch = .TRUE.
+        EXIT
+      END IF
     END DO
+    IF( coeff_mismatch ) Ierror = 6
   END IF
   IF( Ierror/=0 ) RETURN
   iwba = M + 1
@@ -273,92 +283,95 @@ PURE SUBROUTINE POISTG(Nperod,N,Mperod,M,A,B,C,Idimy,Y,Ierror,W)
   END DO
   np = Nperod
   mp = Mperod + 1
-  IF( mp/=1 ) GOTO 200
-  GOTO 500
-  100  Ierror = 6
-  RETURN
-  200 CONTINUE
-  SELECT CASE (Nperod)
-    CASE (4)
-      !
-      !     REVERSE COLUMNS WHEN NPEROD = 4.
-      !
-      irev = 1
-      nby2 = N/2
-      np = 2
-      GOTO 600
-    CASE DEFAULT
-  END SELECT
-  300  CALL POSTG2(np,N,M,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Idimy,Y,&
-    W(1:iwba-1),W(iwb2:iwb3-1),W(iwb3:iww1-1),W(iww1:iww2-1),W(iww2:iww3-1),&
-    W(iww3:iwd-1),W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
-  ipstor = INT( W(iww1) )
-  irev = 2
-  IF( Nperod==4 ) GOTO 600
-  400 CONTINUE
-  IF( mp==1 ) GOTO 700
-  IF( mp==2 ) GOTO 800
   !
-  !     REORDER UNKNOWNS WHEN MP =0
+  ! Phase 1: Reorder unknowns when Mperod=0 (mp=1)
   !
-  500  mh = (M+1)/2
-  mhm1 = mh - 1
-  modd = 1
-  IF( mh*2==M ) modd = 2
-  DO j = 1, N
-    DO i = 1, mhm1
-      mhpi = mh + i
-      mhmi = mh - i
-      W(i) = Y(mhmi,j) - Y(mhpi,j)
-      W(mhpi) = Y(mhmi,j) + Y(mhpi,j)
+  IF( mp==1 ) THEN
+    mh = (M+1)/2
+    mhm1 = mh - 1
+    modd = 1
+    IF( mh*2==M ) modd = 2
+    DO j = 1, N
+      DO i = 1, mhm1
+        mhpi = mh + i
+        mhmi = mh - i
+        W(i) = Y(mhmi,j) - Y(mhpi,j)
+        W(mhpi) = Y(mhmi,j) + Y(mhpi,j)
+      END DO
+      W(mh) = 2._SP*Y(mh,j)
+      IF( modd/=1 ) W(M) = 2._SP*Y(M,j)
+      DO i = 1, M
+        Y(i,j) = W(i)
+      END DO
     END DO
-    W(mh) = 2._SP*Y(mh,j)
-    IF( modd/=1 ) W(M) = 2._SP*Y(M,j)
-    DO i = 1, M
-      Y(i,j) = W(i)
-    END DO
-  END DO
-  k = iwbc + mhm1 - 1
-  i = iwba + mhm1
-  W(k) = 0._SP
-  W(i) = 0._SP
-  W(k+1) = 2._SP*W(k+1)
-  IF( modd==2 ) THEN
-    W(iwbb-1) = W(k+1)
-  ELSE
-    k = iwbb + mhm1 - 1
-    W(k) = W(k) - W(i-1)
-    W(iwbc-1) = W(iwbc-1) + W(iwbb-1)
+    k = iwbc + mhm1 - 1
+    i = iwba + mhm1
+    W(k) = 0._SP
+    W(i) = 0._SP
+    W(k+1) = 2._SP*W(k+1)
+    IF( modd==2 ) THEN
+      W(iwbb-1) = W(k+1)
+    ELSE
+      k = iwbb + mhm1 - 1
+      W(k) = W(k) - W(i-1)
+      W(iwbc-1) = W(iwbc-1) + W(iwbb-1)
+    END IF
   END IF
-  GOTO 200
-  600 CONTINUE
-  DO j = 1, nby2
-    mskip = N + 1 - j
-    DO i = 1, M
-      a1 = Y(i,j)
-      Y(i,j) = Y(i,mskip)
-      Y(i,mskip) = a1
+  !
+  ! Phase 2: Call solver with optional column reversal for Nperod=4
+  !
+  IF( Nperod==4 ) THEN
+    ! Reverse columns before solving
+    nby2 = N/2
+    DO j = 1, nby2
+      mskip = N + 1 - j
+      DO i = 1, M
+        a1 = Y(i,j)
+        Y(i,j) = Y(i,mskip)
+        Y(i,mskip) = a1
+      END DO
     END DO
-  END DO
-  IF( irev==1 ) GOTO 300
-  IF( irev==2 ) GOTO 400
-  700 CONTINUE
-  DO j = 1, N
-    DO i = 1, mhm1
-      mhmi = mh - i
-      mhpi = mh + i
-      W(mhmi) = 0.5_SP*(Y(mhpi,j)+Y(i,j))
-      W(mhpi) = 0.5_SP*(Y(mhpi,j)-Y(i,j))
+    ! Solve with modified np=2
+    CALL POSTG2(2,N,M,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Idimy,Y,&
+      W(1:iwba-1),W(iwb2:iwb3-1),W(iwb3:iww1-1),W(iww1:iww2-1),W(iww2:iww3-1),&
+      W(iww3:iwd-1),W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
+    ipstor = INT( W(iww1) )
+    ! Reverse columns back
+    DO j = 1, nby2
+      mskip = N + 1 - j
+      DO i = 1, M
+        a1 = Y(i,j)
+        Y(i,j) = Y(i,mskip)
+        Y(i,mskip) = a1
+      END DO
     END DO
-    W(mh) = 0.5_SP*Y(mh,j)
-    IF( modd/=1 ) W(M) = 0.5_SP*Y(M,j)
-    DO i = 1, M
-      Y(i,j) = W(i)
+  ELSE
+    CALL POSTG2(np,N,M,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Idimy,Y,&
+      W(1:iwba-1),W(iwb2:iwb3-1),W(iwb3:iww1-1),W(iww1:iww2-1),W(iww2:iww3-1),&
+      W(iww3:iwd-1),W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
+    ipstor = INT( W(iww1) )
+  END IF
+  !
+  ! Phase 3: Undo reordering when Mperod=0 (mp=1)
+  !
+  IF( mp==1 ) THEN
+    DO j = 1, N
+      DO i = 1, mhm1
+        mhmi = mh - i
+        mhpi = mh + i
+        W(mhmi) = 0.5_SP*(Y(mhpi,j)+Y(i,j))
+        W(mhpi) = 0.5_SP*(Y(mhpi,j)-Y(i,j))
+      END DO
+      W(mh) = 0.5_SP*Y(mh,j)
+      IF( modd/=1 ) W(M) = 0.5_SP*Y(M,j)
+      DO i = 1, M
+        Y(i,j) = W(i)
+      END DO
     END DO
-  END DO
+  END IF
   !
   !     RETURN STORAGE REQUIREMENTS FOR W ARRAY.
   !
-  800  W(1) = ipstor + iwp - 1
+  W(1) = ipstor + iwp - 1
   !
 END SUBROUTINE POISTG

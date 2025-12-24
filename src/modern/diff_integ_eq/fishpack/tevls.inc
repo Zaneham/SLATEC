@@ -62,6 +62,11 @@ PURE SUBROUTINE TEVLS(N,D,E2,Ierr)
   INTEGER :: nhalf, ntop, i, j, l, m, ii, l1, mml
   REAL(SP) :: dhold, b, c, f, g, h, p, r, s
   !* FIRST EXECUTABLE STATEMENT  TEVLS
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using named loop with EXIT.
+  !   Original F77 used labels 20/40/50.
+  !   Algorithm unchanged - Reinsch rational QL method.
   Ierr = 0
   IF( N/=1 ) THEN
     !
@@ -92,7 +97,7 @@ PURE SUBROUTINE TEVLS(N,D,E2,Ierr)
       END DO
       !
       IF( m/=l ) THEN
-        DO WHILE( j/=30 )
+        converged: DO WHILE( j/=30 )
           j = j + 1
           !
           !     ********** FORM SHIFT **********
@@ -138,30 +143,37 @@ PURE SUBROUTINE TEVLS(N,D,E2,Ierr)
           !
           !     ********** GUARD AGAINST UNDERFLOWED H **********
           !
-          IF( h==0._SP ) GOTO 20
-          IF( ABS(E2(l))<=ABS(c/h) ) GOTO 20
+          IF( h==0._SP ) EXIT converged
+          IF( ABS(E2(l))<=ABS(c/h) ) EXIT converged
           E2(l) = h*E2(l)
-          IF( E2(l)==0._SP ) GOTO 20
-        END DO
-        GOTO 50
+          IF( E2(l)==0._SP ) EXIT converged
+        END DO converged
+        !
+        IF( j==30 ) THEN
+          ! No convergence after 30 iterations
+          Ierr = l
+          RETURN
+        END IF
       END IF
-      20  p = D(l) + f
+      !
+      p = D(l) + f
       !
       !     ********** ORDER EIGENVALUES **********
       !
+      i = 1
       IF( l/=1 ) THEN
         !
         !     ********** FOR I=L STEP -1 UNTIL 2 DO -- **********
         !
         DO ii = 2, l
           i = l + 2 - ii
-          IF( p>=D(i-1) ) GOTO 40
+          IF( p>=D(i-1) ) EXIT
           D(i) = D(i-1)
+          IF( ii==l ) i = 1
         END DO
       END IF
       !
-      i = 1
-      40  D(i) = p
+      D(i) = p
     END DO
     !
     IF( ABS(D(N))<ABS(D(1)) ) THEN
@@ -173,11 +185,6 @@ PURE SUBROUTINE TEVLS(N,D,E2,Ierr)
         D(ntop+1) = dhold
       END DO
     END IF
-    RETURN
-    !
-    !********** SET ERROR -- NO CONVERGENCE TO AN EIGENVALUE AFTER 30 ITERATIONS **********
-    !
-    50  Ierr = l
   END IF
   !
   !     ********** LAST CARD OF TQLRAT **********

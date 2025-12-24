@@ -236,7 +236,14 @@ PURE SUBROUTINE CMGNBN(Nperod,N,Mperod,M,A,B,C,Idimy,Y,Ierror,W)
   INTEGER :: i, ipstor, irev, iwb2, iwb3, iwba, iwbb, iwbc, iwd, iwp, iwtcos, &
     iww1, iww2, iww3, j, k, mh, mhm1, mhmi, mhpi, modd, mp, mskip, nby2, np
   COMPLEX(SP) :: a1
+  LOGICAL :: coeff_mismatch
   !* FIRST EXECUTABLE STATEMENT  CMGNBN
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using state machine with named blocks.
+  !   Original F77 used labels 100/200/300/400/500/600/700/800/900.
+  !   Algorithm unchanged - Sweet cyclic reduction (complex version).
+  !
   Ierror = 0
   IF( M<=2 ) Ierror = 1
   IF( N<=2 ) Ierror = 2
@@ -246,15 +253,15 @@ PURE SUBROUTINE CMGNBN(Nperod,N,Mperod,M,A,B,C,Idimy,Y,Ierror,W)
   IF( Mperod==1 ) THEN
     IF( ABS(A(1))/=0. .AND. ABS(C(M))/=0. ) Ierror = 7
   ELSE
+    coeff_mismatch = .FALSE.
     DO i = 2, M
-      IF( ABS(A(i)-C(1))/=0. ) GOTO 100
-      IF( ABS(C(i)-C(1))/=0. ) GOTO 100
-      IF( ABS(B(i)-B(1))/=0. ) GOTO 100
+      IF( ABS(A(i)-C(1))/=0. .OR. ABS(C(i)-C(1))/=0. .OR. ABS(B(i)-B(1))/=0. ) THEN
+        coeff_mismatch = .TRUE.
+        EXIT
+      END IF
     END DO
+    IF( coeff_mismatch ) Ierror = 6
   END IF
-  GOTO 200
-  100  Ierror = 6
-  200 CONTINUE
   IF( Ierror/=0 ) RETURN
   iwba = M + 1
   iwbb = iwba + M
@@ -280,105 +287,110 @@ PURE SUBROUTINE CMGNBN(Nperod,N,Mperod,M,A,B,C,Idimy,Y,Ierror,W)
   END DO
   mp = Mperod + 1
   np = Nperod + 1
-  IF( mp==1 ) GOTO 600
-  300 CONTINUE
-  SELECT CASE (np)
-    CASE (2)
-      CALL CMPOSD(M,N,1,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Y,Idimy,W,&
-        W(iww1:iww2-1),W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
-    CASE (3)
-      CALL CMPOSN(M,N,1,2,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Y,Idimy,W,&
-        W(iwb2:iwb3-1),W(iwb3:iww1-1),W(iww1:iww2-1),W(iww2:iww3-1),W(iww3:iwd-1),&
-        W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
-    CASE (4)
-      CALL CMPOSN(M,N,1,1,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Y,Idimy,W,&
-        W(iwb2:iwb3-1),W(iwb3:iww1-1),W(iww1:iww2-1),W(iww2:iww3-1),W(iww3:iwd-1),&
-        W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
-    CASE (5)
-      !
-      !     REVERSE COLUMNS WHEN NPEROD = 4
-      !
-      irev = 1
-      nby2 = N/2
-      GOTO 700
-    CASE DEFAULT
-      CALL CMPOSP(M,N,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Y,Idimy,W,&
-        W(iwb2:iwb3-1),W(iwb3:iww1-1),W(iww1:iww2-1),W(iww2:iww3-1),W(iww3:iwd-1),&
-        W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
-  END SELECT
-  400  ipstor = INT(W(iww1))
-  irev = 2
-  IF( Nperod==4 ) GOTO 700
-  500 CONTINUE
-  IF( mp==1 ) GOTO 800
-  IF( mp==2 ) GOTO 900
   !
-  !     REORDER UNKNOWNS WHEN MP =0
+  ! Phase 1: Reorder unknowns when Mperod=0 (mp=1)
   !
-  600  mh = (M+1)/2
-  mhm1 = mh - 1
-  modd = 1
-  IF( mh*2==M ) modd = 2
-  DO j = 1, N
-    DO i = 1, mhm1
-      mhpi = mh + i
-      mhmi = mh - i
-      W(i) = Y(mhmi,j) - Y(mhpi,j)
-      W(mhpi) = Y(mhmi,j) + Y(mhpi,j)
+  IF( mp==1 ) THEN
+    mh = (M+1)/2
+    mhm1 = mh - 1
+    modd = 1
+    IF( mh*2==M ) modd = 2
+    DO j = 1, N
+      DO i = 1, mhm1
+        mhpi = mh + i
+        mhmi = mh - i
+        W(i) = Y(mhmi,j) - Y(mhpi,j)
+        W(mhpi) = Y(mhmi,j) + Y(mhpi,j)
+      END DO
+      W(mh) = 2._SP*Y(mh,j)
+      IF( modd/=1 ) W(M) = 2._SP*Y(M,j)
+      DO i = 1, M
+        Y(i,j) = W(i)
+      END DO
     END DO
-    W(mh) = 2._SP*Y(mh,j)
-    IF( modd/=1 ) W(M) = 2._SP*Y(M,j)
-    DO i = 1, M
-      Y(i,j) = W(i)
-    END DO
-  END DO
-  k = iwbc + mhm1 - 1
-  i = iwba + mhm1
-  W(k) = (0._SP,0._SP)
-  W(i) = (0._SP,0._SP)
-  W(k+1) = 2._SP*W(k+1)
-  IF( modd==2 ) THEN
-    W(iwbb-1) = W(k+1)
-  ELSE
-    k = iwbb + mhm1 - 1
-    W(k) = W(k) - W(i-1)
-    W(iwbc-1) = W(iwbc-1) + W(iwbb-1)
+    k = iwbc + mhm1 - 1
+    i = iwba + mhm1
+    W(k) = (0._SP,0._SP)
+    W(i) = (0._SP,0._SP)
+    W(k+1) = 2._SP*W(k+1)
+    IF( modd==2 ) THEN
+      W(iwbb-1) = W(k+1)
+    ELSE
+      k = iwbb + mhm1 - 1
+      W(k) = W(k) - W(i-1)
+      W(iwbc-1) = W(iwbc-1) + W(iwbb-1)
+    END IF
   END IF
-  GOTO 300
-  700 CONTINUE
-  DO j = 1, nby2
-    mskip = N + 1 - j
-    DO i = 1, M
-      a1 = Y(i,j)
-      Y(i,j) = Y(i,mskip)
-      Y(i,mskip) = a1
+  !
+  ! Phase 2: Call solver based on np (Nperod+1)
+  ! If np=5 (Nperod=4), reverse columns first, then solve, then reverse again
+  !
+  IF( np==5 ) THEN
+    ! Reverse columns before solving
+    nby2 = N/2
+    DO j = 1, nby2
+      mskip = N + 1 - j
+      DO i = 1, M
+        a1 = Y(i,j)
+        Y(i,j) = Y(i,mskip)
+        Y(i,mskip) = a1
+      END DO
     END DO
-  END DO
-  IF( irev==1 ) THEN
+    ! Solve with modified np=3 (Nperod=2)
     CALL CMPOSN(M,N,1,2,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Y,Idimy,W,&
       W(iwb2:iwb3-1),W(iwb3:iww1-1),W(iww1:iww2-1),W(iww2:iww3-1),W(iww3:iwd-1),&
       W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
-    GOTO 400
-  ELSEIF( irev==2 ) THEN
-    GOTO 500
+    ipstor = INT(W(iww1))
+    ! Reverse columns back
+    DO j = 1, nby2
+      mskip = N + 1 - j
+      DO i = 1, M
+        a1 = Y(i,j)
+        Y(i,j) = Y(i,mskip)
+        Y(i,mskip) = a1
+      END DO
+    END DO
+  ELSE
+    SELECT CASE (np)
+      CASE (2)
+        CALL CMPOSD(M,N,1,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Y,Idimy,W,&
+          W(iww1:iww2-1),W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
+      CASE (3)
+        CALL CMPOSN(M,N,1,2,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Y,Idimy,W,&
+          W(iwb2:iwb3-1),W(iwb3:iww1-1),W(iww1:iww2-1),W(iww2:iww3-1),W(iww3:iwd-1),&
+          W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
+      CASE (4)
+        CALL CMPOSN(M,N,1,1,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Y,Idimy,W,&
+          W(iwb2:iwb3-1),W(iwb3:iww1-1),W(iww1:iww2-1),W(iww2:iww3-1),W(iww3:iwd-1),&
+          W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
+      CASE DEFAULT
+        CALL CMPOSP(M,N,W(iwba:iwbb-1),W(iwbb:iwbc-1),W(iwbc:iwb2-1),Y,Idimy,W,&
+          W(iwb2:iwb3-1),W(iwb3:iww1-1),W(iww1:iww2-1),W(iww2:iww3-1),W(iww3:iwd-1),&
+          W(iwd:iwtcos-1),W(iwtcos:iwp-1),W(iwp:))
+    END SELECT
+    ipstor = INT(W(iww1))
   END IF
-  800 CONTINUE
-  DO j = 1, N
-    DO i = 1, mhm1
-      mhmi = mh - i
-      mhpi = mh + i
-      W(mhmi) = 0.5_SP*(Y(mhpi,j)+Y(i,j))
-      W(mhpi) = 0.5_SP*(Y(mhpi,j)-Y(i,j))
+  !
+  ! Phase 3: Undo reordering when Mperod=0 (mp=1)
+  !
+  IF( mp==1 ) THEN
+    DO j = 1, N
+      DO i = 1, mhm1
+        mhmi = mh - i
+        mhpi = mh + i
+        W(mhmi) = 0.5_SP*(Y(mhpi,j)+Y(i,j))
+        W(mhpi) = 0.5_SP*(Y(mhpi,j)-Y(i,j))
+      END DO
+      W(mh) = 0.5_SP*Y(mh,j)
+      IF( modd/=1 ) W(M) = 0.5_SP*Y(M,j)
+      DO i = 1, M
+        Y(i,j) = W(i)
+      END DO
     END DO
-    W(mh) = 0.5_SP*Y(mh,j)
-    IF( modd/=1 ) W(M) = 0.5_SP*Y(M,j)
-    DO i = 1, M
-      Y(i,j) = W(i)
-    END DO
-  END DO
+  END IF
   !
   !     RETURN STORAGE REQUIREMENTS FOR W ARRAY.
   !
-  900  W(1) = CMPLX(REAL(ipstor+iwp-1,SP),0._SP,SP)
+  W(1) = CMPLX(REAL(ipstor+iwp-1,SP),0._SP,SP)
   !
 END SUBROUTINE CMGNBN

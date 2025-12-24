@@ -320,92 +320,105 @@ PURE SUBROUTINE HWSCRT(A,B,M,Mbdcnd,Bda,Bdb,C,D,N,Nbdcnd,Bdc,Bdd,Elmbda,F,&
   np1 = N + 1
   mp = Mbdcnd + 1
   mp1 = M + 1
+  !
+  ! Modernisation notes (202412):
+  !   Eliminated GOTOs using structured IF-THEN-ELSE.
+  !   Original F77 used labels 100/200/300/400/500/600.
+  !   Algorithm unchanged - Schumann & Sweet Helmholtz solver.
+  !
+  ! Set N-direction grid parameters based on np
   nstart = 1
   nstop = N
   nskip = 1
   SELECT CASE (np)
     CASE (1,5)
+      ! Keep defaults: nstart=1, nstop=N, nskip=1
     CASE (3)
       nstart = 2
-      GOTO 100
+      nstop = np1
+      nskip = 2
     CASE (4)
-      GOTO 100
+      nstop = np1
+      nskip = 2
     CASE DEFAULT
       nstart = 2
   END SELECT
-  GOTO 200
-  100  nstop = np1
-  nskip = 2
-  200  nunk = nstop - nstart + 1
+  nunk = nstop - nstart + 1
   !
   !     ENTER BOUNDARY DATA FOR X-BOUNDARIES.
   !
   mstart = 1
   mstop = M
   mskip = 1
-  SELECT CASE (mp)
-    CASE (1)
-      GOTO 500
-    CASE (3)
-      mstart = 2
-      mstop = mp1
-      mskip = 2
-    CASE (4)
-      mstop = mp1
-      mskip = 2
-      GOTO 300
-    CASE (5)
-      GOTO 300
-    CASE DEFAULT
-      mstart = 2
-  END SELECT
-  DO j = nstart, nstop
-    F(2,j) = F(2,j) - F(1,j)*delxsq
-  END DO
-  GOTO 400
-  300 CONTINUE
-  DO j = nstart, nstop
-    F(1,j) = F(1,j) + Bda(j)*twdelx
-  END DO
-  400 CONTINUE
-  IF( mskip==2 ) THEN
-    DO j = nstart, nstop
-      F(mp1,j) = F(mp1,j) - Bdb(j)*twdelx
-    END DO
-  ELSE
-    DO j = nstart, nstop
-      F(M,j) = F(M,j) - F(mp1,j)*delxsq
-    END DO
+  IF( mp/=1 ) THEN
+    SELECT CASE (mp)
+      CASE (3)
+        mstart = 2
+        mstop = mp1
+        mskip = 2
+        ! Apply Dirichlet at x=A
+        DO j = nstart, nstop
+          F(2,j) = F(2,j) - F(1,j)*delxsq
+        END DO
+      CASE (4)
+        mstop = mp1
+        mskip = 2
+        ! Apply Neumann at x=A
+        DO j = nstart, nstop
+          F(1,j) = F(1,j) + Bda(j)*twdelx
+        END DO
+      CASE (5)
+        ! Apply Neumann at x=A
+        DO j = nstart, nstop
+          F(1,j) = F(1,j) + Bda(j)*twdelx
+        END DO
+      CASE DEFAULT
+        mstart = 2
+        ! Apply Dirichlet at x=A
+        DO j = nstart, nstop
+          F(2,j) = F(2,j) - F(1,j)*delxsq
+        END DO
+    END SELECT
+    ! Apply x=B boundary condition
+    IF( mskip==2 ) THEN
+      DO j = nstart, nstop
+        F(mp1,j) = F(mp1,j) - Bdb(j)*twdelx
+      END DO
+    ELSE
+      DO j = nstart, nstop
+        F(M,j) = F(M,j) - F(mp1,j)*delxsq
+      END DO
+    END IF
   END IF
-  500  munk = mstop - mstart + 1
+  munk = mstop - mstart + 1
   !
   !     ENTER BOUNDARY DATA FOR Y-BOUNDARIES.
   !
-  SELECT CASE (np)
-    CASE (1)
-      GOTO 600
-    CASE (4,5)
+  IF( np/=1 ) THEN
+    SELECT CASE (np)
+      CASE (4,5)
+        DO i = mstart, mstop
+          F(i,1) = F(i,1) + Bdc(i)*twdely
+        END DO
+      CASE DEFAULT
+        DO i = mstart, mstop
+          F(i,2) = F(i,2) - F(i,1)*delysq
+        END DO
+    END SELECT
+    IF( nskip==2 ) THEN
       DO i = mstart, mstop
-        F(i,1) = F(i,1) + Bdc(i)*twdely
+        F(i,np1) = F(i,np1) - Bdd(i)*twdely
       END DO
-    CASE DEFAULT
+    ELSE
       DO i = mstart, mstop
-        F(i,2) = F(i,2) - F(i,1)*delysq
+        F(i,N) = F(i,N) - F(i,np1)*delysq
       END DO
-  END SELECT
-  IF( nskip==2 ) THEN
-    DO i = mstart, mstop
-      F(i,np1) = F(i,np1) - Bdd(i)*twdely
-    END DO
-  ELSE
-    DO i = mstart, mstop
-      F(i,N) = F(i,N) - F(i,np1)*delysq
-    END DO
+    END IF
   END IF
   !
   !    MULTIPLY RIGHT SIDE BY DELTAY**2.
   !
-  600  delysq = deltay*deltay
+  delysq = deltay*deltay
   DO i = mstart, mstop
     DO j = nstart, nstop
       F(i,j) = F(i,j)*delysq
