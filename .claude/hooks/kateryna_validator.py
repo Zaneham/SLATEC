@@ -59,8 +59,13 @@ class HopperSearch:
             self._conn = sqlite3.connect(str(self.db_path))
         return self._conn
 
-    def extract_terms(self, content: str, max_terms: int = 10) -> List[str]:
-        """Extract key search terms from content."""
+    def extract_terms(self, content: str, max_terms: int = 10) -> List[Tuple[str, int]]:
+        """
+        Extract key search terms from content with importance scores.
+
+        Returns list of (term, importance) tuples, sorted by importance.
+        Higher importance = term looks more "technical" or "specific".
+        """
         # Find potential technical terms (capitalised, underscored, or longer words)
         words = re.findall(r'\b[A-Za-z_][A-Za-z0-9_]*\b', content)
 
@@ -75,7 +80,7 @@ class HopperSearch:
             # - ALL CAPS (likely acronyms/constants): +3
             # - CamelCase or with underscores: +2
             # - Longer words: +1
-            score = 0
+            score = 1  # Base score
             if word.isupper() and len(word) >= 2:
                 score += 3
             if '_' in word or (word[0].isupper() and not word.isupper()):
@@ -87,19 +92,19 @@ class HopperSearch:
 
         # Sort by score descending, take top N
         sorted_terms = sorted(term_scores.items(), key=lambda x: -x[1])
-        return [term for term, _ in sorted_terms[:max_terms]]
+        return sorted_terms[:max_terms]
 
-    def search(self, terms: List[str], limit: int = 20) -> Tuple[float, int]:
+    def search(self, terms: List[Tuple[str, int]], limit: int = 20) -> Tuple[float, int]:
         """
-        Search Hopper FTS5 index for terms.
+        Search Hopper FTS5 index for terms with importance weighting.
 
-        Uses term coverage (what % of terms have matches) rather than BM25
-        relevance, because we want to know "does the KB cover this topic?"
-        not "how relevant is this specific query?"
+        Key insight: unfound *important* terms should REDUCE confidence.
+        A fabricated routine name like "XYZFOOBAR" (high importance, all caps)
+        not being in the KB is a red flag, even if common terms match.
 
         Returns:
             (retrieval_confidence, chunks_found)
-            - retrieval_confidence: 0.0-1.0 based on term coverage
+            - retrieval_confidence: 0.0-1.0, penalised for unfound important terms
             - chunks_found: total number of matching chunks
         """
         if not terms:
@@ -108,52 +113,50 @@ class HopperSearch:
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        terms_with_matches = 0
         total_chunks = 0
-        best_term_score = -100.0
+        weighted_found = 0.0
+        weighted_unfound = 0.0
+        total_weight = 0.0
 
-        for term in terms:
+        for term, importance in terms:
+            total_weight += importance
             try:
-                # Get matches with scores for this term (bm25 can't be used with COUNT)
+                # Count total matches for this term (to detect common words)
                 cursor.execute("""
-                    SELECT bm25(document_fts) as score
-                    FROM document_fts
-                    WHERE document_fts MATCH ?
-                    LIMIT ?
-                """, (term, limit))
-                doc_scores = [r[0] for r in cursor.fetchall()]
+                    SELECT COUNT(*) FROM document_fts WHERE document_fts MATCH ?
+                """, (term,))
+                doc_count = cursor.fetchone()[0]
 
                 cursor.execute("""
-                    SELECT bm25(snippet_fts) as score
-                    FROM snippet_fts
-                    WHERE snippet_fts MATCH ?
-                    LIMIT ?
-                """, (term, limit))
-                snip_scores = [r[0] for r in cursor.fetchall()]
+                    SELECT COUNT(*) FROM snippet_fts WHERE snippet_fts MATCH ?
+                """, (term,))
+                snip_count = cursor.fetchone()[0]
 
-                term_matches = len(doc_scores) + len(snip_scores)
-                if term_matches > 0:
-                    terms_with_matches += 1
+                term_matches = doc_count + snip_count
+
+                # If term matches too many docs, it's probably a common word
+                # that doesn't provide real grounding (e.g. "correct", "definitely")
+                # Max 500 matches = specific enough to count as grounding
+                if term_matches > 0 and term_matches <= 500:
+                    weighted_found += importance
                     total_chunks += term_matches
-                    all_scores = doc_scores + snip_scores
-                    best_term_score = max(best_term_score, max(all_scores))
+                elif term_matches == 0:
+                    # Unfound term - penalise by importance
+                    weighted_unfound += importance
+                # else: too common, don't count either way
 
             except sqlite3.OperationalError:
                 # Skip malformed terms
                 continue
 
-        if terms_with_matches == 0:
+        if total_weight == 0:
             return 0.0, 0
 
-        # Coverage: what fraction of terms have matches?
-        coverage = terms_with_matches / len(terms)
-
-        # Quality: how good is the best match? (BM25 normalised)
-        # -3 or better -> 1.0, -12 or worse -> 0.0
-        quality = max(0.0, min(1.0, (best_term_score + 12) / 9))
-
-        # Combine: coverage matters most, quality as tiebreaker
-        retrieval_confidence = 0.8 * coverage + 0.2 * quality
+        # Confidence = (found weight - unfound weight) / total weight
+        # This means unfound important terms actively reduce confidence
+        # Range: -1.0 to 1.0, then normalised to 0.0-1.0
+        raw_score = (weighted_found - weighted_unfound) / total_weight
+        retrieval_confidence = (raw_score + 1.0) / 2.0  # Normalise to 0-1
 
         return retrieval_confidence, total_chunks
 
