@@ -8,7 +8,14 @@ This project modernises the SLATEC Fortran 77 library to Fortran 2018 standards,
 
 ---
 
-## Recent Changes (Unpushed)
+## Recent Changes
+
+### CMake Build System
+- Added CMakeLists.txt for CMake-based builds
+- Static library builds correctly with all tests passing
+- Shared library disabled by default (include structure causes duplicate symbols)
+- Integrated test-drive framework and golden tests
+- Usage: `mkdir build && cd build && cmake .. && make`
 
 ### Batch 53 - K Bessel Function Drivers (34 GOTOs)
 - `dbesk.inc`: 17 GOTOs → 0
