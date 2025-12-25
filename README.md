@@ -201,4 +201,4 @@ Apologies for the NZ English throughout :-)
 
 ## Contributing
 
-Got a GOTO that's doing your head in? Found a gnarly bit of code that needs sorting? PRs welcome.
+Any issues Found a gnarly bit of code that needs sorting? PRs welcome.
