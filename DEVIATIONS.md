@@ -253,11 +253,11 @@ This is in contrast to Bessel K_0 which shows 2-4 ULP deviations with -ffast-mat
 
 ## Raw Data Files
 
-- `doc/deviation_O0.txt` - Full report with -O0
-- `doc/deviation_O2.txt` - Full report with -O2
-- `doc/deviation_O3_fastmath.txt` - Full report with -O3 -ffast-math
-- `doc/quadpack_O2.txt` - QUADPACK deviation report with -O2
-- `doc/quadpack_O3_fastmath.txt` - QUADPACK deviation report with -O3 -ffast-math
+- `outputs/deviation_O0.txt` - Full report with -O0
+- `outputs/deviation_O2.txt` - Full report with -O2
+- `outputs/deviation_O3_fastmath.txt` - Full report with -O3 -ffast-math
+- `outputs/quadpack_O2.txt` - QUADPACK deviation report with -O2
+- `outputs/quadpack_O3_fastmath.txt` - QUADPACK deviation report with -O3 -ffast-math
 
 ## References
 

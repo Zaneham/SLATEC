@@ -95,7 +95,7 @@ slatec-modern/
 │       ├── service/       # Utility routines, machine constants
 │       └── special_functions/ # Bessel, Gamma, Airy, etc.
 ├── test/                  # Test suite (test-drive + golden tests)
-├── doc/                   # Raw deviation test outputs
+├── outputs/               # Raw deviation test outputs
 ├── scripts/               # Python scripts for batch processing
 └── docs/                  # SLATEC guide and table of contents
 ```
