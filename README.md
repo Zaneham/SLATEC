@@ -60,9 +60,9 @@ The big cleanup jobs:
 - [x] Convert to free-form Fortran 2018
 - [x] Create proper modules with explicit interfaces
 - [x] **Replace GOTOs with structured control flow** *(~1,400 eliminated!)*
-- [ ] Replace arithmetic IFs
-- [ ] Replace COMMON blocks with module variables *(note: some .f90 files in subdirectories kept for reference)*
-- [ ] Replace DATA statements with parameter constants
+- [x] Replace arithmetic IFs
+- [ ] Replace COMMON blocks with module variables *(some .f90 files in subdirectories kept for reference)*
+- [x] Replace DATA statements with parameter constants
 - [x] Add `intent` attributes to all arguments
 - [ ] Replace `EXTERNAL` with procedure interfaces
 - [x] Modern error handling (ERROR STOP replacing XERMSG calls)
