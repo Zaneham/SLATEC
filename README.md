@@ -75,29 +75,47 @@ The big cleanup jobs:
 
 ```
 slatec-modern/
+├── CMakeLists.txt         # CMake build configuration
+├── fpm.toml               # Fortran Package Manager config
+├── CHANGELOG.md           # Detailed modernisation history
+├── DEVIATIONS.md          # Floating-point deviation report
+├── DISCLAIMER             # Public domain notice
 ├── src/
 │   ├── original/          # Original FORTRAN 77 source (for reference)
 │   └── modern/            # Modernised Fortran 2018+ source
-│       ├── approximation/ # Curve fitting, least squares
-│       ├── diff_integ/    # Differentiation & integration
-│       ├── diff_integ_eq/ # Differential equations
+│       ├── approximation/ # Curve fitting, least squares (MINPACK)
+│       ├── data_handling/ # Sorting, permutation
+│       ├── diff_integ/    # Differentiation & integration (QUADPACK)
+│       ├── diff_integ_eq/ # Differential equations (DASSL, DEPAC)
+│       ├── integ_trans/   # Integral transforms (FFTPACK)
 │       ├── interpolation/ # Splines, PCHIP
-│       ├── linear/        # Linear algebra
-│       ├── service/       # Utility routines
-│       └── special_functions/
-├── scripts/               # Python fix scripts for batch GOTO elimination
-├── tests/
-├── examples/
-└── docs/
+│       ├── linear/        # Linear algebra (BLAS, LAPACK, LINPACK, SLAP)
+│       ├── nonlin_eq/     # Nonlinear equation solvers
+│       ├── optimization/  # Linear/quadratic programming (SPLP)
+│       ├── service/       # Utility routines, machine constants
+│       └── special_functions/ # Bessel, Gamma, Airy, etc.
+├── test/                  # Test suite (test-drive + golden tests)
+├── doc/                   # Raw deviation test outputs
+├── scripts/               # Python scripts for batch processing
+└── docs/                  # SLATEC guide and table of contents
 ```
 
 ## Building
 
-Uses the Fortran Package Manager (fpm):
+### Fortran Package Manager (fpm)
 
 ```bash
 fpm build
 fpm test
+```
+
+### CMake
+
+```bash
+mkdir build && cd build
+cmake ..
+make
+ctest
 ```
 
 ## Licence
