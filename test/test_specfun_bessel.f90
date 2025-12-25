@@ -3,7 +3,7 @@ module test_specfun_bessel
   !>
   !> Sources:
   !>   - Mehdi Chinoune's SLATEC tests (2021) - Wronskian checks
-  !>   - ZH: Additional tests for modernized routines (2024)
+  !>   - ZH: Additional tests for modernised routines (2025)
   !>
   !> Test categories:
   !>   1. Wronskian tests (mathematical identity W{I,K} = 1/x)

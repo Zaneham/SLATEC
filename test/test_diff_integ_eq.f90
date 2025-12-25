@@ -3,7 +3,7 @@ module test_diff_integ_eq
   !>
   !> Sources:
   !>   - Mehdi Chinoune's SLATEC tests (2021)
-  !>   - ZH: Additional tests for modernized routines (2024)
+  !>   - ZH: Additional tests for modernised routines (2025)
   !>
   !> Covers: DASSL, DEPAC (DEABM, DEBDF), SDRIVE, BVSUP
 

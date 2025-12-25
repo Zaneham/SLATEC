@@ -15,7 +15,7 @@ under different compiler configurations. This is critical for:
 - **Compiler**: gfortran 13.2.0
 - **Platform**: Windows (MSYS2/MinGW-w64)
 - **CPU**: x86-64 (specific model not recorded)
-- **Date**: 2024-12-23
+- **Date**: 2025-12-23
 
 ## Machine Constants
 
