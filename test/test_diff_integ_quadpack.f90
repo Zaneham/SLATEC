@@ -167,11 +167,12 @@ contains
     real(SP), parameter :: EXACT = 1.0_SP / 3.0_SP
     real(SP) :: rel_err
 
-    call QAG(f_poly_sp, 0.0_SP, 1.0_SP, 0.0_SP, 1.0E-6_SP, 6, &
+    ! Note: Epsrel must be >= 50*epsilon(SP) ≈ 6E-6, otherwise IER=6
+    call QAG(f_poly_sp, 0.0_SP, 1.0_SP, 0.0_SP, 1.0E-5_SP, 6, &
              result, abserr, neval, ier, 100, 400, last, iwork, work)
 
     rel_err = abs(result - EXACT) / EXACT
-    call check(error, ier == 0 .and. rel_err < 1.0E-5_SP, &
+    call check(error, ier == 0 .and. rel_err < 1.0E-4_SP, &
                "QAG (SP): integral of x^2 should equal 1/3")
   end subroutine
 
