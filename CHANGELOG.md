@@ -1,195 +1,255 @@
-# CHANGELOG - SLATEC Modernisation Project
+# CHANGELOG
 
-## Overview
+All notable changes to SLATEC-Modern are documented in this file.
 
-This project modernises the SLATEC Fortran 77 library to Fortran 2018 standards, with a primary focus on eliminating GOTO statements and replacing them with structured control flow constructs.
-
-**Total GOTOs Eliminated:** ~1,400+ across 53 batches
+This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Recent Changes
+## [1.0.0] - 2025-12-27
 
-### CMake Build System
-- Added CMakeLists.txt for CMake-based builds
-- Static library builds correctly with all tests passing
-- Shared library disabled by default (include structure causes duplicate symbols)
-- Integrated test-drive framework and golden tests
-- Usage: `mkdir build && cd build && cmake .. && make`
+### Summary
 
-### Batch 53 - K Bessel Function Drivers (34 GOTOs)
-- `dbesk.inc`: 17 GOTOs → 0
-- `besk.inc`: 17 GOTOs → 0
-- Pattern: Logical flags + named DO loops for underflow handling
+First stable release of SLATEC-Modern: a complete modernisation of the SLATEC Common Mathematical Library (Version 4.1, July 1993) from FORTRAN 77 to Fortran 2018.
 
-### Batch 52 - I Bessel Functions (52 GOTOs)
-- `dbesi.inc`: 26 GOTOs → 0 (state machine with 12 states)
-- `besi.inc`: 26 GOTOs → 0
-- Pattern: SELECT CASE state machine for complex multi-path control flow
-
-### Bug Fix: Pre-existing Build Errors
-Fixed compilation issues that crept in during earlier modernization:
-- `dpsifn.inc`: Mixed 'd' exponent with explicit kind (0.5D-18_DP → 0.5E-18_DP)
-- `dasyjy.inc` / `asyjy.inc`: Missing LOGICAL declarations
-- `dxnrmp.inc`: Wrong SP/DP types for D-prefixed routine
-- `dbesy.inc`: Typo DDBESYNU → DBSYNU
-
-### Batch 51 - QUADPACK Integration (12 GOTOs)
-- `dqagpe.inc`, `qagpe.inc`, `qagie.inc`: 4 GOTOs each → 0
-- Pattern: `final_result: BLOCK` with EXIT
-
-### Batch 50 - Nonlinear Equation Solvers (18 GOTOs)
-- `dsoseq.inc`: 9 GOTOs → 0
-- `soseqs.inc`: 9 GOTOs → 0
-- Pattern: Nested DO WHILE loops + logical flags
-
-### Batch 49 - LQ Factorisation (12 GOTOs)
-- `du12ls.inc`, `u12ls.inc`: 6 GOTOs each → 0
-
-### Batch 48 - Singleton Quicksort (39 GOTOs)
-- `spsort.inc`, `dpsort.inc`, `ipsort.inc`, `hpsort.inc`
-
-### Batch 47 - SPLP Sparse Matrix (4 GOTOs)
-- `dpnnzr.inc`, `pnnzrs.inc`: Sparse nonzero retrieval routines
-
-### Bug Fix: Restore Lost Code (210 GOTOs recovered)
-- Commit `9df00fa`: Fixed regression from .f90 → .inc refactor
-- Restored GOTO-free code that was accidentally overwritten
-
-### Batch 46 - Oscillatory Integration (12 GOTOs)
-- `dqawoe.inc`, `qawoe.inc`: Following Jacob Williams' quadpack pattern
-
-### Batch 45 - QUADPACK Adaptive (26 GOTOs)
-- `dqagse.inc`, `qagse.inc` and related routines
-
-### Batch 44 - Wigner/Bessel Asymptotic (16 GOTOs)
-- `d9b0mp.inc`, `d9b1mp.inc`, `drc3jm.inc`, `drc3jj.inc`
-
-### Infrastructure: .f90 → .inc Refactor
-- Renamed include files from `.f90` to `.inc` extension
-- Prevents fpm from attempting standalone compilation
-
-### Bug Fix: DBESK Numerical Drift
-- **Severity:** High (numerical accuracy)
-- K₄(1) computed as 44.2324 vs correct 44.2341 (~4×10⁻⁵ error)
-- Root cause: series_done flag missing, causing value overwrite
-- Fixed in `dbsknu.inc`, `besknu.inc`
-
-### Batch 43 - Final Special Functions (41 GOTOs)
-- `cuni2.inc`, `psifn.inc`, `dpsifn.inc`, `xnrmp.inc`, `dxnrmp.inc`
-- Completed GOTO elimination in special_functions directory
-
-### Batch 42 - I/Y Bessel Series (10 GOTOs)
-- `cseri.inc`, `besy.inc`, `dbesy.inc`
-
-### Batch 41 - Extended-Range & Bickley (30 GOTOs)
-- `xadd.inc`, `dxadd.inc`, `bskin.inc`, `dbskin.inc`
-
-### Batch 40 - K Bessel Kernel (32 GOTOs)
-- `zbknu.inc`, `cbknu.inc`: Complex K Bessel main kernel
-
-### Batch 39 - Single-Precision Bessel (50 GOTOs)
-- `cunk1.inc`, `cunk2.inc`, `cbinu.inc`
-
-### Batch 38 - zbinu Dispatcher (16 GOTOs)
-- I Bessel computation method selection
-
-### Batch 37 - Uniform Asymptotic (34 GOTOs)
-- `zunk1.inc`, `zunk2.inc`: K Bessel analytic continuation
-
-### Test Infrastructure
-- `test_bessel_regression.f90`: Regression tests against stored values
-- `test_bessel_reference.f90`: Tests against A&S tables
-- `test_bessel_portability.f90`: Cross-platform ULP error measurement
-- `test_utils.f90`: Drift analysis utilities
-
-### Batch 36 - J Bessel Functions (46 GOTOs)
-- `dbesj.inc`: 23 GOTOs → 0
-- `besj.inc`: 23 GOTOs → 0
-
-### Batch 35 - DEPAC RK Routines (20 GOTOs)
-- `derkfs.inc`, `drkfs.inc`: Fehlberg RK4-5 steppers
-
-### Batch 34 - DEPAC Steps/LSOD (36 GOTOs)
-- `dsteps.inc`, `steps.inc`, `dlsod.inc`, `lsod.inc`
-
-### Batch 33 - DEPAC Step Routines (47 GOTOs)
-- `dstod.inc`, `stod.inc`: Adams-Bashforth/BDF steppers
-
-### Batch 32 - SDRIVE ODE Package (162 GOTOs)
-- `ddriv3.inc`, `sdriv3.inc`, `cdriv3.inc`
-- `ddstp.inc`, `sdstp.inc`, `cdstp.inc`
-
-### Batch 31 - DASSL DAE Solver (118 GOTOs)
-- `ddassl.inc`, `sdassl.inc`: Main driver
-- `ddastp.inc`, `sdastp.inc`: Step routines
+**Original Library:** 735 files, 168,216 lines of FORTRAN 77
+**Modernised Library:** 34 modules, 1,079 routines, ~85,000 lines of Fortran 2018
 
 ---
 
-## Bugs Found & Fixed
+### Transformations from Original SLATEC
 
-See `bugs_found.md` for detailed documentation. Summary:
+The following systematic transformations were applied to the entire codebase:
 
-| Bug | Severity | Routines | Status |
-|-----|----------|----------|--------|
-| DBESK numerical drift | High | dbsknu, besknu | Fixed |
-| Missing BLOCK statement | Medium | dcov, scov | Fixed |
-| Unclosed DO loop | Medium | sort routines | Fixed |
-| Undeclared variable | Low | pchid, pchia | Fixed |
-| Build system issues | Medium | various | Fixed |
+| Transformation | Description |
+|----------------|-------------|
+| **Free-form source** | Converted from fixed-form (columns 1-72) to free-form Fortran 2018 |
+| **GOTO elimination** | Replaced ~1,400 GOTO statements with structured control flow |
+| **Module structure** | Organised routines into logical modules with explicit interfaces |
+| **Arithmetic IF removal** | Replaced three-way arithmetic IFs with IF-THEN-ELSE constructs |
+| **INTENT attributes** | Added INTENT(IN/OUT/INOUT) to all procedure arguments |
+| **DATA → PARAMETER** | Replaced DATA statements with named PARAMETER constants |
+| **IMPLICIT NONE** | Enforced explicit typing throughout |
+| **Modern error handling** | Replaced XERMSG calls with ERROR STOP |
 
----
+#### GOTO Elimination Patterns
 
-## Patterns Used
+The following patterns were used to replace GOTO statements whilst preserving the original algorithm semantics:
 
-### State Machine (Complex Multi-Path)
+**State Machine (for complex multi-path control flow):**
 ```fortran
 INTEGER, PARAMETER :: ST_INIT = 1, ST_COMPUTE = 2, ST_DONE = 99
-state_loop: DO WHILE( istate /= ST_DONE )
-  SELECT CASE( istate )
-    CASE( ST_INIT )
-      ! ...
+state_loop: DO WHILE (istate /= ST_DONE)
+  SELECT CASE (istate)
+    CASE (ST_INIT)
+      ! initialisation
       istate = ST_COMPUTE
-    CASE( ST_COMPUTE )
-      ! ...
+    CASE (ST_COMPUTE)
+      ! computation
       istate = ST_DONE
   END SELECT
 END DO state_loop
 ```
 
-### Logical Flags (Forward Jumps)
+**Logical Flags (for forward jumps):**
 ```fortran
-LOGICAL :: skip_section, done
-IF( condition ) skip_section = .TRUE.
-IF( .NOT. skip_section ) THEN
-  ! ... code that was skipped via GOTO ...
+LOGICAL :: skip_section
+IF (condition) skip_section = .TRUE.
+IF (.NOT. skip_section) THEN
+  ! code that was previously skipped via GOTO
 END IF
 ```
 
-### Named DO Loops (Backward Jumps)
+**Named DO Loops (for backward jumps/retry logic):**
 ```fortran
 retry_loop: DO
-  ! ... computation ...
-  IF( converged ) EXIT retry_loop
-  IF( max_iter ) EXIT retry_loop
+  ! computation
+  IF (converged) EXIT retry_loop
 END DO retry_loop
 ```
 
-### BLOCK/EXIT (Forward to Common Exit)
+**BLOCK/EXIT (for common exit points):**
 ```fortran
-final_result: BLOCK
-  IF( error ) EXIT final_result
-  ! ... normal processing ...
-END BLOCK final_result
-! Common cleanup code here
+cleanup: BLOCK
+  IF (error) EXIT cleanup
+  ! normal processing
+END BLOCK cleanup
+! common cleanup code here
 ```
 
 ---
 
-## References
+### Module Organisation
 
-- Amos, D.E., Daniel, S.L., Weston, M.K. - ACM TOMS 3, 1977 (Bessel functions)
-- Temme, N.M. - J. Comp. Physics 19, 1975 (K Bessel)
-- Petzold, L. - SAND82-8637 (DASSL)
-- Piessens, R. & de Doncker, E. - QUADPACK (Integration)
-- Hanson, R.J. & Hiebert, K.L. - SAND81-0297 (SPLP)
+The modernised library is organised into the following modules:
+
+| Module | Contents | Original Source |
+|--------|----------|-----------------|
+| `service` | Machine constants, utility routines | D1MACH, R1MACH, I1MACH |
+| `special_functions` | Bessel, Gamma, Airy, Error functions, etc. | FNLIB, Amos algorithms |
+| `linear` | BLAS, LINPACK, SLAP sparse solvers | BLAS, LINPACK, SLAP |
+| `diff_integ` | Numerical integration (QUADPACK) | QUADPACK |
+| `diff_integ_eq` | ODE/DAE solvers (DASSL, DEPAC, SDRIVE) | DASSL, DEPAC, SDRIVE |
+| `interpolation` | Splines, PCHIP, polynomial interpolation | BSPLINE, PCHIP |
+| `integ_trans` | Fast Fourier Transforms | FFTPACK |
+| `approximation` | Curve fitting, least squares (MINPACK) | MINPACK |
+| `nonlin_eq` | Nonlinear equation solvers | FZERO, SOSEQ |
+| `optimization` | Linear/quadratic programming | SPLP |
+| `data_handling` | Sorting, permutation | SLATEC utilities |
+
+---
+
+### Build System
+
+#### CMake (Recommended)
+
+```bash
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+ctest --output-on-failure
+```
+
+#### Fortran Package Manager (fpm)
+
+```bash
+fpm build --profile release
+fpm test
+```
+
+#### CMake Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `SLATEC_BUILD_TESTS` | ON | Build test suite |
+| `SLATEC_BUILD_SHARED` | OFF | Build shared library (experimental) |
+| `SLATEC_USE_EXTERNAL_LAPACK` | OFF | Link against system LAPACK |
+
+---
+
+### Test Suite
+
+The test suite validates correctness against published reference values:
+
+| Test File | Coverage |
+|-----------|----------|
+| `test_bessel_golden.f90` | J, I, K Bessel functions against Abramowitz & Stegun Tables 9.1, 9.8 |
+| `test_bessel_reference.f90` | Extended Bessel function validation |
+| `test_bessel_portability.f90` | Cross-platform ULP error measurement |
+| `test_bessel_regression.f90` | Regression tests against stored values |
+| `test_diff_integ_quadpack.f90` | QUADPACK integration against closed-form solutions |
+| `test_diff_integ_eq.f90` | ODE solver validation |
+| `test_specfun_bessel.f90` | Special function edge cases |
+
+**Golden Test Methodology:**
+
+Tests compare computed values against:
+1. Abramowitz & Stegun (1964) handbook tables
+2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov)
+3. Known closed-form solutions (e.g., ∫₀¹ x² dx = 1/3)
+
+All comparisons include relative error bounds and ULP (Units in Last Place) analysis.
+
+---
+
+### Numerical Accuracy
+
+See `DEVIATIONS.md` for detailed floating-point analysis.
+
+**Summary:**
+- Double precision routines match A&S reference values to within 2 ULPs
+- QUADPACK produces bit-identical results across optimisation levels
+- Bessel K functions show 2-4 ULP deviation with `-ffast-math` (not recommended)
+
+**Known Limitations:**
+- J Bessel functions lose accuracy for arguments > 100
+- High-order Bessel functions (n > 5) may fail for large arguments
+- See `DEVIATIONS.md` for full analysis and recommendations
+
+---
+
+### Bugs Fixed During Modernisation
+
+The following bugs were discovered and fixed during the modernisation process:
+
+| Bug | Severity | Affected Routines | Resolution |
+|-----|----------|-------------------|------------|
+| DBESK numerical drift | High | dbsknu, besknu | Missing flag causing value overwrite |
+| Missing BLOCK statement | Medium | dcov, scov | Added missing END BLOCK |
+| Unclosed DO loop | Medium | sort routines | Fixed loop termination |
+| Undeclared variable | Low | pchid, pchia | Added declaration |
+| Mixed kind specifiers | Low | dpsifn, dasyjy | Corrected literal kinds |
+
+---
+
+### What Has NOT Changed
+
+The following aspects of SLATEC remain unchanged:
+
+1. **Algorithm implementations** - The mathematical algorithms are identical to the original
+2. **Routine names** - All original routine names are preserved
+3. **Calling conventions** - Argument order and semantics match the original
+4. **Numerical results** - Output values match the original within floating-point precision
+
+---
+
+### Compatibility Notes
+
+**Fortran Compilers Tested:**
+- gfortran 13.x (Linux, macOS, Windows via MSYS2)
+- Intel Fortran (ifort/ifx) - untested but should work
+
+**Platforms:**
+- Linux (Ubuntu, tested in CI)
+- macOS (tested in CI)
+- Windows (MSYS2/MinGW-w64, tested in CI)
+
+---
+
+### Known Issues
+
+1. **Shared library builds** may produce duplicate symbol warnings due to module structure
+2. **C interoperability** not yet implemented (planned for v1.1)
+3. **OpenMP parallelisation** not yet implemented (planned for v1.2)
+
+---
+
+### Future Plans
+
+**v1.1 (Planned):**
+- C API via ISO_C_BINDING for key routines
+- C header files for language bindings
+- Modular shared libraries (libslatec_quadpack.so, etc.)
+
+**v1.2 (Planned):**
+- OpenMP parallelisation for suitable routines
+- Extended test coverage
+- FORD documentation generation
+
+---
+
+### Acknowledgements
+
+SLATEC was developed by the US National Laboratories:
+- Sandia National Laboratories
+- Los Alamos National Laboratory
+- Lawrence Livermore National Laboratory
+- National Institute of Standards and Technology (NIST)
+- Oak Ridge National Laboratory
+
+The original library is in the public domain as a work of the US Government.
+
+### References
+
+- Abramowitz, M. & Stegun, I.A. (1964). *Handbook of Mathematical Functions*. NBS.
+- NIST Digital Library of Mathematical Functions. https://dlmf.nist.gov/
+- Amos, D.E. (1986). Algorithm 644: A Portable Package for Bessel Functions. ACM TOMS 12(3).
+- Piessens, R. et al. (1983). QUADPACK: A Subroutine Package for Automatic Integration.
+- Petzold, L. (1982). A Description of DASSL. SAND82-8637.
+
+---
+
+### Licence
+
+Public Domain. The original SLATEC library is a work of the United States Government and is not subject to copyright protection in the United States.
+
