@@ -1,5 +1,6 @@
 MODULE nonlin_eq
   USE service, ONLY : SP, DP
+  USE lapack, ONLY : SHSEQR, CHSEQR  ! Required by rpqr79, cpqr79
   IMPLICIT NONE
 
 CONTAINS
