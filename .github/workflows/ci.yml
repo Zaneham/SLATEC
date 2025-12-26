@@ -103,24 +103,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Fortran
+      - name: Set up Fortran and fpm
         run: |
-          brew install gcc@13
-
-      - name: Install fpm
-        uses: fortran-lang/setup-fpm@v7
-        with:
-          fpm-version: 'v0.10.1'
+          brew install gcc fpm
 
       - name: Build with fpm
         run: fpm build --profile release
-        env:
-          FPM_FC: gfortran-13
 
       - name: Test with fpm
         run: fpm test
-        env:
-          FPM_FC: gfortran-13
 
   fpm-windows:
     name: fpm (Windows)
@@ -133,7 +124,7 @@ jobs:
         with:
           msystem: MINGW64
           update: true
-          install: mingw-w64-x86_64-gcc-fortran mingw-w64-x86_64-fpm
+          install: mingw-w64-x86_64-gcc-fortran mingw-w64-x86_64-fpm git
 
       - name: Build with fpm
         shell: msys2 {0}
