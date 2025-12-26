@@ -69,31 +69,17 @@ jobs:
         shell: msys2 {0}
         run: ctest --test-dir build --output-on-failure -E "test-drive"
 
-  fpm-build:
-    name: fpm (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            fc: gfortran-13
-          - os: macos-latest
-            fc: gfortran-13
+  fpm-linux:
+    name: fpm (Linux)
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Fortran (Linux)
-        if: runner.os == 'Linux'
+      - name: Set up Fortran
         run: |
           sudo apt-get update
-          sudo apt-get install -y ${{ matrix.fc }}
-
-      - name: Set up Fortran (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install gcc@13
+          sudo apt-get install -y gfortran-13
 
       - name: Install fpm
         uses: fortran-lang/setup-fpm@v5
@@ -103,12 +89,29 @@ jobs:
       - name: Build with fpm
         run: fpm build --profile release
         env:
-          FPM_FC: ${{ matrix.fc }}
+          FPM_FC: gfortran-13
 
       - name: Test with fpm
         run: fpm test
         env:
-          FPM_FC: ${{ matrix.fc }}
+          FPM_FC: gfortran-13
+
+  fpm-macos:
+    name: fpm (macOS)
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Fortran and fpm
+        run: |
+          brew install gcc fpm
+
+      - name: Build with fpm
+        run: fpm build --profile release
+
+      - name: Test with fpm
+        run: fpm test
 
   fpm-windows:
     name: fpm (Windows)
