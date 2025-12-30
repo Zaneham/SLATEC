@@ -58,8 +58,11 @@ D1MACH(4) = 2.22E-16     Machine epsilon (unit roundoff)
 | **CDIV** | Complex Arithmetic | Single | ✅ PASS | ~10⁻⁷ |
 | **CSROOT** | Complex Arithmetic | Single | ✅ PASS | 0 |
 | **VNWRMS** | Vector Operations | Single | ✅ PASS | ~10⁻⁶ |
+| **HVNRM** | Vector Operations | Single | ✅ PASS | 0 |
+| **INTRV** | Interpolation | Integer | ✅ PASS | exact |
+| **RC** | Elliptic Integrals | Single | ✅ PASS | ~10⁻⁶ |
 
-**8 routines tested. 8 routines passed. 0 surprises.**
+**11 routines tested. 11 routines passed. 0 surprises.**
 
 ---
 
@@ -208,6 +211,65 @@ Computes √((1/n) × Σ(vᵢ/wᵢ)²) for ODE integrator error control.
 
 ---
 
+## HVNRM (Maximum/Infinity Norm) Test Results
+
+### Test Date: 30 December 2025
+
+Computes ‖v‖∞ = max|vᵢ| for ODE integrator step control.
+
+| Input Vector | Computed | Expected | Error | Status |
+|--------------|----------|----------|-------|--------|
+| [1, 2, 3, 4, 5] | 5.0 | 5.0 | 0.0 | PASS |
+| [-7, 3, 5, -2, 1] | 7.0 | 7.0 | 0.0 | PASS |
+| [0.1, 0.2, 0.3] | 0.3 | 0.3 | 0.0 | PASS |
+
+---
+
+## INTRV (Interval Search for B-Splines) Test Results
+
+### Test Date: 30 December 2025
+
+Binary search to find interval containing a value in a knot vector.
+Written by Carl de Boor for the classic B-spline package.
+
+Knot vector: XT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+| X | ILEFT | MFLAG | Meaning | Status |
+|---|-------|-------|---------|--------|
+| 3.5 | 3 | 0 | In interval [3,4) | PASS |
+| 7.0 | 7 | 0 | In interval [7,8) | PASS |
+| 0.5 | 1 | -1 | Below range | PASS |
+| 10.5 | 10 | 1 | Above range | PASS |
+
+Sequential search with ILO caching also verified.
+
+---
+
+## RC (Carlson Elliptic Integral) Test Results
+
+### Test Date: 30 December 2025
+
+Carlson's RC function computes the degenerate elliptic integral:
+
+```
+RC(x,y) = (1/2) ∫₀^∞ (t+x)^(-1/2) (t+y)^(-1) dt
+```
+
+This elegant function can express π, logarithms, and inverse trigonometric
+functions through various identities. The duplication theorem is iterated
+until convergence, then a Taylor series is evaluated.
+
+| Test | Computed | Identity | Expected | Error | Status |
+|------|----------|----------|----------|-------|--------|
+| RC(0, 1/4) | **3.1415930** | **π** | 3.1415927 | 9.5E-07 | PASS |
+| RC(1, 2) | 0.7853984 | arctan(1) = π/4 | 0.7853982 | 1.8E-07 | PASS |
+| RC(1/16, 1/8) | **3.1415930** | **π** (alternate) | 3.1415927 | 9.5E-07 | PASS |
+| RC(9/4, 2) | 0.6931474 | ln(2) | 0.6931472 | 1.8E-07 | PASS |
+
+*Yes, we're computing π using the Carlson duplication theorem on 1966 hardware.*
+
+---
+
 ## Analysis
 
 ### Accuracy Notes
@@ -230,6 +292,7 @@ Computes √((1/n) × Σ(vᵢ/wᵢ)²) for ODE integrator error control.
 | Assumed-size arrays | `X(*)` | `X(N)` |
 | SAVE statement | `SAVE VAR` | (removed - DATA provides static init) |
 | Hex constants | `Z'00100000'` | Decimal via EQUIVALENCE |
+| Block IF | `IF (...) THEN` | `IF (...) GO TO label` |
 
 ---
 
@@ -253,12 +316,20 @@ tests/slatec/
 │   ├── enorm.f          # Single precision Euclidean norm
 │   ├── denorm.f         # Double precision Euclidean norm
 │   ├── vnwrms.f         # Weighted RMS norm
+│   ├── hvnrm.f          # Maximum (infinity) norm
 │   └── test_numutil.f   # PYTHAG/ENORM test driver
 │
 ├── Complex Arithmetic
 │   ├── cdiv.f           # Complex division
 │   ├── csroot.f         # Complex square root
 │   └── test_complex_all.f  # Combined complex tests
+│
+├── Interpolation
+│   ├── intrv.f          # Interval search (Carl de Boor)
+│   └── test_intrv_hvnrm.f  # INTRV/HVNRM/RC test driver
+│
+├── Elliptic Integrals
+│   └── rc.f             # Carlson RC (computes π!)
 │
 └── Combined Tests
     └── test_gamln_vnwrms.f  # GAMLN + VNWRMS combined
@@ -268,7 +339,7 @@ tests/slatec/
 
 ## Verdict
 
-**ALL 8 ROUTINES TESTED. ALL 8 PASSED.**
+**ALL 11 ROUTINES TESTED. ALL 11 PASSED.**
 
 The 1966 IBM FORTRAN G compiler successfully compiled and executed SLATEC
 mathematical library code, producing numerically correct results within
@@ -276,9 +347,11 @@ the expected precision limits of IBM 360 hexadecimal floating-point arithmetic.
 
 Key achievements:
 - ✅ Special functions (log-gamma) in both single and double precision
-- ✅ Overflow-protected vector norms
+- ✅ Overflow-protected vector norms (Euclidean, weighted RMS, infinity)
 - ✅ Complex arithmetic with proper branch cuts
 - ✅ Numerical utilities for ODE integrators
+- ✅ B-spline interval search algorithm
+- ✅ Carlson elliptic integral computing π via duplication theorem
 
 *Take that, "modern" numerics libraries.*
 
