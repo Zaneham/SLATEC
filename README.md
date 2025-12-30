@@ -209,9 +209,61 @@ Jacob's work on eliminating GOTOs through structured `DO`/`EXIT` constructs with
 
 ---
 
+## Reproducing the IBM 360 Verification
+
+The period hardware verification is fully reproducible. Here's how:
+
+### Requirements
+
+1. **Hercules** (v3.07+) — Open-source IBM mainframe emulator ([hercules-390.eu](http://www.hercules-390.eu/))
+2. **TK4-** — Pre-built MVS 3.8j distribution with compilers ([tk4-.org](http://wotho.ethz.ch/tk4-/))
+3. **Python 3.8+** — For the FORTRAN 360 automation toolchain
+
+### Setup
+
+```bash
+# Clone the FORTRAN 360 toolchain
+git clone https://github.com/[repository]/fortran360.git
+cd fortran360
+
+# Start Hercules with TK4- (see TK4- documentation)
+# The system exposes a card reader on port 3505
+
+# Run SLATEC tests against IBM FORTRAN G (1966)
+python -m src.fortran360.cli run tests/slatec/slatec_test.f --era=1966
+```
+
+### What Gets Tested
+
+| Component | Verification |
+|-----------|--------------|
+| **I1MACH** | Integer machine constants (FP base=16, mantissa digits=6) |
+| **R1MACH** | Real machine constants via EQUIVALENCE bit patterns |
+| **GAMLN** | Log-gamma function across integer and non-integer arguments |
+
+### Why This Matters
+
+IBM 360 uses **hexadecimal floating-point** (base-16), which differs fundamentally from IEEE 754:
+
+- Mantissa precision "wobbles" between 21–24 bits depending on leading digit
+- No denormalised numbers, NaN, or infinity
+- Truncation rounding (not round-to-nearest)
+
+Numerical edge cases that pass on modern IEEE hardware may behave differently on the original architecture. Testing both ensures the modernised code is faithful to the original mathematical intent, not just the original hardware quirks.
+
+See [IBM360_TEST_RESULTS.md](IBM360_TEST_RESULTS.md) for full test output and analysis.
+
+---
+
 ## A Note on AI Assistance
 
-Generative LLM models (Anthropic's Claude Opus and Sonnet, plus local models including Qwen Coder with augmented epistemic detection) have been used for running tests, summarising results, and the occasional bout of documentation. Code and architectural decisions remain human-authored.
+Generative LLM models (Anthropic's Claude Opus and Sonnet, plus local models including Qwen Coder) have been used primarily as:
+
+- **Test result summarisation** — Collating output from verification runs
+- **Rubber duck debugging** — Talking through control flow transformations
+- **Documentation drafting** — Under human review and editing
+
+Code, architectural decisions, and the GOTO elimination work itself remain human-authored. The AI doesn't write the Fortran; it helps make sense of what the Fortran is doing.
 
 Apologies for the NZ English throughout. Colour has a 'u' in it and that's simply how it is.
 
