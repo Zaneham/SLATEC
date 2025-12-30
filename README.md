@@ -221,14 +221,14 @@ The period hardware verification is fully reproducible. Here's how:
 
 1. **Hercules** (v3.07+) — Open-source IBM mainframe emulator ([hercules-390.eu](http://www.hercules-390.eu/))
 2. **TK4-** — Pre-built MVS 3.8j distribution with compilers ([tk4-.org](http://wotho.ethz.ch/tk4-/))
-3. **Python 3.8+** — For the FORTRAN 360 automation toolchain
+3. **FORTRAN 360** — Python toolchain for the vintage compilers ([github.com/Zaneham/Fortran360](https://github.com/Zaneham/Fortran360))
 
 ### Setup
 
 ```bash
 # Clone the FORTRAN 360 toolchain
-git clone https://github.com/[repository]/fortran360.git
-cd fortran360
+git clone https://github.com/Zaneham/Fortran360.git
+cd Fortran360
 
 # Start Hercules with TK4- (see TK4- documentation)
 # The system exposes a card reader on port 3505
