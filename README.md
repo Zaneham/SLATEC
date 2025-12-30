@@ -264,7 +264,7 @@ See [IBM360_TEST_RESULTS.md](IBM360_TEST_RESULTS.md) for full test output and an
 Generative LLM models (Anthropic's Claude Opus and Sonnet, plus local models including Qwen Coder) have been used primarily as:
 
 - **Test result summarisation** — Collating output from verification runs
-- **Rubber duck debugging** — Talking through control flow transformations
+- **Rubber duck debugging** — Talking through control flow transformations. I speak to the rubber duck, it speaks back to me.
 - **Documentation drafting** — Under human review and editing
 
 Code, architectural decisions, and the GOTO elimination work itself remain human-authored. The AI doesn't write the Fortran; it helps make sense of what the Fortran is doing.
