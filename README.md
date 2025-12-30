@@ -2,105 +2,130 @@
 
 > **Verified on Period Hardware**: This modernisation is tested against authentic 1966 IBM FORTRAN G compilers running on emulated System/360 mainframes. The original SLATEC targeted IBM hexadecimal floating-point (base-16), which has fundamentally different precision characteristics than modern IEEE 754. Our test suite validates numerical correctness across both vintage and contemporary architectures. See [IBM360_TEST_RESULTS.md](IBM360_TEST_RESULTS.md) for details.
 
-Kia ora! Welcome to a complete modernisation of the SLATEC Common Mathematical Library, taking this 1990s FORTRAN 77 codebase into the modern Fortran era (2018+).
+Kia ora (hello)! Welcome to a complete modernisation of the SLATEC Common Mathematical Library, dragging this 1993 FORTRAN 77 codebase—kicking and screaming, in some cases—into the modern Fortran era (2018+).
 
-## What's the Story?
+---
 
-Saw this massive old-school maths library sitting there with thousands of GOTOs and thought "screw it, why not give it a go?" Turns out SLATEC gets used in quite a bit of scientific code out there, built by US national laboratories (Sandia, Los Alamos, Lawrence Livermore, NIST, Oak Ridge). The maths is mint, but the code style is properly vintage and its kind of giving my old 1998 Kia Sportage.
+## What's All This Then?
 
-This library is still used and is pulled into many scientific applications, it's embedded in scipy and referenced pretty much everywhere. But no one wants to touch it.
+SLATEC is one of those libraries that quietly underpins half of scientific computing whilst receiving approximately zero recognition for it. Built by the combined might of Sandia, Los Alamos, Lawrence Livermore, NIST, and Oak Ridge National Laboratories, it contains some of the most battle-tested numerical algorithms ever committed to punch cards.
 
-Now I know what you must be thinking: Why're the All Blacks losing their steam? Nah jokes! "Why not GSL?"
+The mathematics? Absolutely sublime. The code style? Let's just say it has *character*. Over 1,400 GOTOs worth of character, to be precise, written in an era when structured programming was considered a bit avant-garde and "readable code" meant "has comments".
 
-Well the issue with GSL is that it sits under the GPL licence, now I am not a lawyer but if you link against it then any code you write must also be released under the same licence. So its absolutely rubbish for people who're using it for commercial or scientific applications or even just regular people messing about. GSL is also just C with a FORTRAN wig on. SLATEC is FORTRAN native so theres far less friction!
+This library is embedded in SciPy, referenced in countless papers, and used in applications ranging from weather prediction to spacecraft trajectories. Yet nobody wants to touch it, presumably because doing so requires a working knowledge of FORTRAN 77, a high tolerance for spaghetti code, and the sort of patience normally reserved for bomb disposal technicians.
 
-So here we are, keeping the mathematical goodness while making the code actually readable.
+So here we are. Someone had to do it.
 
-## Original Library
+### But Why Not Just Use GSL?
 
-- **Version**: 4.1 (July 1993)
-- **Source**: [Netlib SLATEC](https://netlib.org/slatec/)
-- **Licence**: Public Domain (US Government work)
-- **Size**: 735 files, 168,216 lines of FORTRAN 77
+A fair question. The GNU Scientific Library is comprehensive and well-documented. It also sits under the GPL licence, which means if you link against it, your code must also be released under GPL. This is, to use the technical term, *a bit of a faff* for commercial applications, proprietary research code, or anyone who simply wants to compute a Bessel function without entering into a licensing philosophy debate.
+
+SLATEC, being a product of the US Government, is **public domain**. Use it for whatever you like. Print it out and wallpaper your bathroom with it. We won't judge.
+
+Also, GSL is fundamentally C with a FORTRAN wig on. SLATEC is native Fortran, which means less friction if you're working in a Fortran codebase—and despite rumours to the contrary, rather a lot of scientific computing still is.
+
+---
+
+## The Original Library
+
+| | |
+|---|---|
+| **Version** | 4.1 (July 1993) |
+| **Source** | [Netlib SLATEC](https://netlib.org/slatec/) |
+| **Licence** | Public Domain (US Government work) |
+| **Size** | 735 files, 168,216 lines of FORTRAN 77 |
+| **GOTOs** | Approximately 1,400 (we counted) |
+| **Vibes** | Retro |
+
+---
 
 ## What's Inside?
 
-SLATEC packs in some absolute classics:
+SLATEC is essentially a greatest-hits compilation of 1970s–80s numerical libraries:
 
-| Library | What it Does |
+| Library | What It Does |
 |---------|--------------|
-| BLAS | Basic Linear Algebra, the foundation of everything |
-| LINPACK | Linear equation solving |
-| EISPACK | Eigenvalue computation |
-| FFTPACK | Fast Fourier Transforms |
-| QUADPACK | Numerical integration (proper good stuff) |
-| PCHIP | Piecewise Cubic Hermite Interpolation |
-| SLAP | Sparse Linear Algebra |
-| FNLIB | Special functions galore |
-| BSPLINE | B-spline interpolation |
+| **BLAS** | Basic Linear Algebra Subprograms—the foundation upon which all else rests |
+| **LINPACK** | Linear equation solving, from the era before LAPACK existed |
+| **EISPACK** | Eigenvalue computation, for when you absolutely must diagonalise a matrix |
+| **FFTPACK** | Fast Fourier Transforms, making signals comprehensible since 1985 |
+| **QUADPACK** | Numerical integration done properly |
+| **PCHIP** | Piecewise Cubic Hermite Interpolation—smooth curves without the oscillations |
+| **SLAP** | Sparse Linear Algebra Package, for matrices that are mostly zeros |
+| **FNLIB** | Special functions: Bessel, Gamma, Airy, and friends |
+| **BSPLINE** | B-spline interpolation and approximation |
 
-## Mathematical Categories
+### Mathematical Categories
 
-| Cat | Description | Examples |
-|-----|-------------|----------|
-| A | Arithmetic, error analysis | Machine constants |
-| C | Elementary & special functions | Bessel, Gamma, Airy, Error functions |
-| D | Linear algebra | Vectors, matrices, eigenvalues, SVD |
-| E | Interpolation | Splines, PCHIP, polynomial |
-| F | Nonlinear equations | Root finding, systems |
-| G | Optimisation | Linear/quadratic programming |
-| H | Differentiation & integration | QUADPACK routines |
-| I | Differential equations | ODEs, BVPs, PDEs |
-| J | Integral transforms | FFT, Laplace |
-| K | Approximation | Least squares, curve fitting |
-| L | Statistics & probability | RNG, distributions |
+SLATEC organises its routines using a hierarchical classification scheme:
+
+| Category | Description | Examples |
+|----------|-------------|----------|
+| **A** | Arithmetic & error analysis | Machine constants, precision utilities |
+| **C** | Elementary & special functions | Bessel, Gamma, Airy, error functions |
+| **D** | Linear algebra | Vectors, matrices, eigenvalues, SVD |
+| **E** | Interpolation | Splines, PCHIP, polynomial methods |
+| **F** | Nonlinear equations | Root finding, systems of equations |
+| **G** | Optimisation | Linear programming, quadratic programming |
+| **H** | Differentiation & integration | QUADPACK numerical integration |
+| **I** | Differential equations | ODEs, boundary value problems, PDEs |
+| **J** | Integral transforms | FFT, convolution, Laplace |
+| **K** | Approximation | Least squares, curve fitting |
+| **L** | Statistics & probability | Random number generation, distributions |
+
+---
 
 ## Modernisation Progress
 
-The big cleanup jobs:
+The grand cleanup:
 
 - [x] Convert to free-form Fortran 2018
 - [x] Create proper modules with explicit interfaces
-- [x] **Replace GOTOs with structured control flow** *(~1,400 eliminated!)*
-- [x] Replace arithmetic IFs
-- [ ] Replace COMMON blocks with module variables *(some .f90 files in subdirectories kept for reference)*
+- [x] **Eliminate GOTOs with structured control flow** (~1,400 removed)
+- [x] Replace arithmetic IF statements (remember those?)
 - [x] Replace DATA statements with parameter constants
-- [x] Add `intent` attributes to all arguments
-- [ ] Replace `EXTERNAL` with procedure interfaces
-- [x] Modern error handling (ERROR STOP replacing XERMSG calls)
-- [x] CMake build system (static library)
-- [ ] Add optional OpenMP parallelisation where applicable
+- [x] Add `intent` attributes to all procedure arguments
+- [x] Modern error handling (ERROR STOP replacing XERMSG)
+- [x] CMake build system
+- [ ] Replace remaining COMMON blocks with module variables
+- [ ] Replace `EXTERNAL` declarations with procedure interfaces
+- [ ] Add optional OpenMP parallelisation
 - [ ] Comprehensive test suite
-- [ ] Documentation with FORD
+- [ ] FORD documentation
+
+---
 
 ## Project Structure
 
 ```
 slatec-modern/
-├── CMakeLists.txt         # CMake build configuration
-├── fpm.toml               # Fortran Package Manager config
-├── CHANGELOG.md           # Detailed modernisation history
-├── DEVIATIONS.md          # Floating-point deviation report
-├── DISCLAIMER             # Public domain notice
+├── CMakeLists.txt           # CMake build configuration
+├── fpm.toml                 # Fortran Package Manager config
+├── CHANGELOG.md             # Detailed modernisation history
+├── DEVIATIONS.md            # Floating-point deviation analysis
+├── IBM360_TEST_RESULTS.md   # Period hardware verification
+├── DISCLAIMER               # Public domain notice
 ├── src/
-│   ├── original/          # Original FORTRAN 77 source (for reference)
-│   └── modern/            # Modernised Fortran 2018+ source
-│       ├── approximation/ # Curve fitting, least squares (MINPACK)
-│       ├── data_handling/ # Sorting, permutation
-│       ├── diff_integ/    # Differentiation & integration (QUADPACK)
-│       ├── diff_integ_eq/ # Differential equations (DASSL, DEPAC)
-│       ├── integ_trans/   # Integral transforms (FFTPACK)
-│       ├── interpolation/ # Splines, PCHIP
-│       ├── linear/        # Linear algebra (BLAS, LAPACK, LINPACK, SLAP)
-│       ├── nonlin_eq/     # Nonlinear equation solvers
-│       ├── optimization/  # Linear/quadratic programming (SPLP)
-│       ├── service/       # Utility routines, machine constants
-│       └── special_functions/ # Bessel, Gamma, Airy, etc.
-├── test/                  # Test suite (test-drive + golden tests)
-├── outputs/               # Raw deviation test outputs
-├── scripts/               # Python scripts for batch processing
-└── docs/                  # SLATEC guide and table of contents
+│   ├── original/            # Original FORTRAN 77 (for reference)
+│   └── modern/              # Modernised Fortran 2018+ source
+│       ├── approximation/       # Curve fitting, least squares
+│       ├── data_handling/       # Sorting, permutation
+│       ├── diff_integ/          # Differentiation & integration
+│       ├── diff_integ_eq/       # Differential equations
+│       ├── integ_trans/         # Integral transforms
+│       ├── interpolation/       # Splines, PCHIP
+│       ├── linear/              # Linear algebra (BLAS, LINPACK, SLAP)
+│       ├── nonlin_eq/           # Nonlinear equation solvers
+│       ├── optimization/        # Linear/quadratic programming
+│       ├── service/             # Utilities, machine constants
+│       └── special_functions/   # Bessel, Gamma, Airy, etc.
+├── test/                    # Test suite
+├── outputs/                 # Deviation test outputs
+├── scripts/                 # Batch processing scripts
+└── docs/                    # SLATEC guide and documentation
 ```
+
+---
 
 ## Building
 
@@ -120,22 +145,25 @@ make
 ctest
 ```
 
+Both approaches produce a static library. The fpm route is generally less fuss if you just want to get on with things.
+
+---
+
 ## Licence
 
 The original SLATEC library is **public domain** software, developed by the United States Government. Works created by US Government employees within the scope of their employment are not subject to domestic copyright protection under 17 U.S.C. § 105.
 
+Modernised code in this repository is released under the same public domain terms, except where components incorporate code from other open-source projects (see Acknowledgements for specific licence terms).
 
-**PCHIP Reference**: [Jacob Williams](https://github.com/jacobwilliams/PCHIP) created a clean modern Fortran PCHIP implementation in 2019. His control flow patterns (using `do`/`exit` with logical flags instead of GOTOs) informed our approach to modernising the PCHIP routines whilst preserving algorithmic correctness.
+In practical terms: do what you like with it.
 
-**Current Work**: Zane Hambly, continuing the GOTO elimination crusade and general cleanup.
-=======
-Modernised code in this repository is released under the same public domain terms, except where components incorporate code from other open-source projects (see Acknowledgements below for specific licence terms).
+---
 
 ## Acknowledgements
 
-This project builds upon the work of many contributors. I gratefully acknowledge:
+This project stands on the shoulders of rather a lot of giants.
 
-### Original SLATEC Library
+### The Original SLATEC Library
 
 The SLATEC Common Mathematical Library was developed collaboratively by:
 
@@ -146,13 +174,14 @@ The SLATEC Common Mathematical Library was developed collaboratively by:
 - **National Institute of Standards and Technology** (formerly NBS)
 - **Oak Ridge National Laboratory** (Oak Ridge, TN)
 
-"SLATEC" is an acronym for the Sandia, Los Alamos, Air Force Weapons Laboratory Technical Exchange Committee, established in 1974.
+"SLATEC" is an acronym for the **S**andia, **L**os **A**lamos, Air Force Weapons Laboratory **T**echnical **E**xchange **C**ommittee, established in 1974 to coordinate mathematical software development across the US national laboratories.
+
+The original authors—too numerous to list individually—created algorithms that have stood the test of time for over four decades. Their work continues to underpin scientific computing worldwide.
 
 ### Prior Modernisation Work
 
-**Mehdi Chinoune** ([MehdiChinoune/SLATEC](https://github.com/MehdiChinoune/SLATEC))
+**Mehdi Chinoune** ([MehdiChinoune/SLATEC](https://github.com/MehdiChinoune/SLATEC)) initiated the modernisation effort in 2021, providing the foundation for this project:
 
-Initiated the modernisation effort in 2021, providing the foundation for this project:
 - Conversion from fixed-form to free-form Fortran
 - Addition of `INTENT` attributes to procedure arguments
 - Implementation of `KIND` parameters for portable precision
@@ -163,44 +192,49 @@ Initiated the modernisation effort in 2021, providing the foundation for this pr
 
 Several components incorporate modernisation patterns and code from Jacob Williams' excellent suite of modern Fortran libraries, released under the BSD-3-Clause licence:
 
-**QUADPACK** ([jacobwilliams/quadpack](https://github.com/jacobwilliams/quadpack))
-- Complete GOTO elimination in numerical integration routines
-- Modern control flow patterns using `DO`/`EXIT` constructs
-- BSD-3-Clause Licence, Copyright © 2021-2022 Jacob Williams
+| Library | Contribution |
+|---------|-------------|
+| [**quadpack**](https://github.com/jacobwilliams/quadpack) | Complete GOTO elimination in numerical integration. BSD-3-Clause, Copyright 2021-2022 Jacob Williams |
+| [**PCHIP**](https://github.com/jacobwilliams/PCHIP) | Modern piecewise cubic Hermite interpolation patterns |
+| [**ddeabm**](https://github.com/jacobwilliams/ddeabm) | Adams-Bashforth-Moulton ODE solver modernisation |
+| [**bspline-fortran**](https://github.com/jacobwilliams/bspline-fortran) | B-spline interpolation |
+| [**polyroots-fortran**](https://github.com/jacobwilliams/polyroots-fortran) | Polynomial root finding |
+| [**carlson-elliptic-integrals**](https://github.com/jacobwilliams/carlson-elliptic-integrals) | Elliptic integral computation |
 
-**PCHIP** ([jacobwilliams/PCHIP](https://github.com/jacobwilliams/PCHIP))
-- Piecewise Cubic Hermite Interpolation Package
-- Structured control flow patterns that informed our approach
-
-**ddeabm** ([jacobwilliams/ddeabm](https://github.com/jacobwilliams/ddeabm))
-- Adams-Bashforth-Moulton ODE solver modernisation
-- Object-oriented Fortran design patterns
-
-**Additional libraries**: [bspline-fortran](https://github.com/jacobwilliams/bspline-fortran), [polyroots-fortran](https://github.com/jacobwilliams/polyroots-fortran), [carlson-elliptic-integrals](https://github.com/jacobwilliams/carlson-elliptic-integrals)
+Jacob's work on eliminating GOTOs through structured `DO`/`EXIT` constructs with logical flags provided the template for much of our control flow modernisation.
 
 ### Current Development
 
-**Zane Hambly** — Ongoing GOTO elimination, control flow modernisation, and test suite development.
+**Zane Hambly** — Ongoing GOTO elimination, control flow modernisation, IBM 360 verification testing, and general acts of code archaeology.
 
+---
 
-## The use of generative AI
+## A Note on AI Assistance
 
-Generative LLM models such as Anthropic's Claude (Opus 4.5 and Sonnet) and my own offline models (Qwen coder with augmented epistemic detection) have been used for running tests and summarising their results. Code and documentation for better or worse is authored by me.
+Generative LLM models (Anthropic's Claude Opus and Sonnet, plus local models including Qwen Coder with augmented epistemic detection) have been used for running tests, summarising results, and the occasional bout of documentation. Code and architectural decisions remain human-authored.
 
-Apologies for the NZ English throughout :-)
+Apologies for the NZ English throughout. Colour has a 'u' in it and that's simply how it is.
+
+---
 
 ## References
 
 ### Documentation
-- [SLATEC Guide](https://www.netlib.org/slatec/guide)
-- [SLATEC Table of Contents](https://www.netlib.org/slatec/toc)
-- [John Burkardt's SLATEC page](https://people.math.sc.edu/Burkardt/f_src/slatec/slatec.html)
+
+- [SLATEC Guide](https://www.netlib.org/slatec/guide) — The official user guide
+- [SLATEC Table of Contents](https://www.netlib.org/slatec/toc) — Complete routine listing
+- [John Burkardt's SLATEC page](https://people.math.sc.edu/Burkardt/f_src/slatec/slatec.html) — Comprehensive reference
 
 ### Key Publications
+
 - Piessens, R., de Doncker-Kapenga, E., Überhuber, C. W., and Kahaner, D. K. *QUADPACK: A Subroutine Package for Automatic Integration*. Springer-Verlag, 1983.
 - Fritsch, F. N. and Carlson, R. E. "Monotone Piecewise Cubic Interpolation". *SIAM Journal on Numerical Analysis* 17(2), 1980, pp. 238–246.
 - Amos, D. E. "A Subroutine Package for Bessel Functions of a Complex Argument and Nonnegative Order". Sandia National Laboratories Report SAND85-1018, 1985.
 
+---
+
 ## Contributing
 
-Any issues Found a gnarly bit of code that needs sorting? PRs welcome.
+Found something that needs sorting? Spotted a GOTO we missed? PRs welcome.
+
+If you're feeling particularly brave, the differential equation solvers in `diff_integ_eq/` still have some rather creative control flow that could use attention. We recommend a stiff drink beforehand.
