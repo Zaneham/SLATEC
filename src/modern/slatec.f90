@@ -13,5 +13,5 @@ MODULE slatec
   IMPLICIT NONE
 
 CONTAINS
-  include"aaaaaa.f90"
+  include"aaaaaa.inc"
 END MODULE slatec
