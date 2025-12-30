@@ -10,7 +10,7 @@ Kia ora (hello)! Welcome to a complete modernisation of the SLATEC Common Mathem
 
 SLATEC is one of those libraries that quietly underpins half of scientific computing whilst receiving approximately zero recognition for it. Built by the combined might of Sandia, Los Alamos, Lawrence Livermore, NIST, and Oak Ridge National Laboratories, it contains some of the most battle-tested numerical algorithms ever committed to punch cards.
 
-The mathematics? Absolutely sublime. The code style? Let's just say it has *character*. Over 1,400 GOTOs worth of character, to be precise, written in an era when structured programming was considered a bit avant-garde and "readable code" meant "has comments".
+The mathematics? Absolutely sublime. The code style? Let's just say it has *character*. Over 8,000 GOTOs worth of character, to be precise, written in an era when structured programming was considered a bit avant-garde and "readable code" meant "has comments".
 
 This library is embedded in SciPy, referenced in countless papers, and used in applications ranging from weather prediction to spacecraft trajectories. Yet nobody wants to touch it, presumably because doing so requires a working knowledge of FORTRAN 77, a high tolerance for spaghetti code, and the sort of patience normally reserved for bomb disposal technicians.
 
@@ -81,8 +81,8 @@ The grand cleanup:
 
 - [x] Convert to free-form Fortran 2018
 - [x] Create proper modules with explicit interfaces
-- [x] **Eliminate GOTOs with structured control flow** (~1,400 removed)
-- [x] Replace arithmetic IF statements (remember those?)
+- [x] **Eliminate GOTOs with structured control flow** (8,269 of 8,296 removed — 99.7%. The remaining 27 are in MINPACK and looked at us funny, so we left them for now.)
+- [x] Replace arithmetic IF statements (remember those? No? Good.)
 - [x] Replace DATA statements with parameter constants
 - [x] Add `intent` attributes to all procedure arguments
 - [x] Modern error handling (ERROR STOP replacing XERMSG)
@@ -287,6 +287,8 @@ Apologies for the NZ English throughout. Colour has a 'u' in it and that's simpl
 
 ## Contributing
 
-Found something that needs sorting? Spotted a GOTO we missed? PRs welcome.
+Found something that needs sorting? Spotted one of the 27 remaining GOTOs we tactically ignored? PRs welcome.
 
-If you're feeling particularly brave, the differential equation solvers in `diff_integ_eq/` still have some rather creative control flow that could use attention. We recommend a stiff drink beforehand.
+If you're feeling particularly brave, the differential equation solvers in `diff_integ_eq/` still have some rather creative control flow that could use attention. We recommend a stiff drink beforehand. Or several. We're not here to judge.
+
+The COMMON blocks in SLAP (sparse linear algebra) also need converting to module variables, if you fancy a weekend of questioning your life choices.
