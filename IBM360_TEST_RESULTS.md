@@ -61,8 +61,11 @@ D1MACH(4) = 2.22E-16     Machine epsilon (unit roundoff)
 | **HVNRM** | Vector Operations | Single | ✅ PASS | 0 |
 | **INTRV** | Interpolation | Integer | ✅ PASS | exact |
 | **RC** | Elliptic Integrals | Single | ✅ PASS | ~10⁻⁶ |
+| **DHVNRM** | Vector Operations | Double | ✅ PASS | 0 |
+| **DVNRMS** | Vector Operations | Double | ✅ PASS | 0 |
+| **DRC** | Elliptic Integrals | Double | ✅ PASS | ~10⁻¹⁶ |
 
-**11 routines tested. 11 routines passed. 0 surprises.**
+**14 routines tested. 14 routines passed. 0 surprises.**
 
 ---
 
@@ -270,6 +273,50 @@ until convergence, then a Taylor series is evaluated.
 
 ---
 
+## DHVNRM (Double Precision Maximum Norm) Test Results
+
+### Test Date: 30 December 2025
+
+Double precision version of HVNRM.
+
+| Input Vector | Computed | Expected | Error | Status |
+|--------------|----------|----------|-------|--------|
+| [1, 2, 3, 4, 5] | 5.0000000000 | 5.0 | 0.0 | PASS |
+| [-7, 3, 5, -2, 1] | 7.0000000000 | 7.0 | 0.0 | PASS |
+
+---
+
+## DVNRMS (Double Precision Weighted RMS Norm) Test Results
+
+### Test Date: 30 December 2025
+
+Double precision weighted root-mean-square norm for ODE integrators.
+
+| V Vector | W Vector | Computed | Expected | Error | Status |
+|----------|----------|----------|----------|-------|--------|
+| [1,1,1,1,1] | [1,1,1,1,1] | 1.0000000000 | 1.0 | 0.0 | PASS |
+| [3, 4] | [1, 1] | 3.5355339059 | √12.5 | 0.0 | PASS |
+
+---
+
+## DRC (Double Precision Carlson Elliptic Integral) Test Results
+
+### Test Date: 30 December 2025
+
+Double precision version of RC. Computing transcendental constants to 15-16 significant digits!
+
+| Test | Computed | Identity | Expected | Error | Status |
+|------|----------|----------|----------|-------|--------|
+| DRC(0, 1/4) | **3.14159265358979** | **π** | 3.14159265358979324 | 2.4E-15 | PASS |
+| DRC(1, 2) | 0.785398163397448 | arctan(1) = π/4 | 0.78539816339744831 | 6.9E-16 | PASS |
+| DRC(1/16, 1/8) | **3.14159265358979** | **π** | 3.14159265358979324 | 2.4E-15 | PASS |
+| DRC(9/4, 2) | 0.693147180559945 | ln(2) | 0.69314718055994531 | **5.6E-17** | PASS |
+
+The ln(2) computation achieves an error of 5.6×10⁻¹⁷ - essentially at machine epsilon.
+*Computing transcendentals to 16 significant figures on vintage iron. Not bad for 1966.*
+
+---
+
 ## Analysis
 
 ### Accuracy Notes
@@ -315,8 +362,10 @@ tests/slatec/
 │   ├── pythag.f         # Overflow-safe √(a²+b²)
 │   ├── enorm.f          # Single precision Euclidean norm
 │   ├── denorm.f         # Double precision Euclidean norm
-│   ├── vnwrms.f         # Weighted RMS norm
-│   ├── hvnrm.f          # Maximum (infinity) norm
+│   ├── vnwrms.f         # Weighted RMS norm (SP)
+│   ├── dvnrms.f         # Weighted RMS norm (DP)
+│   ├── hvnrm.f          # Maximum norm (SP)
+│   ├── dhvnrm.f         # Maximum norm (DP)
 │   └── test_numutil.f   # PYTHAG/ENORM test driver
 │
 ├── Complex Arithmetic
@@ -329,7 +378,9 @@ tests/slatec/
 │   └── test_intrv_hvnrm.f  # INTRV/HVNRM/RC test driver
 │
 ├── Elliptic Integrals
-│   └── rc.f             # Carlson RC (computes π!)
+│   ├── rc.f             # Carlson RC single precision
+│   ├── drc.f            # Carlson RC double precision (computes π to 15 digits!)
+│   └── test_dp_final.f  # Final DP tests (DRC, DHVNRM, DVNRMS)
 │
 └── Combined Tests
     └── test_gamln_vnwrms.f  # GAMLN + VNWRMS combined
@@ -339,7 +390,7 @@ tests/slatec/
 
 ## Verdict
 
-**ALL 11 ROUTINES TESTED. ALL 11 PASSED.**
+**ALL 14 ROUTINES TESTED. ALL 14 PASSED.**
 
 The 1966 IBM FORTRAN G compiler successfully compiled and executed SLATEC
 mathematical library code, producing numerically correct results within
@@ -351,7 +402,8 @@ Key achievements:
 - ✅ Complex arithmetic with proper branch cuts
 - ✅ Numerical utilities for ODE integrators
 - ✅ B-spline interval search algorithm
-- ✅ Carlson elliptic integral computing π via duplication theorem
+- ✅ Carlson elliptic integrals computing π and ln(2) via duplication theorem
+- ✅ Double precision routines achieving 10⁻¹⁶ accuracy (machine epsilon!)
 
 *Take that, "modern" numerics libraries.*
 
