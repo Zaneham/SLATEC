@@ -1,5 +1,7 @@
 # SLATEC-Modern
 
+> **Verified on Period Hardware**: This modernisation is tested against authentic 1966 IBM FORTRAN G compilers running on emulated System/360 mainframes. The original SLATEC targeted IBM hexadecimal floating-point (base-16), which has fundamentally different precision characteristics than modern IEEE 754. Our test suite validates numerical correctness across both vintage and contemporary architectures. See [IBM360_TEST_RESULTS.md](IBM360_TEST_RESULTS.md) for details.
+
 Kia ora! Welcome to a complete modernisation of the SLATEC Common Mathematical Library, taking this 1990s FORTRAN 77 codebase into the modern Fortran era (2018+).
 
 ## What's the Story?
