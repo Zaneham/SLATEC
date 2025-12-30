@@ -15,7 +15,7 @@ First stable release of SLATEC-Modern: a complete modernisation of the SLATEC Co
 **Original Library:** 735 files, 168,216 lines of FORTRAN 77, 8,296 GOTOs
 **Modernised Library:** 34 modules, 1,079 routines, ~85,000 lines of Fortran 2018, 27 GOTOs (the stubborn ones)
 
-That's 99.7% GOTO elimination. We didn't count them until afterwards, and honestly we wish we hadn't. Ignorance was bliss.
+That's 99.7% GOTO elimination. I didn't count them until afterwards, and honestly I wish I hadn't. Ignorance was bliss.
 
 ---
 
@@ -26,7 +26,7 @@ The following systematic transformations were applied to the entire codebase:
 | Transformation | Description |
 |----------------|-------------|
 | **Free-form source** | Converted from fixed-form (columns 1-72) to free-form Fortran 2018 |
-| **GOTO elimination** | Replaced 8,269 of 8,296 GOTO statements with structured control flow (99.7%). We're not saying we deserve a medal, but we're not *not* saying that either. |
+| **GOTO elimination** | Replaced 8,269 of 8,296 GOTO statements with structured control flow (99.7%). I'm not saying I deserve a medal, but I'm not *not* saying that either. |
 | **Module structure** | Organised routines into logical modules with explicit interfaces |
 | **Arithmetic IF removal** | Replaced three-way arithmetic IFs with IF-THEN-ELSE constructs |
 | **INTENT attributes** | Added INTENT(IN/OUT/INOUT) to all procedure arguments |
@@ -188,11 +188,11 @@ The following bugs were discovered and fixed during the modernisation process:
 
 The following aspects of SLATEC remain unchanged:
 
-1. **Algorithm implementations** — The mathematical algorithms are identical to the original. We modernised the plumbing, not the maths.
+1. **Algorithm implementations** — The mathematical algorithms are identical to the original. I modernised the plumbing, not the maths.
 2. **Routine names** — All original routine names are preserved. Your muscle memory is safe.
 3. **Calling conventions** — Argument order and semantics match the original
 4. **Numerical results** — Output values match the original within floating-point precision
-5. **The 27 GOTOs we couldn't be arsed finishing** — They're in MINPACK and they work. Sometimes you just have to accept that.
+5. **The 27 GOTOs I couldn't be arsed finishing** — They're in MINPACK and they work. Sometimes you just have to accept that.
 
 ---
 
@@ -254,5 +254,11 @@ The original library is in the public domain as a work of the US Government.
 
 ### Licence
 
-Public Domain. The original SLATEC library is a work of the United States Government and is not subject to copyright protection in the United States.
+Modernisation work is released under the **Apache License 2.0**.
+
+The original SLATEC library is **public domain** (US Government work, 17 U.S.C. § 105).
+
+Some components incorporate code from Jacob Williams' libraries under **BSD-3-Clause**.
+
+See [LICENSE](LICENSE) for full details. In practical terms: it's all permissively licensed.
 

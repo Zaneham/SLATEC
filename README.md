@@ -14,13 +14,13 @@ The mathematics? Absolutely sublime. The code style? Let's just say it has *char
 
 This library is embedded in SciPy, referenced in countless papers, and used in applications ranging from weather prediction to spacecraft trajectories. Yet nobody wants to touch it, presumably because doing so requires a working knowledge of FORTRAN 77, a high tolerance for spaghetti code, and the sort of patience normally reserved for bomb disposal technicians.
 
-So here we are. Someone had to do it.
+So here I am. Someone had to do it.
 
 ### But Why Not Just Use GSL?
 
 A fair question. The GNU Scientific Library is comprehensive and well-documented. It also sits under the GPL licence, which means if you link against it, your code must also be released under GPL. This is, to use the technical term, *a bit of a faff* for commercial applications, proprietary research code, or anyone who simply wants to compute a Bessel function without entering into a licensing philosophy debate.
 
-SLATEC, being a product of the US Government, is **public domain**. Use it for whatever you like. Print it out and wallpaper your bathroom with it. We won't judge.
+SLATEC, being a product of the US Government, is **public domain**. Use it for whatever you like. Print it out and wallpaper your bathroom with it. I won't judge.
 
 Also, GSL is fundamentally C with a FORTRAN wig on. SLATEC is native Fortran, which means less friction if you're working in a Fortran codebase—and despite rumours to the contrary, rather a lot of scientific computing still is.
 
@@ -34,7 +34,7 @@ Also, GSL is fundamentally C with a FORTRAN wig on. SLATEC is native Fortran, wh
 | **Source** | [Netlib SLATEC](https://netlib.org/slatec/) |
 | **Licence** | Public Domain (US Government work) |
 | **Size** | 735 files, 168,216 lines of FORTRAN 77 |
-| **GOTOs** | Approximately 1,400 (we counted) |
+| **GOTOs** | 8,296 (I counted, eventually) |
 | **Vibes** | Retro |
 
 ---
@@ -81,7 +81,7 @@ The grand cleanup:
 
 - [x] Convert to free-form Fortran 2018
 - [x] Create proper modules with explicit interfaces
-- [x] **Eliminate GOTOs with structured control flow** (8,269 of 8,296 removed — 99.7%. The remaining 27 are in MINPACK and looked at us funny, so we left them for now.)
+- [x] **Eliminate GOTOs with structured control flow** (8,269 of 8,296 removed — 99.7%. The remaining 27 are in MINPACK and looked at me funny, so I left them for now.)
 - [x] Replace arithmetic IF statements (remember those? No? Good.)
 - [x] Replace DATA statements with parameter constants
 - [x] Add `intent` attributes to all procedure arguments
@@ -151,11 +151,15 @@ Both approaches produce a static library. The fpm route is generally less fuss i
 
 ## Licence
 
+**TL;DR:** Do what you like with it.
+
 The original SLATEC library is **public domain** software, developed by the United States Government. Works created by US Government employees within the scope of their employment are not subject to domestic copyright protection under 17 U.S.C. § 105.
 
-Modernised code in this repository is released under the same public domain terms, except where components incorporate code from other open-source projects (see Acknowledgements for specific licence terms).
+Modernisation work (GOTO elimination, module restructuring, control flow rewriting) is released under the **Apache License 2.0**. See [LICENSE](LICENSE) for the full text.
 
-In practical terms: do what you like with it.
+Some components incorporate code from Jacob Williams' excellent modern Fortran libraries, released under the **BSD-3-Clause** licence. See Acknowledgements for details.
+
+In practical terms: it's all permissively licensed. Use it commercially, modify it, distribute it, put it on a satellite. Just don't blame me if your Bessel functions come out wonky.
 
 ---
 
@@ -287,8 +291,8 @@ Apologies for the NZ English throughout. Colour has a 'u' in it and that's simpl
 
 ## Contributing
 
-Found something that needs sorting? Spotted one of the 27 remaining GOTOs we tactically ignored? PRs welcome.
+Found something that needs sorting? Spotted one of the 27 remaining GOTOs I tactically ignored? PRs welcome.
 
-If you're feeling particularly brave, the differential equation solvers in `diff_integ_eq/` still have some rather creative control flow that could use attention. We recommend a stiff drink beforehand. Or several. We're not here to judge.
+If you're feeling particularly brave, the differential equation solvers in `diff_integ_eq/` still have some rather creative control flow that could use attention. I recommend a stiff drink beforehand. Or several. I'm not here to judge.
 
 The COMMON blocks in SLAP (sparse linear algebra) also need converting to module variables, if you fancy a weekend of questioning your life choices.
