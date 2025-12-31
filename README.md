@@ -81,7 +81,7 @@ The grand cleanup:
 
 - [x] Convert to free-form Fortran 2018
 - [x] Create proper modules with explicit interfaces
-- [x] **Eliminate GOTOs with structured control flow** (8,269 of 8,296 removed — 99.7%. The remaining 27 are in MINPACK and looked at me funny, so I left them for now.)
+- [x] **Eliminate GOTOs with structured control flow** (8,296 of 8,296 removed — 100%. Every last one.)
 - [x] Replace arithmetic IF statements (remember those? No? Good.)
 - [x] Replace DATA statements with parameter constants
 - [x] Add `intent` attributes to all procedure arguments
@@ -209,7 +209,7 @@ Jacob's work on eliminating GOTOs through structured `DO`/`EXIT` constructs with
 
 ### Current Development
 
-**Zane Hambly** — Ongoing GOTO elimination, control flow modernisation, IBM 360 verification testing, and general acts of code archaeology.
+**Zane Hambly** — Complete GOTO elimination (8,296 of 8,296!), control flow modernisation, IBM 360 verification testing, and general acts of code archaeology.
 
 ---
 
@@ -291,7 +291,7 @@ Apologies for the NZ English throughout. Colour has a 'u' in it and that's simpl
 
 ## Contributing
 
-Found something that needs sorting? Spotted one of the 27 remaining GOTOs I tactically ignored? PRs welcome.
+Found something that needs sorting? Spotted an issue or want to help with the remaining modernisation tasks? PRs welcome.
 
 If you're feeling particularly brave, the differential equation solvers in `diff_integ_eq/` still have some rather creative control flow that could use attention. I recommend a stiff drink beforehand. Or several. I'm not here to judge.
 
