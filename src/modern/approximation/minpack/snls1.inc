@@ -607,6 +607,8 @@ PURE SUBROUTINE SNLS1(FCN,Iopt,M,N,X,Fvec,Fjac,Ldfjac,Ftol,Xtol,Gtol,Maxfev,&
   !   900315  CALLs to XERROR changed to CALLs to XERMSG.  (THJ)
   !   900510  Convert XERRWV calls to XERMSG calls.  (RWC)
   !   920501  Reformatted the REFERENCES section.  (WRB)
+  !   260101  Eliminated GOTO using outer_loop DO/EXIT/CYCLE.  (ZH)
+  !           Ref: ISO/IEC 1539-1:2018 S11.1.7.4.3 (EXIT/CYCLE)
   USE service, ONLY : eps_sp
   !
   INTERFACE
@@ -648,14 +650,17 @@ PURE SUBROUTINE SNLS1(FCN,Iopt,M,N,X,Fvec,Fjac,Ldfjac,Ftol,Xtol,Gtol,Maxfev,&
   !
   !     CHECK THE INPUT PARAMETERS FOR ERRORS.
   !
-  IF( Iopt<1 .OR. Iopt>3 .OR. N<=0 .OR. M<N .OR. Ldfjac<N .OR. Ftol<0._SP .OR. &
-    Xtol<0._SP .OR. Gtol<0._SP .OR. Maxfev<=0 .OR. Factor<=0._SP ) GOTO 200
-  IF( Iopt<3 .AND. Ldfjac<M ) GOTO 200
+  validation: BLOCK
+    LOGICAL :: invalid_input
+    invalid_input = Iopt<1 .OR. Iopt>3 .OR. N<=0 .OR. M<N .OR. Ldfjac<N .OR. Ftol<0._SP .OR. &
+      Xtol<0._SP .OR. Gtol<0._SP .OR. Maxfev<=0 .OR. Factor<=0._SP
+    IF( Iopt<3 .AND. Ldfjac<M ) invalid_input = .TRUE.
+    IF( invalid_input ) EXIT validation
   IF( Mode==2 ) THEN
-    DO j = 1, N
-      IF( Diag(j)<=0._SP ) GOTO 200
-    END DO
-  END IF
+      DO j = 1, N
+        IF( Diag(j)<=0._SP ) EXIT validation
+      END DO
+    END IF
   !
   !     EVALUATE THE FUNCTION AT THE STARTING POINT
   !     AND CALCULATE ITS NORM.
@@ -664,24 +669,25 @@ PURE SUBROUTINE SNLS1(FCN,Iopt,M,N,X,Fvec,Fjac,Ldfjac,Ftol,Xtol,Gtol,Maxfev,&
   ijunk = 1
   CALL FCN(iflag,M,N,X,Fvec,Fjac,ijunk)
   Nfev = 1
-  IF( iflag<0 ) GOTO 200
-  fnorm = NORM2(Fvec)
+  IF( iflag<0 ) EXIT validation
+    fnorm = NORM2(Fvec)
   !
   !     INITIALIZE LEVENBERG-MARQUARDT PARAMETER AND ITERATION COUNTER.
   !
   par = 0._SP
   iter = 1
+    END BLOCK validation
   !
   !     BEGINNING OF THE OUTER LOOP.
   !
-  !
-  !        IF REQUESTED, CALL FCN TO ENABLE PRINTING OF ITERATES.
-  !
-  100 CONTINUE
+  outer_loop: DO
+    !
+    !        IF REQUESTED, CALL FCN TO ENABLE PRINTING OF ITERATES.
+    !
   IF( Nprint>0 ) THEN
     iflag = 0
     IF( MOD(iter-1,Nprint)==0 ) CALL FCN(iflag,M,N,X,Fvec,Fjac,ijunk)
-    IF( iflag<0 ) GOTO 200
+    IF( iflag<0 ) EXIT outer_loop
   END IF
   !
   !        CALCULATE THE JACOBIAN MATRIX.
@@ -704,7 +710,7 @@ PURE SUBROUTINE SNLS1(FCN,Iopt,M,N,X,Fvec,Fjac,Ldfjac,Ftol,Xtol,Gtol,Maxfev,&
       nrow = i
       iflag = 3
       CALL FCN(iflag,M,N,X,Fvec,Wa3,nrow)
-      IF( iflag<0 ) GOTO 200
+      IF( iflag<0 ) EXIT outer_loop
       !
       !            ON THE FIRST ITERATION, CHECK THE USER SUPPLIED JACOBIAN.
       !
@@ -724,7 +730,7 @@ PURE SUBROUTINE SNLS1(FCN,Iopt,M,N,X,Fvec,Fjac,Ldfjac,Ftol,Xtol,Gtol,Maxfev,&
           iflag = 1
           CALL FCN(iflag,M,N,Wa1,Wa4,Fjac,nrow)
           Nfev = Nfev + 1
-          IF( iflag<0 ) GOTO 200
+          IF( iflag<0 ) EXIT outer_loop
         END IF
         modech = 2
         CALL CHKDER(1,N,X,Fvec(i),Wa3,1,Wa1,Wa4(i),modech,err)
@@ -788,7 +794,7 @@ PURE SUBROUTINE SNLS1(FCN,Iopt,M,N,X,Fvec,Fjac,Ldfjac,Ftol,Xtol,Gtol,Maxfev,&
       !             ON THE FIRST ITERATION, CHECK THE USER SUPPLIED JACOBIAN
       !
       IF( iter<=1 ) THEN
-        IF( iflag<0 ) GOTO 200
+        IF( iflag<0 ) EXIT outer_loop
         !
         !           GET THE INCREMENTED X-VALUES INTO WA1(*).
         !
@@ -800,7 +806,7 @@ PURE SUBROUTINE SNLS1(FCN,Iopt,M,N,X,Fvec,Fjac,Ldfjac,Ftol,Xtol,Gtol,Maxfev,&
         iflag = 1
         CALL FCN(iflag,M,N,Wa1,Wa4,Fjac,Ldfjac)
         Nfev = Nfev + 1
-        IF( iflag<0 ) GOTO 200
+        IF( iflag<0 ) EXIT outer_loop
         DO i = 1, M
           modech = 2
           CALL CHKDER(1,N,X,Fvec(i),Fjac(i,1),Ldfjac,Wa1,Wa4(i),modech,err)
@@ -814,7 +820,7 @@ PURE SUBROUTINE SNLS1(FCN,Iopt,M,N,X,Fvec,Fjac,Ldfjac,Ftol,Xtol,Gtol,Maxfev,&
         !
       END IF
     END IF
-    IF( iflag<0 ) GOTO 200
+    IF( iflag<0 ) EXIT outer_loop
     !
     !        COMPUTE THE QR FACTORIZATION OF THE JACOBIAN.
     !
@@ -1000,13 +1006,15 @@ PURE SUBROUTINE SNLS1(FCN,Iopt,M,N,X,Fvec,Fjac,Ldfjac,Ftol,Xtol,Gtol,Maxfev,&
       !
       !        END OF THE OUTER LOOP.
       !
-      IF( ratio>=p0001 ) GOTO 100
+      IF( ratio>=p0001 ) CYCLE outer_loop
+      EXIT outer_loop
     END DO
   END IF
+  EXIT outer_loop
+  END DO outer_loop
   !
   !     TERMINATION, EITHER NORMAL OR USER IMPOSED.
   !
-  200 CONTINUE
   IF( iflag<0 ) Info = iflag
   iflag = 0
   IF( Nprint>0 ) CALL FCN(iflag,M,N,X,Fvec,Fjac,ijunk)

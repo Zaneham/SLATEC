@@ -13,9 +13,9 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 First stable release of SLATEC-Modern: a complete modernisation of the SLATEC Common Mathematical Library (Version 4.1, July 1993) from FORTRAN 77 to Fortran 2018.
 
 **Original Library:** 735 files, 168,216 lines of FORTRAN 77, 8,296 GOTOs
-**Modernised Library:** 34 modules, 1,079 routines, ~85,000 lines of Fortran 2018, 27 GOTOs (the stubborn ones)
+**Modernised Library:** 34 modules, 1,079 routines, ~85,000 lines of Fortran 2018, 0 GOTOs (yes, zero!)
 
-That's 99.7% GOTO elimination. I didn't count them until afterwards, and honestly I wish I hadn't. Ignorance was bliss.
+That's 100% GOTO elimination. I didn't count them until afterwards, and honestly I wish I hadn't. Ignorance was bliss.
 
 ---
 
