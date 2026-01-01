@@ -43,7 +43,9 @@ This is the fortran360 project which provides:
 - FORTRAN G/H compilation
 - Authentic IBM 360 execution environment
 
-## Current MINPACK Coverage
+## Coverage
+
+### MINPACK
 
 | Test File | Routines | Status |
 |-----------|----------|--------|
@@ -52,11 +54,30 @@ This is the fortran360 project which provides:
 | test_dnls1.f | DNLS1 (Nonlinear least squares) | Pending |
 | test_dnsq.f | DNSQ (Nonlinear equations) | Pending |
 
+### BLAS
+
+| Test File | Routines | Status |
+|-----------|----------|--------|
+| test_daxpy.f | DAXPY (Y = alpha*X + Y) | **5/5 PASS** |
+| test_drotg.f | DROTG (Givens rotation) | **4/4 PASS** |
+
+BLAS tests use Pythagorean triples (3-4-5, 5-12-13, 8-15-17, 7-24-25) for exact integer verification.
+
 ## Running Tests
 
+### IBM 360 (Hercules)
 ```bash
 cd /c/dev/fortran360
 python -m src.fortran360.cli run tests/slatec/minpack/test_enorm.f
+python -m src.fortran360.cli run tests/slatec/blas/test_daxpy.f
+python -m src.fortran360.cli run tests/slatec/blas/test_drotg.f
+```
+
+### Modern Fortran Comparison Tests
+```bash
+cd /c/dev/slatec-modern
+gfortran -o test_l3_blas test/level3_historical/test_linear_blas_ibm360.f90
+./test_l3_blas
 ```
 
 ## FORTRAN IV Compatibility Notes

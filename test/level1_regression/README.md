@@ -21,18 +21,26 @@ When code changes, Level 1 tests may need updating. This is expected and accepta
 2. If they fail due to intentional code changes, update the tests
 3. If they fail unexpectedly, the code has regressed — investigate
 
-## MINPACK Coverage
+## Coverage
 
-| Test File | Routines | Tests |
-|-----------|----------|-------|
-| test_minpack.f90 | DENORM/ENORM | 9 tests |
+| Test File | Module | Routines | Tests | Status |
+|-----------|--------|----------|-------|--------|
+| test_minpack.f90 | approximation | DENORM/ENORM | 9 | ✓ **9/9 PASS** |
+| test_linear_blas.f90 | linear | DAXPY, DSCAL, DCOPY, DSWAP, DROT, DROTG | 18 | ✓ **18/18 PASS** |
+| test_linear_linpack.f90 | linear | DGEFA/DGESL, DPOFA/DPOSL | — | ⏳ In Progress |
 
 ## Running
 
 ```bash
 cd /c/dev/slatec-modern
-gfortran -o test_l1 test/level1_regression/test_minpack.f90
-./test_l1
+
+# MINPACK
+gfortran -o test_l1_minpack test/level1_regression/test_minpack.f90
+./test_l1_minpack
+
+# BLAS
+gfortran -o test_l1_blas test/level1_regression/test_linear_blas.f90
+./test_l1_blas
 ```
 
 Or via fpm:

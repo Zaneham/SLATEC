@@ -34,7 +34,8 @@ These are the tests we run continuously. They verify basic functionality and cat
 |--------|--------|----------|
 | service | ⏳ Pending | `test/level1_regression/` |
 | special_functions | Partial (Bessel) | `test/test_bessel_regression.f90` |
-| linear | ⏳ Pending | — |
+| linear (BLAS) | ✓ **18/18 PASS** | `test/level1_regression/test_linear_blas.f90` |
+| linear (LINPACK) | ⏳ In Progress | `test/level1_regression/test_linear_linpack.f90` |
 | diff_integ | Partial (QUADPACK) | `test/test_diff_integ_quadpack.f90` |
 | diff_integ_eq | Partial | `test/test_diff_integ_eq.f90` |
 | interpolation | ⏳ Pending | — |
@@ -63,6 +64,7 @@ These tests compare computed values against authoritative mathematical reference
 | Module | Status | Reference Source |
 |--------|--------|------------------|
 | special_functions | Partial | A&S Tables 9.1, 9.8 (Bessel) |
+| linear (BLAS) | ✓ **16/16 PASS** | Lawson et al., ACM TOMS 5(3), 1979 |
 | diff_integ | Partial | Closed-form integrals |
 | approximation (MINPACK) | ✓ **17/17 PASS** | Moré, Garbow, Hillstrom (1981) |
 
@@ -70,6 +72,7 @@ These tests compare computed values against authoritative mathematical reference
 - `test/test_bessel_golden.f90` — Bessel J, I, K vs A&S tables
 - `test/test_bessel_reference.f90` — Extended validation
 - `test/test_specfun_bessel.f90` — Edge cases
+- `test/level2_mathematical/test_linear_blas.f90` — BLAS linearity, orthogonality, Pythagorean properties
 - `test/level2_mathematical/test_minpack_mgh.f90` — MGH test functions (Rosenbrock, Powell, Helical Valley, Freudenstein-Roth)
 
 ---
@@ -105,12 +108,14 @@ A deviation at Level 3 is not necessarily a bug — it may be an unavoidable con
 |--------|-----------------|--------|
 | service | D1MACH, R1MACH, I1MACH | ✓ PASS |
 | special_functions | GAMLN, DGAMLN, CDIV, CSROOT | ✓ PASS |
+| linear (BLAS) | DAXPY, DROTG | ✓ **9/9 PASS** |
 | linear | ENORM, PYTHAG | ✓ PASS |
 | approximation (MINPACK) | DENORM | ✓ **7/7 PASS** |
 | approximation (MINPACK) | DQRFAC | ⏳ Pending |
 | approximation (MINPACK) | DNLS1 | ⏳ Pending |
 | approximation (MINPACK) | DNSQ | ⏳ Pending |
 
+*BLAS tested with Pythagorean triple golden values. FORTRAN IV source in `/c/dev/fortran360/tests/slatec/blas/`.*
 *DENORM tested on IBM System/360 (Hercules/TK4-) using FORTRAN G, 1 January 2026.*
 
 ---
@@ -131,6 +136,18 @@ These are the portability stress tests. The same code compiled with different co
 | ifort/ifx | Linux | ⏳ Untested |
 | flang | Linux | ⏳ Untested |
 | nvfortran | Linux | ⏳ Untested |
+
+### BLAS Level 4 Results
+
+| Test Suite | Default | `-ffast-math` |
+|------------|---------|---------------|
+| Subnormal Handling | **3/3 PASS** | May FAIL (DAZ/FTZ) |
+| Signed Zero | **3/3 PASS** | 3/3 PASS |
+| Inf/NaN Propagation | **3/3 PASS** | 3/3 PASS |
+| Extreme Values | **4/4 PASS** | 4/4 PASS |
+| Accumulation Precision | **3/3 PASS** | 3/3 PASS |
+| SIMD Edge Cases | **4/4 PASS** | 4/4 PASS |
+| **Total** | **20/20 PASS** | May vary |
 
 ### MINPACK Level 4 Results
 
@@ -155,6 +172,7 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 ### Test Files
 
 - `test/test_bessel_portability.f90` — Cross-platform ULP measurement
+- `test/level4_hostile/test_linear_blas_hostile.f90` — BLAS hostile tests (subnormals, Inf/NaN, SIMD edges)
 - `test/level4_hostile/test_minpack_portability.f90` — MINPACK portability (detects FTZ)
 
 ---
@@ -167,7 +185,7 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 |--------|----------|----|----|----|----|---------|
 | **service** | 3 | — | — | ✓ | — | ~33% |
 | **special_functions** | 270 | ~20 | ~20 | 4 | ~20 | ~9% |
-| **linear** | 217 | — | — | 2 | — | ~1% |
+| **linear (BLAS)** | 217 | 18 | 16 | 9 | 20 | ~29% |
 | **diff_integ** | 81 | ~10 | ~10 | — | — | ~12% |
 | **diff_integ_eq** | 225 | ~5 | — | — | — | ~2% |
 | **interpolation** | 80 | — | — | — | — | 0% |
@@ -176,7 +194,7 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 | **nonlin_eq** | 15 | — | — | — | — | 0% |
 | **optimisation** | 46 | — | — | — | — | 0% |
 | **data_handling** | 16 | — | — | — | — | 0% |
-| **TOTAL** | **1,079** | ~44 | ~47 | ~13 | ~29 | **~7%** |
+| **TOTAL** | **1,079** | ~62 | ~63 | ~22 | ~49 | **~10%** |
 
 ---
 
@@ -213,6 +231,55 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 | test_qrfac.f | DQRFAC | 4 QR tests | ⏳ Pending |
 | test_dnls1.f | DNLS1 | Rosenbrock, Powell, Freudenstein-Roth | ⏳ Pending |
 | test_dnsq.f | DNSQ | Helical, Trigonometric, Broyden | ⏳ Pending |
+
+---
+
+## BLAS Test Details
+
+*Testing core linear algebra routines (DAXPY, DSCAL, DCOPY, DSWAP, DROT, DROTG)*
+
+### Complete 4-Level Results (1 January 2026)
+
+| Level | Tests | Result | Notes |
+|-------|-------|--------|-------|
+| **L1 Regression** | 18 | ✓ **18/18 PASS** | DAXPY, DSCAL, DCOPY, DSWAP, DROT, DROTG |
+| **L2 Mathematical** | 16 | ✓ **16/16 PASS** | Linearity, orthogonality, Pythagorean |
+| **L3 Historical** | 9 | ✓ **9/9 PASS** | IBM 360 golden values (Pythagorean triples) |
+| **L4 Hostile** | 20 | ✓ **20/20 PASS** | Subnormals, Inf/NaN, SIMD edges |
+| **TOTAL** | **63** | **63/63 PASS** | |
+
+### Test Files
+
+| Level | File | Description |
+|-------|------|-------------|
+| L1 | `test/level1_regression/test_linear_blas.f90` | Modern Fortran regression |
+| L2 | `test/level2_mathematical/test_linear_blas.f90` | Mathematical property verification |
+| L3 | `test/level3_historical/test_linear_blas_ibm360.f90` | IBM 360 golden comparisons |
+| L3 | `/c/dev/fortran360/tests/slatec/blas/test_daxpy.f` | FORTRAN IV for Hercules |
+| L3 | `/c/dev/fortran360/tests/slatec/blas/test_drotg.f` | FORTRAN IV for Hercules |
+| L4 | `test/level4_hostile/test_linear_blas_hostile.f90` | Hostile environment tests |
+
+### Mathematical Properties Tested (Level 2)
+
+| Property | Test |
+|----------|------|
+| Distributivity | (a+b)*X = a*X + b*X |
+| Distributivity | a*(X+Y) = a*X + a*Y |
+| Orthogonality | c² + s² = 1 for Givens rotations |
+| Pythagorean | r = √(a² + b²) for Givens |
+| Norm preservation | \|\|Rx\|\| = \|\|x\|\| for rotations |
+| Triangle inequality | \|\|x+y\|\| ≤ \|\|x\|\| + \|\|y\|\| |
+
+### Hostile Tests (Level 4)
+
+| Category | Tests | What It Catches |
+|----------|-------|-----------------|
+| Subnormals | 3 | DAZ/FTZ from `-ffast-math` |
+| Signed Zero | 3 | IEEE 754 ±0 handling |
+| Inf/NaN | 3 | Special value propagation |
+| Extreme Values | 4 | Near overflow/underflow |
+| Accumulation | 3 | Precision loss in summations |
+| SIMD Edges | 4 | Vectorization boundary bugs |
 
 ---
 
