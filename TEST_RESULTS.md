@@ -8,7 +8,8 @@
 |-------|-----|-----|-----|------|-------|
 | **BLAS** | 18/18 | 16/16 | 9/9 | 65/65 | **108/108** |
 | **MINPACK** | 9/9 | 17/17 | 7/7 | 45/45 | **78/78** |
-| **Combined** | 27/27 | 33/33 | 16/16 | 110/110 | **186/186** |
+| **LINPACK** | 6/6 | — | — | — | **6/6** |
+| **Combined** | 33/33 | 33/33 | 16/16 | 110/110 | **192/192** |
 
 **All tests pass with safe compiler flags (`-O2` or `-O3`).**
 
@@ -98,10 +99,11 @@ The `-ffast-math` flag is equivalent to:
 
 ## Test Categories Explained
 
-### Level 1: Regression (27 tests)
+### Level 1: Regression (33 tests)
 - **Purpose**: Does the code work?
 - **Stability**: May be modified when code changes
 - **Pass Rate**: 100%
+- **Breakdown**: BLAS (18), MINPACK (9), LINPACK (6)
 
 ### Level 2: Mathematical (33 tests)
 - **Purpose**: Does output match mathematical truth?
@@ -245,6 +247,7 @@ cd /c/dev/slatec-modern
 # Level 1: Regression
 gfortran -O2 -o test_l1_blas test/level1_regression/test_l1_linear_blas.f90 && ./test_l1_blas
 gfortran -O2 -o test_l1_minpack test/level1_regression/test_l1_minpack.f90 && ./test_l1_minpack
+gfortran -O2 -o test_l1_linpack test/level1_regression/test_l1_linear_linpack.f90 && ./test_l1_linpack
 
 # Level 2: Mathematical
 gfortran -O2 -o test_l2_blas test/level2_mathematical/test_l2_linear_blas.f90 && ./test_l2_blas
