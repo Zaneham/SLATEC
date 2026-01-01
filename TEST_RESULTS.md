@@ -8,8 +8,8 @@
 |-------|-----|-----|-----|------|-------|
 | **BLAS** | 18/18 | 16/16 | 9/9 | 65/65 | **108/108** |
 | **MINPACK** | 9/9 | 17/17 | 7/7 | 45/45 | **78/78** |
-| **LINPACK** | 6/6 | — | — | — | **6/6** |
-| **Combined** | 33/33 | 33/33 | 16/16 | 110/110 | **192/192** |
+| **LINPACK** | 6/6 | 13/13 | 9/9 | 18/18 | **46/46** |
+| **Combined** | 33/33 | 46/46 | 25/25 | 128/128 | **232/232** |
 
 **All tests pass with safe compiler flags (`-O2` or `-O3`).**
 
@@ -105,20 +105,23 @@ The `-ffast-math` flag is equivalent to:
 - **Pass Rate**: 100%
 - **Breakdown**: BLAS (18), MINPACK (9), LINPACK (6)
 
-### Level 2: Mathematical (33 tests)
+### Level 2: Mathematical (46 tests)
 - **Purpose**: Does output match mathematical truth?
 - **Stability**: Read-only (reference values)
 - **Pass Rate**: 100%
+- **Breakdown**: BLAS (16), MINPACK (17), LINPACK (13)
 
-### Level 3: Historical (16 tests)
+### Level 3: Historical (25 tests)
 - **Purpose**: Does output match IBM 360?
 - **Stability**: Read-only (golden values from Hercules/TK4-)
 - **Pass Rate**: 100%
+- **Breakdown**: BLAS (9), MINPACK (7), LINPACK (9)
 
-### Level 4: Hostile (110 tests)
+### Level 4: Hostile (128 tests)
 - **Purpose**: What breaks under stress?
 - **Stability**: Read-only (platform detection)
 - **Pass Rate**: 100% with safe flags
+- **Breakdown**: BLAS (65), MINPACK (45), LINPACK (18)
 
 ---
 
@@ -162,6 +165,19 @@ The `-ffast-math` flag is equivalent to:
 | Scaling Sensitivity | 3 | Homogeneity preservation |
 | Jacobian Computation | 3 | Finite difference accuracy |
 | LM Parameter Sensitivity | 3 | Trust region effects |
+
+### LINPACK Level 4 (18 tests)
+
+| Category | Tests | What It Detects |
+|----------|-------|-----------------|
+| Ill-Conditioned Matrices | 2 | Hilbert, Vandermonde stability |
+| Subnormal Elements | 2 | FTZ/DAZ effects on matrix elements |
+| Extreme Scaling | 3 | Near overflow/underflow |
+| Pivoting Stress | 2 | Partial pivoting correctness |
+| Near-Singular | 2 | Detection of rank deficiency |
+| Inf/NaN Handling | 2 | IEEE special value propagation |
+| Cholesky Edge Cases | 3 | SPD detection, conditioning |
+| Reproducibility | 2 | Deterministic results |
 
 ---
 
@@ -252,14 +268,17 @@ gfortran -O2 -o test_l1_linpack test/level1_regression/test_l1_linear_linpack.f9
 # Level 2: Mathematical
 gfortran -O2 -o test_l2_blas test/level2_mathematical/test_l2_linear_blas.f90 && ./test_l2_blas
 gfortran -O2 -o test_l2_minpack test/level2_mathematical/test_l2_minpack_mgh.f90 && ./test_l2_minpack
+gfortran -O2 -o test_l2_linpack test/level2_mathematical/test_l2_linear_linpack.f90 && ./test_l2_linpack
 
 # Level 3: Historical
 gfortran -O2 -o test_l3_blas test/level3_historical/test_l3_linear_blas.f90 && ./test_l3_blas
 gfortran -O2 -o test_l3_minpack test/level3_historical/test_l3_minpack.f90 && ./test_l3_minpack
+gfortran -O2 -o test_l3_linpack test/level3_historical/test_l3_linear_linpack.f90 && ./test_l3_linpack
 
 # Level 4: Hostile (safe flags)
 gfortran -O2 -o test_l4_blas test/level4_hostile/test_l4_linear_blas.f90 && ./test_l4_blas
 gfortran -O2 -o test_l4_minpack test/level4_hostile/test_l4_minpack.f90 && ./test_l4_minpack
+gfortran -O2 -o test_l4_linpack test/level4_hostile/test_l4_linear_linpack.f90 && ./test_l4_linpack
 
 # Level 4: Hostile (with hostile flags — expected failures)
 gfortran -Ofast -o test_l4_hostile test/level4_hostile/test_l4_linear_blas.f90 && ./test_l4_hostile
