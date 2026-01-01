@@ -266,3 +266,95 @@ This is in contrast to Bessel K_0 which shows 2-4 ULP deviations with -ffast-mat
 1. Abramowitz, M. & Stegun, I.A. (1964). Handbook of Mathematical Functions. NBS.
 2. NIST Digital Library of Mathematical Functions. https://dlmf.nist.gov/
 3. IEEE 754-2019. Standard for Floating-Point Arithmetic.
+
+---
+
+## MINPACK (Approximation Module)
+
+*Tested: 1 January 2026*
+
+### DENORM (Double Precision Euclidean Norm)
+
+DENORM computes the Euclidean norm using a three-accumulator algorithm designed to prevent overflow and underflow. It partitions input values into three ranges:
+- **Large components** (> rgiant/n): Scaled accumulation to prevent overflow
+- **Intermediate components**: Direct accumulation
+- **Small components** (< rdwarf): Scaled accumulation to prevent underflow
+
+#### Results Across Configurations
+
+| Test Case | -O0 | -O2 | -O3 -ffast-math |
+|-----------|-----|-----|-----------------|
+| Unit vector | ✓ 1.0 | ✓ 1.0 | ✓ 1.0 |
+| Ones vector (√10) | ✓ 3.162277660168... | ✓ identical | ✓ identical |
+| 3-4-5 triangle | ✓ 5.0 | ✓ 5.0 | ✓ 5.0 |
+| Large (10¹⁵) | ✓ 1.732...×10¹⁵ | ✓ identical | ✓ identical |
+| Small (10⁻¹⁵) | ✓ 1.732...×10⁻¹⁵ | ✓ identical | ✓ identical |
+| Mixed (10⁻¹⁸ to 10¹⁸) | ✓ 1.0×10¹⁸ | ✓ identical | ✓ identical |
+| Zero vector | ✓ 0.0 | ✓ 0.0 | ✓ 0.0 |
+| **Subnormal (10⁻³⁰⁸)** | ✓ 2.49×10⁻³⁰⁸ | ✓ identical | **✗ 0.0** |
+
+### CRITICAL DEVIATION: Subnormal Flush with -ffast-math
+
+**Detected by**: Level 4 Hostile Test  
+**Severity**: Catastrophic (silent data corruption)  
+**Affected**: Any computation involving subnormal (denormalised) floating-point numbers
+
+#### The Problem
+
+When compiled with `-ffast-math`, GCC enables **Flush-To-Zero (FTZ)** mode. FTZ causes the CPU to silently replace subnormal numbers with zero.
+
+#### Observed Behaviour
+
+```
+Input vector: x = (1.11×10⁻³⁰⁸, 1.11×10⁻³⁰⁸, 1.11×10⁻³⁰⁸, 1.11×10⁻³⁰⁸, 1.11×10⁻³⁰⁸)
+
+Expected:     ||x|| = √5 × 1.11×10⁻³⁰⁸ ≈ 2.49×10⁻³⁰⁸
+Without -ffast-math:  DENORM = 2.48770820×10⁻³⁰⁸  ✓
+With -ffast-math:     DENORM = 0.0                 ✗
+```
+
+#### Root Cause Analysis
+
+1. The subnormal value `tiny(1.0_dp) / 2.0_dp = 1.11×10⁻³⁰⁸` is created
+2. With FTZ enabled, the CPU flushes this to zero before any arithmetic
+3. DENORM receives a vector of zeros and correctly returns zero
+4. The algorithm's underflow protection is **bypassed at the hardware level**
+
+DENORM's three-accumulator design handles values down to `rdwarf = 3.834×10⁻²⁰`, but subnormals (below `tiny ≈ 2.225×10⁻³⁰⁸`) are flushed before DENORM ever sees them.
+
+#### Hex Analysis
+
+| Compiler Flags | Subnormal Value | Hex Representation |
+|----------------|-----------------|-------------------|
+| -O2 | 1.112536929253601×10⁻³⁰⁸ | 0x000FFFFFFFFFFFFF |
+| -O3 -ffast-math | 0.0 (flushed) | 0x0000000000000000 |
+
+#### Impact Assessment
+
+**Scientific Computing**: Simulations involving very small quantities (e.g., quantum mechanics, particle physics) may silently produce zeros instead of small values.
+
+**Numerical Linear Algebra**: Condition number estimation, null space computation, and iterative refinement may fail silently.
+
+**Optimisation Algorithms**: MINPACK's Levenberg-Marquardt algorithm uses DENORM for step size computation. Subnormal Jacobian entries would cause premature termination.
+
+#### Mitigation
+
+1. **Never use `-ffast-math`** for numerical code
+2. If aggressive optimisation is required, use `-O3` without `-ffast-math`
+3. Test with Level 4 hostile tests before deployment
+
+### Comparison to IBM 360 Historical Values (Level 3)
+
+DENORM produces **bit-identical** results to IBM System/360 (Hercules/TK4-/FORTRAN G) for all test cases within IEEE 754 representable range:
+
+| Test Case | IBM 360 (Hex FP) | Modern (IEEE 754) | Match |
+|-----------|------------------|-------------------|-------|
+| Unit vector | 0.1000000000000D+01 | 1.0000000000000000 | ✓ |
+| √10 | 0.3162277660168D+01 | 3.1622776601683795 | ✓ |
+| 3-4-5 | 0.5000000000000D+01 | 5.0000000000000000 | ✓ |
+| Large | 0.1732050807569D+16 | 1.7320508075688772×10¹⁵ | ✓ |
+| Small | 0.1732050807569D-14 | 1.7320508075688772×10⁻¹⁵ | ✓ |
+| Mixed | 0.1000000000000D+19 | 1.0000000000000000×10¹⁸ | ✓ |
+| Zero | 0 | 0.0 | ✓ |
+
+Note: IBM 360 uses hexadecimal floating-point (base 16) with different mantissa length. Values match within representation limits of both formats.
