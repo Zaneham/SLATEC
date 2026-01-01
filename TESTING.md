@@ -96,7 +96,7 @@ IBM hexadecimal floating-point differs from IEEE 754:
 - No NaN or Infinity
 - "Wobbling precision" (0-3 bits lost depending on normalisation)
 
-A deviation at Level 3 is not necessarily a bug — it may be an unavoidable consequence of the floating-point representation change. But it must be **documented and explained**.
+A deviation at Level 3 is not necessarily a bug, it may be an unavoidable consequence of the floating-point representation change. But it must be **documented and explained**.
 
 ### Test Location
 
