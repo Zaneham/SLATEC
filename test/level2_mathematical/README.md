@@ -37,8 +37,8 @@ Level 2 tests compare computed values against authoritative mathematical referen
 
 | File | Module | Properties Tested | Status |
 |------|--------|-------------------|--------|
-| test_minpack_mgh.f90 | approximation | Rosenbrock, Powell, Helical Valley, Freudenstein-Roth, DENORM | ✓ **17/17 PASS** |
-| test_linear_blas.f90 | linear | Linearity, distributivity, orthogonality, Pythagorean, norms | ✓ **16/16 PASS** |
+| test_l2_minpack_mgh.f90 | approximation | Rosenbrock, Powell, Helical Valley, Freudenstein-Roth, DENORM | ✓ **17/17 PASS** |
+| test_l2_linear_blas.f90 | linear | Linearity, distributivity, orthogonality, Pythagorean, norms | ✓ **16/16 PASS** |
 
 ### BLAS Mathematical Properties
 
@@ -57,11 +57,11 @@ Level 2 tests compare computed values against authoritative mathematical referen
 cd /c/dev/slatec-modern
 
 # MINPACK
-gfortran -o test_l2_minpack test/level2_mathematical/test_minpack_mgh.f90
+gfortran -o test_l2_minpack test/level2_mathematical/test_l2_minpack_mgh.f90
 ./test_l2_minpack
 
 # BLAS
-gfortran -o test_l2_blas test/level2_mathematical/test_linear_blas.f90
+gfortran -o test_l2_blas test/level2_mathematical/test_l2_linear_blas.f90
 ./test_l2_blas
 ```
 

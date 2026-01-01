@@ -76,8 +76,11 @@ python -m src.fortran360.cli run tests/slatec/blas/test_drotg.f
 ### Modern Fortran Comparison Tests
 ```bash
 cd /c/dev/slatec-modern
-gfortran -o test_l3_blas test/level3_historical/test_linear_blas_ibm360.f90
+gfortran -o test_l3_blas test/level3_historical/test_l3_linear_blas.f90
 ./test_l3_blas
+
+gfortran -o test_l3_minpack test/level3_historical/test_l3_minpack.f90
+./test_l3_minpack
 ```
 
 ## FORTRAN IV Compatibility Notes

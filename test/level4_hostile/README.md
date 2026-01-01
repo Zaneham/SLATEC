@@ -51,8 +51,8 @@ Level 4 tests detect platform-specific behaviour. The same code compiled with di
 
 | File | Module | Tests | Status |
 |------|--------|-------|--------|
-| test_minpack_portability.f90 | approximation | 45 | ✓ **45/45 PASS** |
-| test_linear_blas_hostile.f90 | linear | 65 | ✓ **65/65 PASS** |
+| test_l4_minpack.f90 | approximation | 45 | ✓ **45/45 PASS** |
+| test_l4_linear_blas.f90 | linear | 65 | ✓ **65/65 PASS** |
 
 **Total: 110 Level 4 tests**
 
@@ -101,15 +101,15 @@ Level 4 tests detect platform-specific behaviour. The same code compiled with di
 cd /c/dev/slatec-modern
 
 # MINPACK - Safe flags
-gfortran -O2 -o test_l4_minpack test/level4_hostile/test_minpack_portability.f90
+gfortran -O2 -o test_l4_minpack test/level4_hostile/test_l4_minpack.f90
 ./test_l4_minpack
 
 # BLAS - Safe flags
-gfortran -O2 -o test_l4_blas test/level4_hostile/test_linear_blas_hostile.f90
+gfortran -O2 -o test_l4_blas test/level4_hostile/test_l4_linear_blas.f90
 ./test_l4_blas
 
 # With hostile flags (EXPECTED TO FAIL - validates detection)
-gfortran -Ofast -ffast-math -o test_l4_hostile test/level4_hostile/test_linear_blas_hostile.f90
+gfortran -Ofast -ffast-math -o test_l4_hostile test/level4_hostile/test_l4_linear_blas.f90
 ./test_l4_hostile
 ```
 

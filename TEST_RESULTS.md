@@ -243,23 +243,23 @@ Tests run on:
 cd /c/dev/slatec-modern
 
 # Level 1: Regression
-gfortran -O2 -o test_l1_blas test/level1_regression/test_linear_blas.f90 && ./test_l1_blas
-gfortran -O2 -o test_l1_minpack test/level1_regression/test_minpack.f90 && ./test_l1_minpack
+gfortran -O2 -o test_l1_blas test/level1_regression/test_l1_linear_blas.f90 && ./test_l1_blas
+gfortran -O2 -o test_l1_minpack test/level1_regression/test_l1_minpack.f90 && ./test_l1_minpack
 
 # Level 2: Mathematical
-gfortran -O2 -o test_l2_blas test/level2_mathematical/test_linear_blas.f90 && ./test_l2_blas
-gfortran -O2 -o test_l2_minpack test/level2_mathematical/test_minpack_mgh.f90 && ./test_l2_minpack
+gfortran -O2 -o test_l2_blas test/level2_mathematical/test_l2_linear_blas.f90 && ./test_l2_blas
+gfortran -O2 -o test_l2_minpack test/level2_mathematical/test_l2_minpack_mgh.f90 && ./test_l2_minpack
 
 # Level 3: Historical
-gfortran -O2 -o test_l3_blas test/level3_historical/test_linear_blas_ibm360.f90 && ./test_l3_blas
-gfortran -O2 -o test_l3_minpack test/level3_historical/test_minpack_ibm360.f90 && ./test_l3_minpack
+gfortran -O2 -o test_l3_blas test/level3_historical/test_l3_linear_blas.f90 && ./test_l3_blas
+gfortran -O2 -o test_l3_minpack test/level3_historical/test_l3_minpack.f90 && ./test_l3_minpack
 
 # Level 4: Hostile (safe flags)
-gfortran -O2 -o test_l4_blas test/level4_hostile/test_linear_blas_hostile.f90 && ./test_l4_blas
-gfortran -O2 -o test_l4_minpack test/level4_hostile/test_minpack_portability.f90 && ./test_l4_minpack
+gfortran -O2 -o test_l4_blas test/level4_hostile/test_l4_linear_blas.f90 && ./test_l4_blas
+gfortran -O2 -o test_l4_minpack test/level4_hostile/test_l4_minpack.f90 && ./test_l4_minpack
 
 # Level 4: Hostile (with hostile flags — expected failures)
-gfortran -Ofast -o test_l4_hostile test/level4_hostile/test_linear_blas_hostile.f90 && ./test_l4_hostile
+gfortran -Ofast -o test_l4_hostile test/level4_hostile/test_l4_linear_blas.f90 && ./test_l4_hostile
 ```
 
 ---

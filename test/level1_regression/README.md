@@ -25,9 +25,9 @@ When code changes, Level 1 tests may need updating. This is expected and accepta
 
 | Test File | Module | Routines | Tests | Status |
 |-----------|--------|----------|-------|--------|
-| test_minpack.f90 | approximation | DENORM/ENORM | 9 | ✓ **9/9 PASS** |
-| test_linear_blas.f90 | linear | DAXPY, DSCAL, DCOPY, DSWAP, DROT, DROTG | 18 | ✓ **18/18 PASS** |
-| test_linear_linpack.f90 | linear | DGEFA/DGESL, DPOFA/DPOSL | — | ⏳ In Progress |
+| test_l1_minpack.f90 | approximation | DENORM/ENORM | 9 | ✓ **9/9 PASS** |
+| test_l1_linear_blas.f90 | linear | DAXPY, DSCAL, DCOPY, DSWAP, DROT, DROTG | 18 | ✓ **18/18 PASS** |
+| test_l1_linear_linpack.f90 | linear | DGEFA/DGESL, DPOFA/DPOSL | — | ⏳ In Progress |
 
 ## Running
 
@@ -35,11 +35,11 @@ When code changes, Level 1 tests may need updating. This is expected and accepta
 cd /c/dev/slatec-modern
 
 # MINPACK
-gfortran -o test_l1_minpack test/level1_regression/test_minpack.f90
+gfortran -o test_l1_minpack test/level1_regression/test_l1_minpack.f90
 ./test_l1_minpack
 
 # BLAS
-gfortran -o test_l1_blas test/level1_regression/test_linear_blas.f90
+gfortran -o test_l1_blas test/level1_regression/test_l1_linear_blas.f90
 ./test_l1_blas
 ```
 

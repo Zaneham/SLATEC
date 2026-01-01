@@ -34,13 +34,13 @@ These are the tests we run continuously. They verify basic functionality and cat
 |--------|--------|----------|
 | service | ⏳ Pending | `test/level1_regression/` |
 | special_functions | Partial (Bessel) | `test/test_bessel_regression.f90` |
-| linear (BLAS) | ✓ **18/18 PASS** | `test/level1_regression/test_linear_blas.f90` |
-| linear (LINPACK) | ⏳ In Progress | `test/level1_regression/test_linear_linpack.f90` |
+| linear (BLAS) | ✓ **18/18 PASS** | `test/level1_regression/test_l1_linear_blas.f90` |
+| linear (LINPACK) | ⏳ In Progress | `test/level1_regression/test_l1_linear_linpack.f90` |
 | diff_integ | Partial (QUADPACK) | `test/test_diff_integ_quadpack.f90` |
 | diff_integ_eq | Partial | `test/test_diff_integ_eq.f90` |
 | interpolation | ⏳ Pending | — |
 | integ_trans | ⏳ Pending | — |
-| approximation (MINPACK) | ✓ **9/9 PASS** | `test/level1_regression/test_minpack.f90` |
+| approximation (MINPACK) | ✓ **9/9 PASS** | `test/level1_regression/test_l1_minpack.f90` |
 | nonlin_eq | ⏳ Pending | — |
 | optimisation | ⏳ Pending | — |
 | data_handling | ⏳ Pending | — |
@@ -72,8 +72,8 @@ These tests compare computed values against authoritative mathematical reference
 - `test/test_bessel_golden.f90` — Bessel J, I, K vs A&S tables
 - `test/test_bessel_reference.f90` — Extended validation
 - `test/test_specfun_bessel.f90` — Edge cases
-- `test/level2_mathematical/test_linear_blas.f90` — BLAS linearity, orthogonality, Pythagorean properties
-- `test/level2_mathematical/test_minpack_mgh.f90` — MGH test functions (Rosenbrock, Powell, Helical Valley, Freudenstein-Roth)
+- `test/level2_mathematical/test_l2_linear_blas.f90` — BLAS linearity, orthogonality, Pythagorean properties
+- `test/level2_mathematical/test_l2_minpack_mgh.f90` — MGH test functions (Rosenbrock, Powell, Helical Valley, Freudenstein-Roth)
 
 ---
 
@@ -192,8 +192,8 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 ### Test Files
 
 - `test/test_bessel_portability.f90` — Cross-platform ULP measurement
-- `test/level4_hostile/test_linear_blas_hostile.f90` — BLAS hostile tests (subnormals, Inf/NaN, SIMD edges)
-- `test/level4_hostile/test_minpack_portability.f90` — MINPACK portability (detects FTZ)
+- `test/level4_hostile/test_l4_linear_blas.f90` — BLAS hostile tests (subnormals, Inf/NaN, SIMD edges)
+- `test/level4_hostile/test_l4_minpack.f90` — MINPACK portability (detects FTZ)
 
 ---
 
@@ -237,11 +237,11 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 
 | Level | File | Description |
 |-------|------|-------------|
-| L1 | `test/level1_regression/test_minpack.f90` | Modern Fortran regression |
-| L2 | `test/level2_mathematical/test_minpack_mgh.f90` | MGH test functions |
-| L3 | `test/level3_historical/test_minpack_ibm360.f90` | IBM 360 golden comparisons |
+| L1 | `test/level1_regression/test_l1_minpack.f90` | Modern Fortran regression |
+| L2 | `test/level2_mathematical/test_l2_minpack_mgh.f90` | MGH test functions |
+| L3 | `test/level3_historical/test_l3_minpack.f90` | IBM 360 golden comparisons |
 | L3 | `/c/dev/fortran360/tests/slatec/minpack/test_enorm.f` | FORTRAN IV for Hercules |
-| L4 | `test/level4_hostile/test_minpack_portability.f90` | Portability stress tests |
+| L4 | `test/level4_hostile/test_l4_minpack.f90` | Portability stress tests |
 
 ### IBM 360 Historical Tests (Level 3)
 
@@ -272,12 +272,12 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 
 | Level | File | Description |
 |-------|------|-------------|
-| L1 | `test/level1_regression/test_linear_blas.f90` | Modern Fortran regression |
-| L2 | `test/level2_mathematical/test_linear_blas.f90` | Mathematical property verification |
-| L3 | `test/level3_historical/test_linear_blas_ibm360.f90` | IBM 360 golden comparisons |
+| L1 | `test/level1_regression/test_l1_linear_blas.f90` | Modern Fortran regression |
+| L2 | `test/level2_mathematical/test_l2_linear_blas.f90` | Mathematical property verification |
+| L3 | `test/level3_historical/test_l3_linear_blas.f90` | IBM 360 golden comparisons |
 | L3 | `/c/dev/fortran360/tests/slatec/blas/test_daxpy.f` | FORTRAN IV for Hercules |
 | L3 | `/c/dev/fortran360/tests/slatec/blas/test_drotg.f` | FORTRAN IV for Hercules |
-| L4 | `test/level4_hostile/test_linear_blas_hostile.f90` | Hostile environment tests |
+| L4 | `test/level4_hostile/test_l4_linear_blas.f90` | Hostile environment tests |
 
 ### Mathematical Properties Tested (Level 2)
 
