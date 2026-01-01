@@ -358,3 +358,145 @@ DENORM produces **bit-identical** results to IBM System/360 (Hercules/TK4-/FORTR
 | Zero | 0 | 0.0 | ✓ |
 
 Note: IBM 360 uses hexadecimal floating-point (base 16) with different mantissa length. Values match within representation limits of both formats.
+
+---
+
+## BLAS (Linear Algebra Primitives)
+
+*Tested: 1 January 2026*
+
+### Level 4 Hostile Test Results
+
+BLAS routines (DAXPY, DSCAL, DCOPY, DSWAP, DROT, DROTG) were subjected to 65 hostile environment tests across 16 categories.
+
+#### Results by Compiler Flag
+
+| Flag | Passed | Failed | Failure Categories |
+|------|--------|--------|-------------------|
+| `-O2` | 65/65 | 0 | None |
+| `-O3` | 65/65 | 0 | None |
+| `-O3 -march=native` | 65/65 | 0 | None |
+| `-O2 -flto` | 65/65 | 0 | None |
+| `-O2 -ffast-math` | 59/65 | 6 | Subnormals (2), Inf/NaN (2), NaN variants (2) |
+| `-Ofast` | 59/65 | 6 | Subnormals (2), Inf/NaN (2), NaN variants (2) |
+| `-O2 -ffinite-math-only` | 61/65 | 4 | Inf/NaN (2), NaN variants (2) |
+| `-O2 -funsafe-math-optimizations` | 63/65 | 2 | Subnormals (2) |
+
+### CRITICAL DEVIATION: DAXPY Subnormal Flush
+
+**Detected by**: Level 4 Subnormal Handling Test
+**Severity**: Catastrophic (silent data corruption)
+**Affected**: Any DAXPY computation with subnormal inputs or results
+
+#### Observed Behaviour
+
+```fortran
+! With -O2 (correct)
+call daxpy(n, 1.0_dp, subnormal_x, 1, y, 1)
+! y = subnormal values preserved
+
+! With -ffast-math (incorrect)
+call daxpy(n, 1.0_dp, subnormal_x, 1, y, 1)
+! y = 0.0 (subnormals flushed to zero)
+```
+
+#### Impact
+
+DAXPY is the fundamental operation `Y = alpha*X + Y` used throughout numerical linear algebra. Subnormal flush affects:
+
+1. **Iterative refinement** — Small corrections lost
+2. **Null space computation** — Near-zero vectors corrupted
+3. **Gradient descent** — Small gradients vanish
+4. **Condition estimation** — Small singular values lost
+
+### CRITICAL DEVIATION: DAXPY NaN Non-Propagation
+
+**Detected by**: Level 4 Inf/NaN Propagation Test
+**Severity**: High (incorrect results go undetected)
+**Affected**: Error detection in iterative algorithms
+
+#### Observed Behaviour
+
+```fortran
+! Input with NaN
+x = [1.0, NaN, 3.0]
+call daxpy(3, 1.0_dp, x, 1, y, 1)
+
+! With -O2: y contains NaN (correct - propagates error)
+! With -ffast-math: y = finite values (NaN silently dropped)
+```
+
+#### Impact
+
+NaN values typically indicate:
+- Division by zero
+- 0 * Inf
+- Inf - Inf
+- sqrt of negative number
+
+When NaN doesn't propagate, errors go undetected and produce plausible-looking but wrong results.
+
+### CRITICAL DEVIATION: Infinity Arithmetic
+
+**Detected by**: Level 4 Inf/NaN Propagation Test
+**Severity**: High
+**Affected**: Overflow detection
+
+#### Observed Behaviour
+
+```fortran
+! With -O2 (IEEE 754 compliant)
+Inf - Inf = NaN  ✓
+0 * Inf = NaN    ✓
+
+! With -ffast-math (non-compliant)
+Inf - Inf = undefined (not NaN)
+0 * Inf = undefined (not NaN)
+```
+
+### Additional Warnings (Not Failures)
+
+The following were detected but classified as warnings, not failures:
+
+| Test | -O2 Result | -ffast-math Result | Status |
+|------|------------|-------------------|--------|
+| Signed zero distinction | +0 ≠ -0 | +0 = -0 | WARN |
+| 1/(+0) vs 1/(-0) | +Inf vs -Inf | Same | WARN |
+| (1+1e-15) - 1 | 1.11e-16 | 1.11e-16 | OK (same) |
+| Associativity | Violated (IEEE correct) | Violated | OK |
+
+### BLAS Safe Usage Summary
+
+| Routine | Safe Flags | Dangerous Flags | Notes |
+|---------|------------|-----------------|-------|
+| DAXPY | `-O2`, `-O3` | `-ffast-math` | Subnormal, NaN issues |
+| DSCAL | `-O2`, `-O3` | `-ffast-math` | Subnormal issues |
+| DCOPY | Any | None | Pure memory copy |
+| DSWAP | Any | None | Pure memory swap |
+| DROT | `-O2`, `-O3` | `-ffast-math` | May affect precision |
+| DROTG | `-O2`, `-O3` | `-ffast-math` | Extreme value handling |
+
+---
+
+## Comprehensive Flag Impact Matrix
+
+*What exactly breaks with each dangerous flag?*
+
+| Flag | Subnormals | Signed Zero | Inf | NaN | Associativity | Extended Precision |
+|------|------------|-------------|-----|-----|---------------|-------------------|
+| `-ffast-math` | FLUSH | Merged | Broken | Broken | May reorder | OK |
+| `-ffinite-math-only` | OK | OK | Broken | Broken | OK | OK |
+| `-funsafe-math-optimizations` | FLUSH | May merge | OK | OK | May reorder | May leak |
+| `-fno-signed-zeros` | OK | Merged | OK | OK | OK | OK |
+| `-fassociative-math` | OK | OK | OK | OK | Reorders | OK |
+| `-freciprocal-math` | OK | OK | OK | OK | OK | OK |
+| `-fno-trapping-math` | OK | OK | OK | OK | OK | OK |
+
+### Legend
+
+- **FLUSH**: Values flushed to zero (silent data corruption)
+- **Merged**: +0 and -0 treated as identical
+- **Broken**: IEEE 754 semantics violated
+- **Reorders**: (a+b)+c may not equal a+(b+c)
+- **May leak**: x87 80-bit precision may affect results
+- **OK**: Behaviour unchanged from strict IEEE 754
