@@ -247,7 +247,7 @@ contains
     integer, intent(in) :: lda, n
     real(dp), intent(inout) :: a(lda,*)
     integer, intent(out) :: ipvt(*), info
-    integer :: j, k, l
+    integer :: i, j, k, l
     real(dp) :: t
 
     info = 0
@@ -281,8 +281,8 @@ contains
         if (l /= k) then
           a(l,j) = a(k,j); a(k,j) = t
         end if
-        do l = k+1, n
-          a(l,j) = a(l,j) + t * a(l,k)
+        do i = k+1, n
+          a(i,j) = a(i,j) + t * a(i,k)
         end do
       end do
     end do
@@ -296,7 +296,7 @@ contains
     real(dp), intent(in) :: a(lda,*)
     integer, intent(in) :: ipvt(*)
     real(dp), intent(inout) :: b(*)
-    integer :: k, l
+    integer :: i, k, l
     real(dp) :: t
 
     if (job == 0) then
@@ -308,8 +308,8 @@ contains
         if (l /= k) then
           b(l) = b(k); b(k) = t
         end if
-        do l = k+1, n
-          b(l) = b(l) + t * a(l,k)
+        do i = k+1, n
+          b(i) = b(i) + t * a(i,k)
         end do
       end do
 
@@ -317,8 +317,8 @@ contains
       do k = n, 1, -1
         b(k) = b(k) / a(k,k)
         t = -b(k)
-        do l = 1, k-1
-          b(l) = b(l) + t * a(l,k)
+        do i = 1, k-1
+          b(i) = b(i) + t * a(i,k)
         end do
       end do
     end if
@@ -329,15 +329,15 @@ contains
     integer, intent(in) :: lda, n
     real(dp), intent(inout) :: a(lda,*)
     integer, intent(out) :: info
-    integer :: j, k
+    integer :: j, k, i
     real(dp) :: s, t
 
     do j = 1, n
       s = 0.0_dp
       do k = 1, j-1
         t = a(k,j)
-        do info = 1, k-1
-          t = t - a(info,k) * a(info,j)
+        do i = 1, k-1
+          t = t - a(i,k) * a(i,j)
         end do
         t = t / a(k,k)
         a(k,j) = t
@@ -354,33 +354,31 @@ contains
   end subroutine
 
   ! DPOSL: Solve using Cholesky factorization
+  ! Solves A*x = b where A = L*L' and L is stored in upper triangle of a
   subroutine dposl_local(a, lda, n, b)
     integer, intent(in) :: lda, n
     real(dp), intent(in) :: a(lda,*)
     real(dp), intent(inout) :: b(*)
-    integer :: k
+    integer :: k, j
     real(dp) :: t
 
-    ! Solve L*y = b
+    ! Forward substitution: Solve L*y = b
+    ! L is stored as L(j,k) = a(j,k) for j <= k
     do k = 1, n
       t = 0.0_dp
-      do t = 1, k-1
-        ! This is wrong - need to fix
+      do j = 1, k-1
+        t = t + a(j,k) * b(j)
       end do
-      t = b(k)
-      do k = 1, k-1
-        ! Also wrong
-      end do
-      b(k) = b(k) / a(k,k)
+      b(k) = (b(k) - t) / a(k,k)
     end do
 
-    ! Solve L'*x = y
+    ! Back substitution: Solve L'*x = y
     do k = n, 1, -1
-      b(k) = b(k) / a(k,k)
-      t = -b(k)
-      do k = 1, k-1
-        ! Fix needed
+      t = 0.0_dp
+      do j = k+1, n
+        t = t + a(k,j) * b(j)
       end do
+      b(k) = (b(k) - t) / a(k,k)
     end do
   end subroutine
 
