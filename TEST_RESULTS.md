@@ -19,16 +19,18 @@
 
 ### gfortran 13.2.0 on Windows (MSYS2)
 
-| Flag Combination | BLAS L4 | MINPACK L4 | Safe? |
-|------------------|---------|------------|-------|
-| `-O2` | 65/65 ✓ | 45/45 ✓ | **YES** |
-| `-O3` | 65/65 ✓ | 45/45 ✓ | **YES** |
-| `-O3 -march=native` | 65/65 ✓ | 45/45 ✓ | **YES** |
-| `-O2 -flto` | 65/65 ✓ | 45/45 ✓ | **YES** |
-| `-O2 -ffast-math` | 59/65 ✗ | 44/45 ✗ | **NO** |
-| `-Ofast` | 59/65 ✗ | 44/45 ✗ | **NO** |
-| `-O2 -ffinite-math-only` | 61/65 ✗ | — | **NO** |
-| `-O2 -funsafe-math-optimizations` | 63/65 ✗ | — | **NO** |
+| Flag Combination | BLAS L4 | MINPACK L4 | LINPACK L4 | Safe? |
+|------------------|---------|------------|------------|-------|
+| `-O2` | 65/65 ✓ | 45/45 ✓ | 18/18 ✓ | **YES** |
+| `-O3` | 65/65 ✓ | 45/45 ✓ | 18/18 ✓ | **YES** |
+| `-O3 -march=native` | 65/65 ✓ | 45/45 ✓ | 18/18 ✓ | **YES** |
+| `-O2 -flto` | 65/65 ✓ | 45/45 ✓ | 18/18 ✓ | **YES** |
+| `-O2 -ffast-math` | 59/65 ✗ | 44/45 ✗ | 18/18 ⚠ | **NO** |
+| `-Ofast` | 59/65 ✗ | 44/45 ✗ | 18/18 ⚠ | **NO** |
+| `-O2 -ffinite-math-only` | 61/65 ✗ | — | 18/18 ⚠ | **NO** |
+| `-O2 -funsafe-math-optimizations` | 63/65 ✗ | — | 18/18 ✓ | **NO** |
+
+**Note:** LINPACK L4 tests pass with all flags but show warnings (⚠) for Inf/NaN handling when `-ffinite-math-only` is active. The tests detect but don't fail on altered IEEE behavior.
 
 ---
 
