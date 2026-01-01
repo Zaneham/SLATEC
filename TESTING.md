@@ -139,24 +139,44 @@ These are the portability stress tests. The same code compiled with different co
 
 ### BLAS Level 4 Results
 
-| Test Suite | Default | `-ffast-math` |
-|------------|---------|---------------|
-| Subnormal Handling | **3/3 PASS** | May FAIL (DAZ/FTZ) |
-| Signed Zero | **3/3 PASS** | 3/3 PASS |
-| Inf/NaN Propagation | **3/3 PASS** | 3/3 PASS |
-| Extreme Values | **4/4 PASS** | 4/4 PASS |
-| Accumulation Precision | **3/3 PASS** | 3/3 PASS |
-| SIMD Edge Cases | **4/4 PASS** | 4/4 PASS |
-| **Total** | **20/20 PASS** | May vary |
+| Test Category | Tests | Default | `-ffast-math` |
+|---------------|-------|---------|---------------|
+| Subnormals | 3 | ✓ PASS | May FAIL (DAZ/FTZ) |
+| Signed Zero | 3 | ✓ PASS | ✓ PASS |
+| Inf/NaN Propagation | 3 | ✓ PASS | ✓ PASS |
+| Extreme Values | 4 | ✓ PASS | ✓ PASS |
+| Accumulation Precision | 3 | ✓ PASS | ✓ PASS |
+| SIMD Edge Cases | 4 | ✓ PASS | ✓ PASS |
+| Rounding Modes | 4 | ✓ PASS | ✓ PASS |
+| FMA Detection | 3 | ✓ PASS | ✓ PASS |
+| Catastrophic Cancellation | 3 | ✓ PASS | May vary |
+| Associativity | 4 | ✓ PASS | May FAIL |
+| Extended Precision (x87) | 4 | ✓ PASS | ✓ PASS |
+| Reproducibility | 3 | ✓ PASS | ✓ PASS |
+| Compiler Flag Detection | 4 | ✓ PASS | FAIL (expected) |
+| NaN Variants | 4 | ✓ PASS | May FAIL |
+| ULP Accuracy | 4 | ✓ PASS | ✓ PASS |
+| Memory Alignment | 12 | ✓ PASS | ✓ PASS |
+| **Total** | **65** | **65/65 PASS** | May vary |
 
 ### MINPACK Level 4 Results
 
-| Test Suite | Default | `-ffast-math` |
-|------------|---------|---------------|
-| ULP Precision | **3/3 PASS** | 3/3 PASS |
-| Edge Cases | **3/3 PASS** | **2/3 FAIL** |
-| Associativity | **3/3 PASS** | 3/3 PASS |
-| **Total** | **9/9 PASS** | **8/9 FAIL** |
+| Test Category | Tests | Default | `-ffast-math` |
+|---------------|-------|---------|---------------|
+| ULP Precision | 4 | ✓ PASS | ✓ PASS |
+| Edge Cases | 5 | ✓ PASS | May FAIL |
+| Associativity | 4 | ✓ PASS | May FAIL |
+| Rounding Modes | 4 | ✓ PASS | ✓ PASS |
+| FMA Effects | 3 | ✓ PASS | ✓ PASS |
+| Catastrophic Cancellation | 3 | ✓ PASS | May vary |
+| Condition Number | 3 | ✓ PASS | ✓ PASS |
+| Convergence Reproducibility | 3 | ✓ PASS | ✓ PASS |
+| Compiler Flag Detection | 4 | ✓ PASS | FAIL (expected) |
+| Extended Precision (x87) | 3 | ✓ PASS | ✓ PASS |
+| Scaling Sensitivity | 3 | ✓ PASS | ✓ PASS |
+| Jacobian Computation | 3 | ✓ PASS | May vary |
+| LM Parameter Sensitivity | 3 | ✓ PASS | ✓ PASS |
+| **Total** | **45** | **45/45 PASS** | May FAIL |
 
 ### Known Hostile Behaviours
 
@@ -185,16 +205,16 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 |--------|----------|----|----|----|----|---------|
 | **service** | 3 | — | — | ✓ | — | ~33% |
 | **special_functions** | 270 | ~20 | ~20 | 4 | ~20 | ~9% |
-| **linear (BLAS)** | 217 | 18 | 16 | 9 | 20 | ~29% |
+| **linear (BLAS)** | 217 | 18 | 16 | 9 | 65 | ~50% |
 | **diff_integ** | 81 | ~10 | ~10 | — | — | ~12% |
 | **diff_integ_eq** | 225 | ~5 | — | — | — | ~2% |
 | **interpolation** | 80 | — | — | — | — | 0% |
 | **integ_trans** | 48 | — | — | — | — | 0% |
-| **approximation** | 78 | 9 | 17 | 7 | 9 | ~54% |
+| **approximation** | 78 | 9 | 17 | 7 | 45 | ~100% |
 | **nonlin_eq** | 15 | — | — | — | — | 0% |
 | **optimisation** | 46 | — | — | — | — | 0% |
 | **data_handling** | 16 | — | — | — | — | 0% |
-| **TOTAL** | **1,079** | ~62 | ~63 | ~22 | ~49 | **~10%** |
+| **TOTAL** | **1,079** | ~62 | ~63 | ~22 | ~130 | **~18%** |
 
 ---
 
@@ -209,9 +229,9 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 | **L1 Regression** | 9 | ✓ **9/9 PASS** | DENORM (7) + ENORM (2) |
 | **L2 Mathematical** | 17 | ✓ **17/17 PASS** | Rosenbrock, Powell, Helical, F-R, DENORM |
 | **L3 Historical** | 7 | ✓ **7/7 PASS** | IBM 360 golden values |
-| **L4 Hostile** | 9 | ✓ **9/9 PASS** | ULP, edge cases, associativity |
-| **L4 with -ffast-math** | 9 | ✗ **8/9 FAIL** | Subnormal flush detected |
-| **TOTAL** | **42** | **42/42 PASS** | (without hostile flags) |
+| **L4 Hostile** | 45 | ✓ **45/45 PASS** | 13 categories, comprehensive portability |
+| **L4 with -ffast-math** | 45 | May FAIL | Subnormal flush, associativity detected |
+| **TOTAL** | **78** | **78/78 PASS** | (without hostile flags) |
 
 ### Test Files
 
@@ -245,8 +265,8 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 | **L1 Regression** | 18 | ✓ **18/18 PASS** | DAXPY, DSCAL, DCOPY, DSWAP, DROT, DROTG |
 | **L2 Mathematical** | 16 | ✓ **16/16 PASS** | Linearity, orthogonality, Pythagorean |
 | **L3 Historical** | 9 | ✓ **9/9 PASS** | IBM 360 golden values (Pythagorean triples) |
-| **L4 Hostile** | 20 | ✓ **20/20 PASS** | Subnormals, Inf/NaN, SIMD edges |
-| **TOTAL** | **63** | **63/63 PASS** | |
+| **L4 Hostile** | 65 | ✓ **65/65 PASS** | 16 categories, comprehensive portability |
+| **TOTAL** | **108** | **108/108 PASS** | |
 
 ### Test Files
 
@@ -270,7 +290,7 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 | Norm preservation | \|\|Rx\|\| = \|\|x\|\| for rotations |
 | Triangle inequality | \|\|x+y\|\| ≤ \|\|x\|\| + \|\|y\|\| |
 
-### Hostile Tests (Level 4)
+### Hostile Tests (Level 4) — 65 Tests in 16 Categories
 
 | Category | Tests | What It Catches |
 |----------|-------|-----------------|
@@ -280,6 +300,16 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 | Extreme Values | 4 | Near overflow/underflow |
 | Accumulation | 3 | Precision loss in summations |
 | SIMD Edges | 4 | Vectorization boundary bugs |
+| Rounding Modes | 4 | All four IEEE rounding modes |
+| FMA Detection | 3 | Fused multiply-add vs separate |
+| Catastrophic Cancellation | 3 | Nearly-equal value subtraction |
+| Associativity | 4 | Summation reordering, `-ffast-math` |
+| Extended Precision (x87) | 4 | 80-bit register leakage |
+| Reproducibility | 3 | Identical results across runs |
+| Compiler Flag Detection | 4 | Automatic dangerous flag detection |
+| NaN Variants | 4 | qNaN vs sNaN, payload preservation |
+| ULP Accuracy | 4 | Mathematical precision deviation |
+| Memory Alignment | 12 | Non-aligned, strided, reverse access |
 
 ---
 
