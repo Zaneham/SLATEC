@@ -79,7 +79,7 @@ SLATEC organises its routines using a hierarchical classification scheme:
 
 The grand cleanup:
 
-- [x] Convert to free-form Fortran 2018
+- [x] Convert to free-form Fortran 2018 (Cheers Mehdi!)
 - [x] Create proper modules with explicit interfaces
 - [x] **Eliminate GOTOs with structured control flow** (8,296 of 8,296 removed — 100%. Every last one.)
 - [x] Replace arithmetic IF statements (remember those? No? Good.)
