@@ -83,37 +83,127 @@ These tests compare computed values against authoritative mathematical reference
 
 This is the **"last known good"** reference. SLATEC was developed and validated on IBM mainframes. If our modernised code produces different output than the original would have on IBM hardware, we need to understand *why*.
 
-**Platform:** IBM System/360 via Hercules emulation (TK4-/MVT)
-**Compiler:** IBM FORTRAN G (1966) and FORTRAN H (1969)
-**Floating-Point:** IBM Hexadecimal (base-16, not IEEE 754)
+### Test Environment
+
+| Component | Version | Notes |
+|-----------|---------|-------|
+| **Compiler** | IBM FORTRAN G Level 21 (IEYFORT) | 1966 - predates SLATEC by 16 years |
+| **System** | MVS 3.8j (TK4-) | The mainframe that refuses to die |
+| **Emulator** | Hercules 3.07 | Making virtual iron from actual silicon |
+| **Library** | SLATEC 4.1 | Sandia/Los Alamos/Air Force origin |
 
 ### Why This Matters
 
 IBM hexadecimal floating-point differs from IEEE 754:
-- Base 16 vs base 2
-- Different mantissa lengths (56 bits vs 52 bits for double)
-- No gradual underflow
-- No NaN or Infinity
-- "Wobbling precision" (0-3 bits lost depending on normalisation)
 
-A deviation at Level 3 is not necessarily a bug, it may be an unavoidable consequence of the floating-point representation change. But it must be **documented and explained**.
+| Property | IBM Hex FP | IEEE 754 |
+|----------|------------|----------|
+| Base | 16 | 2 |
+| Single mantissa | 24 bits (6 hex) | 23 bits |
+| Double mantissa | 56 bits (14 hex) | 52 bits |
+| Gradual underflow | No | Yes |
+| NaN / Infinity | No | Yes |
+| Precision | "Wobbling" (0-3 bits lost) | Consistent |
+
+A deviation at Level 3 is not necessarily a bug - it may be an unavoidable consequence of the floating-point representation change. But it must be **documented and explained**.
+
+### Machine Constants Verification
+
+IBM System/360 uses hexadecimal floating-point because *of course it does*.
+
+**I1MACH (Integer Machine Constants)**
+```
+I1MACH(1)  = 5       Standard input unit
+I1MACH(2)  = 6       Standard output unit
+I1MACH(10) = 16      Base for floating-point (hex!)
+I1MACH(11) = 6       Hex digits in single precision mantissa
+I1MACH(14) = 14      Hex digits in double precision mantissa
+```
+
+**R1MACH (Single Precision):** epsilon = 9.54e-7, range 1e-78 to 1e76
+
+**D1MACH (Double Precision):** epsilon = 2.22e-16, range 1e-79 to 1e75
+
+### Test Results Summary
+
+| Routine | Category | Precision | Status | Max Error |
+|---------|----------|-----------|--------|-----------|
+| **I1MACH** | Machine Constants | Integer | PASS | exact |
+| **R1MACH** | Machine Constants | Single | PASS | exact |
+| **D1MACH** | Machine Constants | Double | PASS | exact |
+| **GAMLN** | Special Functions | Single | PASS | ~1e-6 |
+| **DGAMLN** | Special Functions | Double | PASS | ~1e-15 |
+| **PYTHAG** | Numerical Utilities | Single | PASS | ~1e-6 |
+| **ENORM** | Vector Operations | Single | PASS | 0 |
+| **DENORM** | Vector Operations | Double | PASS | ~1e-15 |
+| **CDIV** | Complex Arithmetic | Single | PASS | ~1e-7 |
+| **CSROOT** | Complex Arithmetic | Single | PASS | 0 |
+| **RC** | Elliptic Integrals | Single | PASS | ~1e-6 |
+| **DRC** | Elliptic Integrals | Double | PASS | ~1e-16 |
+| **VNWRMS** | Vector Operations | Single | PASS | ~1e-6 |
+| **HVNRM** | Vector Operations | Single | PASS | 0 |
+
+**14 routines tested. 14 routines passed. 0 surprises.**
+
+### Highlights
+
+**Carlson Elliptic Integrals** - Computing pi via the duplication theorem:
+- RC(0, 1/4) = 3.1415930 (single) - pi to 7 digits on 1966 hardware
+- DRC(0, 1/4) = 3.14159265358979 (double) - pi to 15 digits, error 2.4e-15
+
+**Overflow Protection** - PYTHAG and ENORM handle extreme values correctly:
+- PYTHAG(1e30, 1e30) = sqrt(2)*1e30 without overflow
+- DENORM([1e30, 1e30]) = sqrt(2)*1e30 with error 0.0
+
+### Accuracy Notes
+
+**Single Precision (6 hex digits = 7.2 decimal digits)**
+- Observed errors: 1e-5 to 1e-7
+- Within expected tolerance for IBM 360 hexadecimal FP
+
+**Double Precision (14 hex digits = 16.8 decimal digits)**
+- Observed errors: 1e-15 to 1e-16
+- Approaching machine epsilon, as expected
+
+### FORTRAN IV Compatibility Fixes
+
+Code modifications required to compile on IBM FORTRAN G (1966):
+
+| Issue | FORTRAN 77 | FORTRAN IV Fix |
+|-------|------------|----------------|
+| Deck markers | `*DECK NAME` | `C     DECK NAME` |
+| Generic intrinsics | `MAX`, `MIN`, `ABS` | `AMAX1`, `AMIN1`, `ABS` (SP) |
+| Generic intrinsics (DP) | `MAX`, `MIN`, `LOG` | `DMAX1`, `DMIN1`, `DLOG` |
+| Assumed-size arrays | `X(*)` | `X(N)` |
+| SAVE statement | `SAVE VAR` | (removed) |
+| Hex constants | `Z'00100000'` | Decimal via EQUIVALENCE |
+| Block IF | `IF (...) THEN` | `IF (...) GO TO label` |
 
 ### Test Location
 
 `/c/dev/fortran360/tests/slatec/`
 
-### Coverage
+### Coverage by Module
 
 | Module | Routines Tested | Status |
 |--------|-----------------|--------|
-| service | D1MACH, R1MACH, I1MACH | ✓ PASS |
-| special_functions | GAMLN, DGAMLN, CDIV, CSROOT | ✓ PASS |
-| linear (BLAS) | DAXPY, DROTG | ✓ **9/9 PASS** |
-| linear | ENORM, PYTHAG | ✓ PASS |
-| approximation (MINPACK) | DENORM | ✓ **7/7 PASS** |
-| approximation (MINPACK) | DQRFAC | ⏳ Pending |
-| approximation (MINPACK) | DNLS1 | ⏳ Pending |
-| approximation (MINPACK) | DNSQ | ⏳ Pending |
+| service | D1MACH, R1MACH, I1MACH | PASS |
+| special_functions | GAMLN, DGAMLN, CDIV, CSROOT | PASS |
+| linear (BLAS) | DAXPY, DROTG | **9/9 PASS** |
+| linear | ENORM, PYTHAG | PASS |
+| elliptic | RC, DRC | PASS |
+| approximation (MINPACK) | DENORM | **7/7 PASS** |
+| approximation (MINPACK) | DQRFAC | Pending |
+| approximation (MINPACK) | DNLS1 | Pending |
+| approximation (MINPACK) | DNSQ | Pending |
+
+### Historical Context
+
+- **SLATEC**: 1982 joint effort by Sandia, Los Alamos, and Air Force labs
+- **FORTRAN G**: 1966 IBM compiler, predating SLATEC by 16 years
+- **IBM 360**: 1964 architecture, still running (virtually) today
+
+The fact that 1982 library code runs perfectly on a 1966 compiler is a testament to FORTRAN's legendary backward compatibility.
 
 *BLAS tested with Pythagorean triple golden values. FORTRAN IV source in `/c/dev/fortran360/tests/slatec/blas/`.*
 *DENORM tested on IBM System/360 (Hercules/TK4-) using FORTRAN G, 1 January 2026.*

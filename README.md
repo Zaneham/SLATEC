@@ -289,6 +289,12 @@ Apologies for the NZ English throughout. Colour has a 'u' in it and that's simpl
 
 ---
 
+## Related Projects
+
+[SLATEC.jl](https://github.com/Zaneham/SLATEC.jl) ports validated routines to Julia for those who prefer their numerical archaeology without the semicolons. Only routines passing all four test levels get ported. The rest remain here, documented but not shipped.
+
+---
+
 ## Contributing
 
 Found something that needs sorting? Spotted an issue or want to help with the remaining modernisation tasks? PRs welcome.
