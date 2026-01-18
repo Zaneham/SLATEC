@@ -36,9 +36,9 @@ These are the tests we run continuously. They verify basic functionality and cat
 | special_functions | Partial (Bessel) | `test/test_bessel_regression.f90` |
 | linear (BLAS) | ✓ **18/18 PASS** | `test/level1_regression/test_l1_linear_blas.f90` |
 | linear (LINPACK) | ⏳ In Progress | `test/level1_regression/test_l1_linear_linpack.f90` |
-| diff_integ | Partial (QUADPACK) | `test/test_diff_integ_quadpack.f90` |
+| diff_integ | ✓ **12/12 PASS** | `test/level1_regression/test_l1_diff_integ.f90` |
 | diff_integ_eq | Partial | `test/test_diff_integ_eq.f90` |
-| interpolation | ⏳ Pending | — |
+| interpolation | ✓ **9/9 PASS** | `test/level1_regression/test_l1_interpolation.f90` |
 | integ_trans | ⏳ Pending | — |
 | approximation (MINPACK) | ✓ **9/9 PASS** | `test/level1_regression/test_l1_minpack.f90` |
 | nonlin_eq | ⏳ Pending | — |
@@ -65,7 +65,8 @@ These tests compare computed values against authoritative mathematical reference
 |--------|--------|------------------|
 | special_functions | Partial | A&S Tables 9.1, 9.8 (Bessel) |
 | linear (BLAS) | ✓ **16/16 PASS** | Lawson et al., ACM TOMS 5(3), 1979 |
-| diff_integ | Partial | Closed-form integrals |
+| diff_integ | ✓ **17/17 PASS** | Closed-form integrals, A&S, NIST DLMF |
+| interpolation | ⚠ **14/17 PASS** | de Boor (1978), Fritsch & Carlson (1980) |
 | approximation (MINPACK) | ✓ **17/17 PASS** | Moré, Garbow, Hillstrom (1981) |
 
 **Test Files:**
@@ -74,6 +75,8 @@ These tests compare computed values against authoritative mathematical reference
 - `test/test_specfun_bessel.f90` — Edge cases
 - `test/level2_mathematical/test_l2_linear_blas.f90` — BLAS linearity, orthogonality, Pythagorean properties
 - `test/level2_mathematical/test_l2_minpack_mgh.f90` — MGH test functions (Rosenbrock, Powell, Helical Valley, Freudenstein-Roth)
+- `test/level2_mathematical/test_l2_diff_integ.f90` — Gauss-Kronrod exactness, classical integrals, infinite intervals
+- `test/level2_mathematical/test_l2_interpolation.f90` — B-spline, PCHIP, polynomial interpolation properties
 
 ---
 
@@ -196,6 +199,11 @@ Code modifications required to compile on IBM FORTRAN G (1966):
 | approximation (MINPACK) | DQRFAC | Pending |
 | approximation (MINPACK) | DNLS1 | Pending |
 | approximation (MINPACK) | DNSQ | Pending |
+| interpolation | DPLINT, DPOLVL (polynomial) | **4/4 PASS** |
+| interpolation | DPCHIM, DPCHFE (PCHIP) | N/A (post-1980) |
+| interpolation | DBINT4, DBVALU (B-spline) | N/A (post-1978) |
+| diff_integ | Trapezoidal rule | **2/2 PASS** |
+| diff_integ | QUADPACK routines | N/A (post-1983) |
 
 ### Historical Context
 
@@ -289,22 +297,22 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 
 ## Module Coverage Summary
 
-*Last updated: 1 January 2026*
+*Last updated: 18 January 2026*
 
 | Module | Routines | L1 | L2 | L3 | L4 | Overall |
 |--------|----------|----|----|----|----|---------|
 | **service** | 3 | — | — | ✓ | — | ~33% |
 | **special_functions** | 270 | ~20 | ~20 | 4 | ~20 | ~9% |
 | **linear (BLAS)** | 217 | 18 | 16 | 9 | 65 | ~50% |
-| **diff_integ** | 81 | ~10 | ~10 | — | — | ~12% |
+| **diff_integ** | 81 | 12 | 17 | 2 | 12 | ~53% |
 | **diff_integ_eq** | 225 | ~5 | — | — | — | ~2% |
-| **interpolation** | 80 | — | — | — | — | 0% |
+| **interpolation** | 80 | 9 | 14 | 4 | 19 | ~58% |
 | **integ_trans** | 48 | — | — | — | — | 0% |
 | **approximation** | 78 | 9 | 17 | 7 | 45 | ~100% |
 | **nonlin_eq** | 15 | — | — | — | — | 0% |
 | **optimisation** | 46 | — | — | — | — | 0% |
 | **data_handling** | 16 | — | — | — | — | 0% |
-| **TOTAL** | **1,079** | ~62 | ~63 | ~22 | ~130 | **~18%** |
+| **TOTAL** | **1,079** | ~83 | ~98 | ~28 | ~161 | **~25%** |
 
 ---
 
@@ -400,6 +408,102 @@ See [DEVIATIONS.md](DEVIATIONS.md#critical-deviation-subnormal-flush-with--ffast
 | NaN Variants | 4 | qNaN vs sNaN, payload preservation |
 | ULP Accuracy | 4 | Mathematical precision deviation |
 | Memory Alignment | 12 | Non-aligned, strided, reverse access |
+
+---
+
+## Diff_Integ Test Details
+
+*Testing QUADPACK and GAUS8 numerical integration routines*
+
+### Complete 4-Level Results (18 January 2026)
+
+| Level | Tests | Result | Notes |
+|-------|-------|--------|-------|
+| **L1 Regression** | 12 | ✓ **12/12 PASS** | DGAUS8, DQAGS, DQAGI, DQNG |
+| **L2 Mathematical** | 17 | ✓ **17/17 PASS** | Gauss-Kronrod exactness, classical integrals |
+| **L3 Historical** | 2 | ✓ **2/2 PASS** | Trapezoidal rule (QUADPACK N/A - post-1983) |
+| **L4 Hostile** | 12 | ✓ **12/12 PASS** | Extreme values, oscillatory, reproducibility |
+| **TOTAL** | **43** | **43/43 PASS** | |
+
+### Test Files
+
+| Level | File | Description |
+|-------|------|-------------|
+| L1 | `test/level1_regression/test_l1_diff_integ.f90` | Basic integration regression tests |
+| L2 | `test/level2_mathematical/test_l2_diff_integ.f90` | Gauss-Kronrod exactness, special functions |
+| L3 | `test/level3_historical/test_l3_diff_integ.f90` | IBM 360 trapezoidal golden values |
+| L4 | `test/level4_hostile/test_l4_diff_integ.f90` | Hostile environment tests |
+
+### Mathematical Properties Tested (Level 2)
+
+| Property | Test |
+|----------|------|
+| Gauss-Kronrod exactness | QK15 exact for degree ≤ 29 |
+| Gauss-Kronrod exactness | QK21 exact for degree ≤ 41 |
+| Gauss-Kronrod exactness | QK31 exact for degree ≤ 61 |
+| Classical integrals | ∫sin(x)dx, ∫exp(-x)dx, ∫1/√x dx |
+| Infinite intervals | ∫₀^∞ exp(-x)dx = 1 |
+| Gaussian integral | ∫_{-∞}^{∞} exp(-x²)dx = √π |
+
+### Hostile Tests (Level 4) — 12 Tests in 6 Categories
+
+| Category | Tests | What It Catches |
+|----------|-------|-----------------|
+| Tiny Intervals | 2 | Very small [a,b], A≈B handling |
+| Extreme Values | 3 | 1e-100 to 1e100 function scaling |
+| Narrow Peaks | 2 | Sharp Gaussian, narrow Lorentzian |
+| Discontinuities | 2 | Step functions, kinks |
+| Oscillatory | 2 | sin(10x), cos(10x) moderate oscillation |
+| Reproducibility | 1 | Identical results across runs |
+
+### Historical Note (Level 3)
+
+QUADPACK was developed by Piessens, de Doncker, et al. and published in 1983. The algorithms post-date the IBM 360 era, so no authentic L3 golden values exist. Level 3 tests use trapezoidal rule integration (1960s compatible) for IBM 360 validation.
+
+---
+
+## Interpolation Test Details
+
+*Testing B-spline, PCHIP, and polynomial interpolation routines*
+
+### Complete 4-Level Results (18 January 2026)
+
+| Level | Tests | Result | Notes |
+|-------|-------|--------|-------|
+| **L1 Regression** | 9 | ✓ **9/9 PASS** | DBINT4, DBVALU, DPCHIM, DPCHFE, DPLINT, DPOLVL |
+| **L2 Mathematical** | 17 | ⚠ **14/17 PASS** | B-spline issues identified |
+| **L3 Historical** | 4 | ✓ **4/4 PASS** | IBM 360 polynomial golden values |
+| **L4 Hostile** | 19 | ✓ **19/19 PASS** | Runge phenomenon, subnormals, cancellation |
+| **TOTAL** | **49** | **46/49 PASS** | 3 B-spline mathematical issues |
+
+### Test Files
+
+| Level | File | Description |
+|-------|------|-------------|
+| L1 | `test/level1_regression/test_l1_interpolation.f90` | Basic interpolation regression |
+| L2 | `test/level2_mathematical/test_l2_interpolation.f90` | Mathematical property verification |
+| L3 | `test/level3_historical/test_l3_interpolation.f90` | IBM 360 golden comparisons |
+| L3 | `/c/dev/vintage/fortran360/tests/slatec/interpolation/test_poly.f` | FORTRAN IV for Hercules |
+| L4 | `test/level4_hostile/test_l4_interpolation.f90` | Hostile environment tests |
+
+### IBM 360 Golden Values (Level 3)
+
+Captured via Hercules/TK4- on 18 January 2026:
+
+| Test | y = x³ at midpoints | IBM 360 Value |
+|------|---------------------|---------------|
+| p(0.5) | 0.125 | 0.125000000000000D 00 |
+| p(1.5) | 3.375 | 0.337500000000000D 01 |
+| p(2.5) | 15.625 | 0.156250000000000D 02 |
+| p(3.5) | 42.875 | 0.428750000000000D 02 |
+
+### Known Issues (Level 2)
+
+- **DBINT4 natural spline**: Does not interpolate exactly (max error: 3.56e-03)
+- **DBINT4 clamped spline**: Does not interpolate exactly (max error: 0.36)
+- **Natural spline boundary**: S''(1) = 60.1 instead of 0
+
+PCHIP and polynomial interpolation work correctly.
 
 ---
 
