@@ -63,6 +63,33 @@ This is the fortran360 project which provides:
 
 BLAS tests use Pythagorean triples (3-4-5, 5-12-13, 8-15-17, 7-24-25) for exact integer verification.
 
+### Interpolation
+
+| Test File | Routines | Status |
+|-----------|----------|--------|
+| test_l3_interpolation.f90 | DPLINT, DPOLVL | ✓ **4/4 PASS** (polynomial) |
+| test_l3_interpolation.f90 | DPCHIM, DPCHFE | N/A (post-1980 algorithm) |
+| test_l3_interpolation.f90 | DBINT4, DBVALU | N/A (post-1978 + L2 issues) |
+
+**Polynomial Interpolation**: Golden values captured from IBM 360 via Hercules/TK4- on 18 January 2026.
+Test case: y = x³ interpolated through x = 0,1,2,3,4, evaluated at midpoints.
+
+**PCHIP**: Fritsch & Carlson (1980) - algorithm post-dates IBM 360 era. No L3 golden values possible.
+
+**B-spline**: de Boor (1978) - algorithm post-dates IBM 360 era. Additionally has L2 mathematical issues.
+
+### Diff_Integ
+
+| Test File | Routines | Status |
+|-----------|----------|--------|
+| test_l3_diff_integ.f90 | Trapezoidal rule (1960s method) | ✓ **2/2 PASS** |
+| test_l3_diff_integ.f90 | QUADPACK (DQAGS, DQAGI, DQNG) | N/A (post-1983) |
+| test_l3_diff_integ.f90 | DGAUS8 | N/A (1980s implementation) |
+
+**Trapezoidal Rule**: Basic numerical integration method available in 1960s FORTRAN. Golden values captured from IBM 360.
+
+**QUADPACK**: Piessens, de Doncker, et al. (1983) - algorithms post-date IBM 360 era. No L3 golden values possible.
+
 ## Running Tests
 
 ### IBM 360 (Hercules)

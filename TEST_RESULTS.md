@@ -1,6 +1,6 @@
 # SLATEC-Modern Test Results
 
-*Comprehensive test execution log — 1 January 2026*
+*Comprehensive test execution log — 18 January 2026*
 
 ## Executive Summary
 
@@ -10,9 +10,17 @@
 | **MINPACK** | 9/9 | 17/17 | 7/7 | 45/45 | **78/78** |
 | **LINPACK** | 15/15 | 26/26 | 19/19 | 36/36 | **96/96** |
 | **Special Functions** | 26/26 | 18/18 | 21/21 | 28/32 | **93/97** |
-| **Combined** | 68/68 | 77/77 | 56/56 | 174/178 | **375/379** |
+| **Interpolation** | 9/9 | 14/17 | 4/4 | 19/19 | **46/49** |
+| **Diff_Integ** | 12/12 | 17/17 | 2/2 | 12/12 | **43/43** |
+| **Combined** | 89/89 | 108/111 | 62/62 | 205/209 | **464/471** |
 
-**All tests pass with safe compiler flags (`-O2` or `-O3`).**
+**All tests pass with safe compiler flags (`-O2` or `-O3`).** 3 B-spline mathematical issues documented.
+
+### Latest Additions (18 January 2026)
+
+- **Interpolation**: Full L1-L4 coverage for DBINT4, DBVALU, DPCHIM, DPCHFE, DPLINT, DPOLVL
+- **Diff_Integ**: Full L1-L4 coverage for DGAUS8, DQAGS, DQAGI, DQNG, DQK15/21/31
+- **L3 Historical**: IBM 360 golden values captured via Hercules/TK4- for polynomial interpolation
 
 ---
 

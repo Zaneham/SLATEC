@@ -53,8 +53,10 @@ Level 4 tests detect platform-specific behaviour. The same code compiled with di
 |------|--------|-------|--------|
 | test_l4_minpack.f90 | approximation | 45 | ✓ **45/45 PASS** |
 | test_l4_linear_blas.f90 | linear | 65 | ✓ **65/65 PASS** |
+| test_l4_interpolation.f90 | interpolation | 19 | ✓ **19/19 PASS** |
+| test_l4_diff_integ.f90 | diff_integ | 12 | ✓ **12/12 PASS** |
 
-**Total: 110 Level 4 tests**
+**Total: 141 Level 4 tests**
 
 ### MINPACK Hostile Test Categories
 
@@ -95,6 +97,30 @@ Level 4 tests detect platform-specific behaviour. The same code compiled with di
 | ULP Accuracy | 4 | Deviation from mathematical truth |
 | Memory Alignment | 12 | Non-aligned, strided, reverse access |
 
+### Interpolation Hostile Test Categories
+
+| Category | Tests | What It Detects |
+|----------|-------|-----------------|
+| Closely Spaced Data | 3 | Catastrophic cancellation in divided differences |
+| Extreme Domain | 3 | Overflow/underflow in large/small domains |
+| Runge Phenomenon | 3 | Ill-conditioned polynomial interpolation |
+| Catastrophic Cancellation | 2 | Precision loss in nearly constant functions |
+| Subnormal Values | 3 | DAZ/FTZ flushing of tiny function values |
+| Reproducibility | 1 | Identical results across runs |
+| Sign Changes | 2 | PCHIP overshoot/monotonicity at zero crossings |
+| Nearly Flat Spline | 2 | Spline behavior with tiny variations |
+
+### Diff_Integ Hostile Test Categories
+
+| Category | Tests | What It Detects |
+|----------|-------|-----------------|
+| Tiny Intervals | 2 | Very small [a,b], A≈B handling |
+| Extreme Values | 3 | 1e-100 to 1e100 function scaling |
+| Narrow Peaks | 2 | Sharp Gaussian, narrow Lorentzian (adaptive integration stress) |
+| Discontinuities | 2 | Step functions, kinks |
+| Oscillatory | 2 | Moderate oscillation handling (sin(10x), cos(10x)) |
+| Reproducibility | 1 | Identical results across runs |
+
 ## Running
 
 ```bash
@@ -107,6 +133,14 @@ gfortran -O2 -o test_l4_minpack test/level4_hostile/test_l4_minpack.f90
 # BLAS - Safe flags
 gfortran -O2 -o test_l4_blas test/level4_hostile/test_l4_linear_blas.f90
 ./test_l4_blas
+
+# Interpolation - Safe flags
+gfortran -O2 -I build/modules -o test_l4_interpolation test/level4_hostile/test_l4_interpolation.f90 -L build/lib -lslatec
+./test_l4_interpolation
+
+# Diff_Integ - Safe flags
+gfortran -O2 -I build/modules -o test_l4_diff_integ test/level4_hostile/test_l4_diff_integ.f90 -L build/lib -lslatec
+./test_l4_diff_integ
 
 # With hostile flags (EXPECTED TO FAIL - validates detection)
 gfortran -Ofast -ffast-math -o test_l4_hostile test/level4_hostile/test_l4_linear_blas.f90
