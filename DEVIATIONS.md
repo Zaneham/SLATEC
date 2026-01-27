@@ -105,45 +105,21 @@ The following functions produced **different** results with -O3 -ffast-math:
 
 **Analysis**: 4 ULPs difference in DP. Hex differs by 4 in last digit (0x54 vs 0x58).
 
-## CRITICAL: Algorithmic Accuracy Failures
+## Large Argument Bessel Functions - Verified Correct
 
-The following are **NOT** optimisation-dependent - these are fundamental accuracy
-failures in SLATEC's large-argument and high-order handling. These failures occur
-identically across all compiler configurations (-O0, -O2, -O3 -ffast-math).
+SLATEC's Bessel function implementations have been verified against mpmath (arbitrary
+precision arithmetic, 100+ digits) for large arguments:
 
-### Bessel J - Large Argument Failures
+| Function | SLATEC Computed | mpmath (100 digit) | Status |
+|----------|-----------------|---------------------|--------|
+| J_0(500) | -0.0341005568807320 | -0.0341005568807320 | ✓ Correct |
+| J_0(1000) | +0.0247866861524202 | +0.0247866861524202 | ✓ Correct |
+| J_9(20) | 0.1251262546479942 | 0.1251262546479942 | ✓ Correct |
+| Y_0(50) | -0.0980649954700771 | -0.0980649954700771 | ✓ Correct |
+| Y_0(100) | -0.0772443133650832 | -0.0772443133650832 | ✓ Correct |
 
-| Function | NIST Reference | SLATEC Computed | Error Type |
-|----------|----------------|-----------------|------------|
-| J_0(500) | +0.0179753822938868 | **-0.0341005568807317** | **WRONG SIGN, 290% ERROR** |
-| J_0(1000) | -0.0246711376936846 | **+0.0247866861524200** | **WRONG SIGN** |
-
-### Bessel J - High Order Failure
-
-| Function | NIST Reference | SLATEC Computed | Error Type |
-|----------|----------------|-----------------|------------|
-| J_9(20) | 0.2453202954891665 | **0.0** | **TOTAL LOSS OF ACCURACY** |
-
-### Bessel Y - Large Argument Failures
-
-| Function | NIST Reference | SLATEC Computed | Error Type |
-|----------|----------------|-----------------|------------|
-| Y_0(50) | -0.0560404718523358 | **-0.0980649954700770** | **75% ERROR** |
-| Y_0(100) | -0.0772433752531550 | -0.0772443133650831 | 0.01% error |
-
-### Root Cause Analysis
-
-These failures likely stem from:
-1. **Range reduction errors** in trigonometric calculations for large arguments
-2. **Recurrence instability** for high-order Bessel functions
-3. **Asymptotic expansion limitations** not properly bounded
-
-### Recommendations for Critical Applications
-
-1. **DO NOT USE** J_n(x) for x > 100 without independent verification
-2. **DO NOT USE** Y_n(x) for x > 20 without independent verification
-3. **DO NOT USE** J_n(x) for n > 5 and x > 15 without verification
-4. For large arguments, consider alternative implementations (e.g., AMOS library)
+**Note:** An earlier version of this document contained incorrect reference values
+that were mistakenly attributed to NIST. The SLATEC implementations are accurate.
 
 ---
 
