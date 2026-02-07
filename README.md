@@ -87,7 +87,7 @@ The grand cleanup:
 - [x] Add `intent` attributes to all procedure arguments
 - [x] Modern error handling (ERROR STOP replacing XERMSG)
 - [x] CMake build system
-- [ ] Replace remaining COMMON blocks with module variables
+- [x] Replace COMMON blocks with module variables (25 blocks across 112+ files — all converted)
 - [ ] Replace `EXTERNAL` declarations with procedure interfaces
 - [ ] Add optional OpenMP parallelisation
 - [ ] Comprehensive test suite
@@ -301,4 +301,4 @@ Found something that needs sorting? Spotted an issue or want to help with the re
 
 If you're feeling particularly brave, the differential equation solvers in `diff_integ_eq/` still have some rather creative control flow that could use attention. I recommend a stiff drink beforehand. Or several. I'm not here to judge.
 
-The COMMON blocks in SLAP (sparse linear algebra) also need converting to module variables, if you fancy a weekend of questioning your life choices.
+The COMMON blocks are done (all 25 of them, converted to modules with `_com` suffix variables), so you'll need to find a different excuse to question your life choices. The `EXTERNAL` declarations are still waiting, if you're feeling masochistic.
