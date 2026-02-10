@@ -29,8 +29,9 @@ fpm_build/
 .DS_Store
 Thumbs.db
 
-# Original source (cloned for reference)
+# Original source (kept locally for reference)
 mehdi-slatec/
+src/original/
 
 # Internal tracking
 .goto-status.md

@@ -87,7 +87,7 @@ The grand cleanup:
 - [x] Add `intent` attributes to all procedure arguments
 - [x] Modern error handling (ERROR STOP replacing XERMSG)
 - [x] CMake build system
-- [ ] Replace remaining COMMON blocks with module variables
+- [x] Replace COMMON blocks with module variables
 - [ ] Replace `EXTERNAL` declarations with procedure interfaces
 - [ ] Add optional OpenMP parallelisation
 - [ ] Comprehensive test suite
@@ -103,25 +103,24 @@ slatec-modern/
 ├── fpm.toml                 # Fortran Package Manager config
 ├── CHANGELOG.md             # Detailed modernisation history
 ├── DEVIATIONS.md            # Floating-point deviation analysis
-├── IBM360_TEST_RESULTS.md   # Period hardware verification
 ├── DISCLAIMER               # Public domain notice
 ├── src/
-│   ├── original/            # Original FORTRAN 77 (for reference)
 │   └── modern/              # Modernised Fortran 2018+ source
-│       ├── approximation/       # Curve fitting, least squares
+│       ├── approximation/       # Curve fitting, least squares (MINPACK)
 │       ├── data_handling/       # Sorting, permutation
-│       ├── diff_integ/          # Differentiation & integration
-│       ├── diff_integ_eq/       # Differential equations
-│       ├── integ_trans/         # Integral transforms
-│       ├── interpolation/       # Splines, PCHIP
+│       ├── diff_integ/          # Differentiation & integration (QUADPACK)
+│       ├── diff_integ_eq/       # Differential equations (DASSL, DEPAC)
+│       ├── integ_trans/         # Integral transforms (FFTPACK)
+│       ├── interpolation/       # Splines, PCHIP, B-splines
 │       ├── linear/              # Linear algebra (BLAS, LINPACK, SLAP)
 │       ├── nonlin_eq/           # Nonlinear equation solvers
 │       ├── optimization/        # Linear/quadratic programming
 │       ├── service/             # Utilities, machine constants
 │       └── special_functions/   # Bessel, Gamma, Airy, etc.
-├── test/                    # Test suite
-├── outputs/                 # Deviation test outputs
-├── scripts/                 # Batch processing scripts
+├── test/                    # Unit and regression tests (L1-L4)
+├── tests/                   # Integration tests (test-drive framework)
+├── outputs/                 # Numerical deviation reports
+├── scripts/                 # Refactoring and maintenance scripts
 └── docs/                    # SLATEC guide and documentation
 ```
 
@@ -300,5 +299,3 @@ Apologies for the NZ English throughout. Colour has a 'u' in it and that's simpl
 Found something that needs sorting? Spotted an issue or want to help with the remaining modernisation tasks? PRs welcome.
 
 If you're feeling particularly brave, the differential equation solvers in `diff_integ_eq/` still have some rather creative control flow that could use attention. I recommend a stiff drink beforehand. Or several. I'm not here to judge.
-
-The COMMON blocks in SLAP (sparse linear algebra) also need converting to module variables, if you fancy a weekend of questioning your life choices.
